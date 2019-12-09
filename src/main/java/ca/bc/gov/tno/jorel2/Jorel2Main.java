@@ -6,6 +6,8 @@ package ca.bc.gov.tno.jorel2;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.SimpleCommandLinePropertySource;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Main program for Jorel2. This stand-alone application retrieves its configuration information from files in the
@@ -16,6 +18,8 @@ import org.springframework.core.env.SimpleCommandLinePropertySource;
  */
 public class Jorel2Main {
 	
+    private static final Logger logger = LogManager.getLogger(Jorel2Main.class);
+	
 	/**
 	 * Configures the Spring IOC application context and refreshes the context.
 	 * 
@@ -25,7 +29,8 @@ public class Jorel2Main {
 		
 		System.out.println("hello world!");
 	    SimpleCommandLinePropertySource clps = new SimpleCommandLinePropertySource(args);
-	    
+	    logger.debug("Log this!");
+
         AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
         ctx.getEnvironment().getPropertySources().addFirst(clps);
         ctx.register(Jorel2Configuration.class);

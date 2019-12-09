@@ -25,12 +25,11 @@ import java.io.IOException;
 public class Jorel2Configuration {
 	
 	private Properties config;
-	public static final String PROPERTIES_PATH = "";
 	public static final String SYSTEM_DESCRIPTOR = "systemdescriptor.properties";
 	//@Inject Environment env;
 	
 	/**
-	 * Loads all configuration information for use throught the system.
+	 * Loads all configuration information for use throughout the system.
 	 */
 	public Jorel2Configuration(Environment env) {
 		
