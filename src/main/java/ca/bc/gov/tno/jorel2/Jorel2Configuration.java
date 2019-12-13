@@ -9,8 +9,6 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.context.annotation.Bean;
-import java.util.Properties;
-import java.io.InputStream;
 
 /**
  * Spring Framework configuration for Jorel2. Reads the system id (dev, prod etc.) from the SimpleCommandLinePropertySource set 
@@ -27,8 +25,6 @@ import java.io.InputStream;
 @ComponentScan("ca.bc.gov.tno.jorel2")
 public class Jorel2Configuration {
 	
-	private Properties config;
-	public static final String SYSTEM_DESCRIPTOR = "systemdescriptor.properties";
     private static final Logger logger = LogManager.getLogger(Jorel2Main.class);
 	
 	/**
@@ -36,7 +32,7 @@ public class Jorel2Configuration {
 	 */
 	public Jorel2Configuration(Environment env) {
 		
-		// Empty for now
+		// Unused for now
 	}
 	
     @Bean
@@ -48,15 +44,4 @@ public class Jorel2Configuration {
         executor.initialize();
         return executor;
     }
-
-	/**
-	 * Provides access to the server configuration object for this execution.
-	 * 
-	 * @return Configuration properties object
-	 */
-	
-    public Properties exportConfig() {
-    	
-		return config;
-	}
 }

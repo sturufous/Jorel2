@@ -13,7 +13,6 @@ class DevDataSourceConfig implements DataSourceConfig {
 		System.out.println("Setup for dev profile.");
 	}
 	
-	@Override
 	public void setup() {
 	}
 	

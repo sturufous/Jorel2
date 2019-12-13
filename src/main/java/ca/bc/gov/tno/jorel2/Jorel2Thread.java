@@ -15,22 +15,8 @@ import org.springframework.stereotype.Component;
 @Component
 @Scope("prototype")
 class Jorel2Thread implements Runnable {
-	
-    @Autowired
-    private Environment environment;
-    
-    @Autowired
-    private DataSourceConfig config;
-	
-	/**
-	 * Start the scheduler loop.
-	 */
-	
-    @Override
+		
     public void run() {
-    	System.out.println("Hi!");
-        for (String profileName : environment.getActiveProfiles()) {
-            System.out.println("Current host name - " + config.getSystemName());
-        }  
+    	// Unused for now
     }
 }

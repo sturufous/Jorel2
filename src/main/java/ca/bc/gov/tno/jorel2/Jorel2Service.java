@@ -4,7 +4,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.Environment;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * Spring framework service that executes all tasks performed by Jorel2.
@@ -16,11 +19,13 @@ import org.springframework.core.task.TaskExecutor;
 @Service
 public class Jorel2Service {
 	
-    @Autowired
-    private ApplicationContext ctx;
+	/** Environment variable used for retrieving active profiles */
+	@Autowired
+    private Environment environment;
     
+	/** Configuration object for the active data source. Contains system_name, port etc. */
     @Autowired
-    private TaskExecutor taskExecutor;
+    private DataSourceConfig config;
 	
 	/**
 	 * Starts all tasks performed by Jorel2.
@@ -28,7 +33,16 @@ public class Jorel2Service {
 	
     @PostConstruct
     public void init(){
-        Jorel2Thread myThread = ctx.getBean(Jorel2Thread.class);
-        taskExecutor.execute(myThread);
+        //Jorel2Thread myThread = ctx.getBean(Jorel2Thread.class);
+        //taskExecutor.execute(myThread);
+    }
+    
+    @Async
+    @Scheduled(fixedDelay = 1000)
+    public void scheduleFixedDelayTask() {
+        System.out.println("Fixed delay task - " + System.currentTimeMillis() / 1000);
+        for (String profileName : environment.getActiveProfiles()) {
+            System.out.println("Current host name - " + config.getSystemName());
+        }  
     }
 }
