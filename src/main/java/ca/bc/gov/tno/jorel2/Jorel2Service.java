@@ -24,8 +24,6 @@ public class Jorel2Service {
 	
 	/**
 	 * Starts all tasks performed by Jorel2.
-	 * 
-	 * @param config Dependency injected system configuration object.
 	 */
 	
     @PostConstruct

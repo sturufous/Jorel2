@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.context.annotation.Bean;
 import java.util.Properties;
@@ -22,6 +23,7 @@ import java.io.InputStream;
  */
 
 @Configuration
+@EnableScheduling
 @ComponentScan("ca.bc.gov.tno.jorel2")
 public class Jorel2Configuration {
 	
@@ -34,17 +36,7 @@ public class Jorel2Configuration {
 	 */
 	public Jorel2Configuration(Environment env) {
 		
-        try {
-        	String systemName = env.getRequiredProperty("system");
-        	
-            // Get the properties for the system retrieved above
-            InputStream input = ClassLoader.getSystemClassLoader().getResourceAsStream(systemName + ".properties");
-            config = new Properties();
-            config.load(input);
-            input.close();
-        } catch (Exception ex) {
-	        logger.error("Occurred when performing Spring configuration.", ex);
-        }
+		// Empty for now
 	}
 	
     @Bean

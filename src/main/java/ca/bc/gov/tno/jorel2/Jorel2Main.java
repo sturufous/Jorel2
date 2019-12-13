@@ -5,6 +5,7 @@
 package ca.bc.gov.tno.jorel2;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.SimpleCommandLinePropertySource;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,11 +35,14 @@ public class Jorel2Main {
 		
 		try {
 			System.out.println("hello world!");
+			
 		    SimpleCommandLinePropertySource clps = new SimpleCommandLinePropertySource(args);
-		    logger.debug("Log this!");
-	
 	        AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 	        ctx.getEnvironment().getPropertySources().addFirst(clps);
+	        ConfigurableEnvironment env = ctx.getEnvironment();
+        	String systemName = env.getRequiredProperty("system");
+	        env.setActiveProfiles(systemName);
+	        
 	        ctx.register(Jorel2Configuration.class);
 	        ctx.refresh();
 	    } catch (Exception ex) {
