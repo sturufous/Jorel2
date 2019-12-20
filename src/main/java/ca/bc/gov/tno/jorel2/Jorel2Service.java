@@ -1,6 +1,10 @@
 package ca.bc.gov.tno.jorel2;
 
+import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Optional;
+
 import javax.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationContext;
@@ -19,30 +23,19 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Service
 public class Jorel2Service {
 	
-	/** Environment variable used for retrieving active profiles */
-	@Autowired
-    private Environment environment;
-    
-	/** Configuration object for the active data source. Contains system_name, port etc. */
     @Autowired
-    private DataSourceConfig config;
-	
+    private TaskExecutor taskExecutor;
+    
+    @Autowired
+    private ApplicationContext ctx;
+
 	/**
 	 * Starts all tasks performed by Jorel2.
 	 */
 	
     @PostConstruct
     public void init(){
-        //Jorel2Thread myThread = ctx.getBean(Jorel2Thread.class);
-        //taskExecutor.execute(myThread);
-    }
-    
-    @Async
-    @Scheduled(fixedDelay = 1000)
-    public void scheduleFixedDelayTask() {
-        System.out.println("Fixed delay task - " + System.currentTimeMillis() / 1000);
-        for (String profileName : environment.getActiveProfiles()) {
-            System.out.println("Current host name - " + config.getSystemName());
-        }  
+        Jorel2Thread myThread = ctx.getBean(Jorel2Thread.class);
+        taskExecutor.execute(myThread);
     }
 }

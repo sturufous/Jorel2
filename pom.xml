@@ -5,6 +5,9 @@
   <version>0.0.1-SNAPSHOT</version>
   <name>Jorel2</name>
   <description>Java 13 rewrite of Jorel</description>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
   <build>
 	  <plugins>
 	   <plugin>
@@ -47,10 +50,17 @@
             <directory>src/main/resources</directory>
             <includes>
                 <include>**/*.properties</include>
+                <include>**/*.xml</include>
             </includes>
         </resource>
       </resources>
   </build>
+  <repositories>
+  <repository>
+    <id>my-local-repo</id>
+    <url>file://${basedir}/lib</url>
+  </repository>
+  </repositories>
   <dependencies>
     <dependency>
 	  <groupId>org.springframework</groupId>
@@ -91,5 +101,16 @@
       <version>2.23.0</version>
       <scope>test</scope>
     </dependency>
+	<dependency>
+	   <groupId>org.hibernate</groupId>
+	   <artifactId>hibernate-core</artifactId>
+	   <version>5.4.10.Final</version>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/com.oracle.jdbc/ojdbc8 -->
+	<dependency>
+	  <groupId>com.oracle</groupId>
+	  <artifactId>ojdbc8</artifactId>
+	  <version>12.2.0.1</version>
+	</dependency>
   </dependencies>
 </project>

@@ -1,23 +1,34 @@
 package ca.bc.gov.tno.jorel2;
 
+import java.util.Optional;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.hibernate.SessionFactory;
 import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
+import java.util.Optional;
 
-import lombok.Getter;
+/**
+ * Production configuration for Hibernate data access.
+ * 
+ * @author Stuart Morse
+ * @version 0.0.1
+ */
 
 @Component
 @Profile("prod")
-class ProdDataSourceConfig implements DataSourceConfig {
+class ProdDataSourceConfig extends DataSourceConfig {
 
 	public String systemName = "scorelli.tno.gov.bc.ca";
 	
-	ProdDataSourceConfig() {
-		System.out.println("Setup for prod profile.");
+	public Optional getSessionFactory() {
+		
+		logger.trace("Getting production Hibernate session factory.");
+		
+		return Optional.empty();
 	}
-	
-	public void setup() {
-	}
-	
+
 	public String getSystemName() {
 		
 		return systemName;
