@@ -1,12 +1,11 @@
-package ca.bc.gov.tno.jorel2;
+package ca.bc.gov.tno.jorel2.model;
 
 import java.util.Optional;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hibernate.SessionFactory;
 import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
+
 import java.util.Optional;
 
 /**

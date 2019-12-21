@@ -14,9 +14,6 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 /**
  * Main program for Jorel2. .
  * 
@@ -28,10 +25,8 @@ import org.apache.logging.log4j.Logger;
  * @author Stuart Morse
  * @version 0.0.1
  */
-public class Jorel2Main {
-	
-    private static final Logger logger = LogManager.getLogger(Jorel2Main.class);
-    
+public class Jorel2Main extends Jorel2Root {
+	   
 	/**
 	 * Configures the Spring IOC application context and refreshes the context.
 	 * 

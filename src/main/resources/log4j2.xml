@@ -25,7 +25,7 @@
     <Root level="ERROR">
       <AppenderRef ref="Console"/>
     </Root>
-	<Logger name="ca.bc.gov.tno.jorel2.Jorel2Main" level="trace" additivity="false">
+	<Logger name="ca.bc.gov.tno.jorel2.Jorel2Root" level="trace" additivity="false">
       <AppenderRef ref="rollingFile"/>
     </Logger>
   </Loggers>

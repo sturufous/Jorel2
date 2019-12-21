@@ -1,10 +1,8 @@
-package ca.bc.gov.tno.jorel2;
+package ca.bc.gov.tno.jorel2.model;
 
 import java.util.Optional;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hibernate.SessionFactory;
+import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
  * Abstract class allowing the application to leverage Spring's <code>profile</code> insfrastructure for Hibernate configuration.
@@ -13,11 +11,10 @@ import org.hibernate.SessionFactory;
  * @version 0.0.1
  */
 
-public abstract class DataSourceConfig {
+public abstract class DataSourceConfig extends Jorel2Root {
 	
-    protected static final Logger logger = LogManager.getLogger(Jorel2Main.class);
 	public abstract String getSystemName();
-	public abstract Optional getSessionFactory();
+	public abstract Optional<SessionFactory> getSessionFactory();
 	
 	protected DataSourceConfig() {
 		

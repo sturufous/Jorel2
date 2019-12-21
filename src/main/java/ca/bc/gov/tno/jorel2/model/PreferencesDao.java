@@ -1,11 +1,11 @@
-package ca.bc.gov.tno.jorel2;
+package ca.bc.gov.tno.jorel2.model;
 
 import java.io.Serializable;
 import javax.persistence.*;
 
 @Entity
 @Table(name = "PREFERENCES")
-public class Preferences implements Serializable {
+public class PreferencesDao implements Serializable {
 
 	/**
 	 * 
@@ -19,6 +19,9 @@ public class Preferences implements Serializable {
 	@Column(name = "APPLICATION_TITLE")
 	private String applicationTitle;
 	
+	public PreferencesDao() {
+	}
+	 
 	public long getRsn() {
 		return rsn;
 	}

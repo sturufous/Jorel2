@@ -2,12 +2,6 @@ package ca.bc.gov.tno.jorel2;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-
-import java.util.Optional;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.hibernate.SessionFactory;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -27,9 +21,7 @@ import org.springframework.context.annotation.Bean;
 @Configuration
 @EnableScheduling
 @ComponentScan("ca.bc.gov.tno.jorel2")
-public class Jorel2Configuration {
-	
-    private static final Logger logger = LogManager.getLogger(Jorel2Main.class);
+public class Jorel2Configuration extends Jorel2Root {
 	
 	/**
 	 * Loads all configuration information for use throughout the system.

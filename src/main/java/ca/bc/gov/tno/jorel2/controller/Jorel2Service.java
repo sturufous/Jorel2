@@ -1,4 +1,4 @@
-package ca.bc.gov.tno.jorel2;
+package ca.bc.gov.tno.jorel2.controller;
 
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +7,9 @@ import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
+
+import ca.bc.gov.tno.jorel2.Jorel2Root;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.core.task.TaskExecutor;
@@ -21,7 +24,7 @@ import org.springframework.scheduling.annotation.Scheduled;
  */
 
 @Service
-public class Jorel2Service {
+public class Jorel2Service extends Jorel2Root {
 	
     @Autowired
     private TaskExecutor taskExecutor;
