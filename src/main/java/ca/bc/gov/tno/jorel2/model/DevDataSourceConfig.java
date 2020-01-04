@@ -1,13 +1,9 @@
 package ca.bc.gov.tno.jorel2.model;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
 import org.hibernate.SessionFactory;
-import org.hibernate.boot.Metadata;
-import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Environment;
@@ -25,9 +21,12 @@ import org.hibernate.cfg.Configuration;
 
 @Component
 @Profile("dev")
-class DevDataSourceConfig extends DataSourceConfig {
+final class DevDataSourceConfig extends DataSourceConfig {
 
-	public String systemName = "vongole.tno.gov.bc.ca";
+	private String systemName = "vongole.tno.gov.bc.ca";
+	private String port = "1521";
+	private String sid = "tnotst02";
+	private String systemIp = "142.34.249.240";
 	
 	private static StandardServiceRegistry registry = null;
 	private static SessionFactory sessionFactory = null;
@@ -42,7 +41,7 @@ class DevDataSourceConfig extends DataSourceConfig {
 						
 			Properties settings = new Properties();
 	        settings.put(Environment.DRIVER, "oracle.jdbc.OracleDriver");
-	        settings.put(Environment.URL, "jdbc:oracle:thin:@142.34.249.240:1521:tnotst02");
+	        settings.put(Environment.URL, "jdbc:oracle:thin:@" + systemName + ":" + port + ":" + sid);
 	        settings.put(Environment.USER, "tno");
 	        settings.put(Environment.PASS, "tn29tst");
 	        settings.put(Environment.DIALECT, "org.hibernate.dialect.Oracle12cDialect");
@@ -50,6 +49,8 @@ class DevDataSourceConfig extends DataSourceConfig {
 	        
 	        config.setProperties(settings);
 	        config.addAnnotatedClass(PreferencesDao.class);
+	        config.addAnnotatedClass(EventsDao.class);
+	        config.addAnnotatedClass(EventTypesDao.class);
 	        
 	        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 	        

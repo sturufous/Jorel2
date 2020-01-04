@@ -17,7 +17,7 @@ import java.util.Optional;
 
 @Component
 @Profile("prod")
-class ProdDataSourceConfig extends DataSourceConfig {
+final class ProdDataSourceConfig extends DataSourceConfig {
 
 	public String systemName = "scorelli.tno.gov.bc.ca";
 	

@@ -3,6 +3,8 @@ package ca.bc.gov.tno.jorel2.controller;
 import java.util.List;
 import java.util.Optional;
 
+import javax.inject.Inject;
+
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,8 @@ import org.springframework.stereotype.Component;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
+import ca.bc.gov.tno.jorel2.model.EventTypesDao;
+import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 
 /**
@@ -23,14 +27,14 @@ import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 
 @Component
 @Scope("prototype")
-class Jorel2Thread extends Jorel2Root implements Runnable {
+final class Jorel2Thread extends Jorel2Root implements Runnable {
 	
 	/** Configuration object for the active data source. Contains system_name, port etc. */
-	@Autowired
+	@Inject
 	private DataSourceConfig config;
 	
 	/** Environment variable used for retrieving active profiles */
-	@Autowired
+	@Inject
     private Environment environment;
     
 	public void run() {
@@ -45,11 +49,11 @@ class Jorel2Thread extends Jorel2Root implements Runnable {
 		        Session session = sessionFactory.get().openSession();
 		    	
 		    	session.beginTransaction();
-		    	String sql = "FROM PreferencesDao";
-		        List<PreferencesDao> results = session.createQuery(sql, PreferencesDao.class).getResultList();
+		    	String sql = "FROM EventsDao";
+		        List<EventsDao> results = session.createQuery(sql, EventsDao.class).getResultList();
 		        
-		        for(PreferencesDao pref : results) {
-		        	System.out.println(pref);
+		        for(EventsDao event : results) {
+		        	System.out.println(event);
 		        }
 		        
 		        session.getTransaction().commit();

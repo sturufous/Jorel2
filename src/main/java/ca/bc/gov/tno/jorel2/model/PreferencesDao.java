@@ -5,7 +5,7 @@ import javax.persistence.*;
 
 @Entity
 @Table(name = "PREFERENCES")
-public class PreferencesDao implements Serializable {
+public final class PreferencesDao implements Serializable {
 
 	/**
 	 * 

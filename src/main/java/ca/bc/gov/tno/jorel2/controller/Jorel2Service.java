@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.Optional;
 
 import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+
 import org.springframework.stereotype.Service;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root;
@@ -24,12 +26,12 @@ import org.springframework.scheduling.annotation.Scheduled;
  */
 
 @Service
-public class Jorel2Service extends Jorel2Root {
+final class Jorel2Service extends Jorel2Root {
 	
-    @Autowired
+    @Inject
     private TaskExecutor taskExecutor;
     
-    @Autowired
+    @Inject
     private ApplicationContext ctx;
 
 	/**

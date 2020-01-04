@@ -25,7 +25,7 @@ import java.sql.Statement;
  * @author Stuart Morse
  * @version 0.0.1
  */
-public class Jorel2Main extends Jorel2Root {
+public final class Jorel2Main extends Jorel2Root {
 	   
 	/**
 	 * Configures the Spring IOC application context and refreshes the context.

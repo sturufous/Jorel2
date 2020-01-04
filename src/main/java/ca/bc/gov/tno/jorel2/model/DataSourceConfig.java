@@ -5,7 +5,7 @@ import org.hibernate.SessionFactory;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
- * Abstract class allowing the application to leverage Spring's <code>profile</code> insfrastructure for Hibernate configuration.
+ * Abstract class allowing the application to leverage Spring's <code>profile</code> infrastructure for Hibernate configuration.
  * 
  * @author Stuart Morse
  * @version 0.0.1
@@ -18,6 +18,6 @@ public abstract class DataSourceConfig extends Jorel2Root {
 	
 	protected DataSourceConfig() {
 		
-		logger.trace("Creating: " + this.getClass().toString());
+		logger.debug("Creating: " + this.getClass().toString());
 	}
 }
