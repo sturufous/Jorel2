@@ -7,6 +7,8 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -42,17 +44,16 @@ public class EventsDao implements java.io.Serializable {
 	private String captureCommand;
 	private String clipCommand;
 	private Boolean ccCapture;
+	private EventTypesDao eventType;
 	
-	private EventTypesDao event_Type;
-	
-	@ManyToOne(cascade = CascadeType.ALL)
-	//@JoinColumn(name = "EVENT_TYPE_RSN")
-	public EventTypesDao getEvent_Type() {
-		return this.event_Type;
+	@JoinColumn(name = "EVENT_TYPE_RSN")
+	@ManyToOne(fetch = FetchType.EAGER)
+	public EventTypesDao getEventType() {
+		return this.eventType;
 	}
 	
-	public void setEvent_Type(EventTypesDao event_Type) {
-		this.event_Type = event_Type;
+	public void setEventType(EventTypesDao eventType) {
+		this.eventType = eventType;
 	}
 	
 	public void Events() {
@@ -95,7 +96,7 @@ public class EventsDao implements java.io.Serializable {
 	}
 
 	@Id
-
+	@GeneratedValue(strategy = GenerationType.AUTO)
 	@Column(name = "RSN", unique = true, nullable = false, precision = 38, scale = 0)
 	public BigDecimal getRsn() {
 		return this.rsn;
@@ -114,10 +115,10 @@ public class EventsDao implements java.io.Serializable {
 		this.name = name;
 	}
 
-	@Column(name = "EVENT_TYPE_RSN", nullable = false, precision = 38, scale = 0)
-	public BigDecimal getEventTypeRsn() {
-		return this.eventTypeRsn;
-	}
+	//@Column(name = "EVENT_TYPE_RSN", nullable = false, precision = 38, scale = 0)
+	//public BigDecimal getEventTypeRsn() {
+	//	return this.eventTypeRsn;
+	//}
 
 	public void setEventTypeRsn(BigDecimal eventTypeRsn) {
 		this.eventTypeRsn = eventTypeRsn;

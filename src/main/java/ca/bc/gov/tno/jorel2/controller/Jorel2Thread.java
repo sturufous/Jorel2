@@ -49,7 +49,7 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 		        Session session = sessionFactory.get().openSession();
 		    	
 		    	session.beginTransaction();
-		    	String sql = "FROM EventsDao";
+		    	String sql = "from EventsDao where process='jorel'";
 		        List<EventsDao> results = session.createQuery(sql, EventsDao.class).getResultList();
 		        
 		        for(EventsDao event : results) {
