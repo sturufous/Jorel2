@@ -1,5 +1,7 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,24 +38,27 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	/** Environment variable used for retrieving active profiles */
 	@Inject
     private Environment environment;
+		
+	List        tasksLowerCase = new ArrayList<String>();
     
 	public void run() {
     	   	
     	while(true) {
-	        System.out.println("Fixed delay task - " + System.currentTimeMillis() / 1000);
 	    	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
 	        
 	    	if(sessionFactory.isEmpty()) {
-	    		throw new IllegalStateException("No session factory provided.");
+	    		IllegalStateException e = new IllegalStateException("No session factory provided.");
+	    		logger.error("Occurrend getting TNO session factory.", e);
+	    		throw e;
 	    	} else {
 		        Session session = sessionFactory.get().openSession();
 		    	
 		    	session.beginTransaction();
-		    	String sql = "from EventsDao where process='jorel'";
-		        List<EventsDao> results = session.createQuery(sql, EventsDao.class).getResultList();
+		        List<EventsDao> results = EventsDao.getEventsForProcessing(session);
 		        
 		        for(EventsDao event : results) {
-		        	System.out.println(event);
+		        	EventTypesDao thisEvent = event.getEventType();
+					tasksLowerCase.add(thisEvent.getEventType().toLowerCase());
 		        }
 		        
 		        session.getTransaction().commit();
