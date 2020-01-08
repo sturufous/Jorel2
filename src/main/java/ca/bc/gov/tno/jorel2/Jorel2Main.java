@@ -6,6 +6,7 @@ package ca.bc.gov.tno.jorel2;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.SimpleCommandLinePropertySource;
 
@@ -20,11 +21,14 @@ import java.sql.Statement;
  * This package will follow these conventions:
  * <ul>
  * <li>There will be no conditional logic in constructors, therefore they will not be unit tested.
+ * <li>Hibernate exceptions inherit from RuntimeException, are unchecked, and will not be tried.
  * </ul>
  * 
  * @author Stuart Morse
  * @version 0.0.1
  */
+
+//@EnableAspectJAutoProxy
 public final class Jorel2Main extends Jorel2Root {
 	   
 	/**
@@ -42,9 +46,7 @@ public final class Jorel2Main extends Jorel2Root {
             AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(); 
             ConfigurableEnvironment env = ctx.getEnvironment(); 
                         
-            logger.trace("log this!");
-	        
-        	// Set the active DataSourceConfig to that identified in the command arguments
+        	// Set the active DataSourceConfig to that identified in the command arguments. Assume a single profile argument.
 	        if(args.length == 0) {
 	        	throw new IllegalArgumentException("Database profile name missing from args array.");
 	        } else {

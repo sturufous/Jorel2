@@ -19,6 +19,7 @@ import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
+import ca.bc.gov.tno.jorel2.controller.RssEventProcessor;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.
@@ -39,16 +40,31 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	@Inject
     private Environment environment;
 		
-	List        tasksLowerCase = new ArrayList<String>();
+	/** RSS Event processor service */
+	@Inject
+    private RssEventProcessor rssEventProcessor;
+		
+	/** 
+	 * Contains a list of Jorel tasks for processing. E.g. if a single occurrence, or multiple occurrences, of RSS 
+	 * is present, RSS processing is triggered. This is true for other event types like monitor, schedule and capture.
+	 * Conversion to lower case mitigates the inconsistent use of camel case in the EVENT_TYPES.EVENT_TYPE column.
+	 */
+	List<String> tasksLowerCase = new ArrayList<>();
     
+	/**
+	 * Perform some initial setup tasks and then enter a loop that repeatedly gets events to process and calls their
+	 * respective handlers.
+	 */
 	public void run() {
-    	   	
+    	   			
+    	Optional<String> rssResult;
+
     	while(true) {
 	    	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
 	        
 	    	if(sessionFactory.isEmpty()) {
 	    		IllegalStateException e = new IllegalStateException("No session factory provided.");
-	    		logger.error("Occurrend getting TNO session factory.", e);
+	    		logger.error("While getting TNO session factory.", e);
 	    		throw e;
 	    	} else {
 		        Session session = sessionFactory.get().openSession();
@@ -59,6 +75,11 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 		        for(EventsDao event : results) {
 		        	EventTypesDao thisEvent = event.getEventType();
 					tasksLowerCase.add(thisEvent.getEventType().toLowerCase());
+		        }
+		        
+		        if(true) { // RSS feed for processing
+		        	rssResult = rssEventProcessor.processEvents();
+		        	System.out.println("RSS Title: " + rssResult.get().toString());
 		        }
 		        
 		        session.getTransaction().commit();

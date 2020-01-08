@@ -3,6 +3,13 @@ package ca.bc.gov.tno.jorel2.model;
 import java.io.Serializable;
 import javax.persistence.*;
 
+/**
+ * Hibernate entity representing a record in TNO.PREFERENCES.
+ * 
+ * @author Stuart Morse
+ * @version 0.0.1
+ */
+
 @Entity
 @Table(name = "PREFERENCES")
 public final class PreferencesDao implements Serializable {

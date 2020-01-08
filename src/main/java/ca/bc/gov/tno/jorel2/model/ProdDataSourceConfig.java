@@ -21,7 +21,7 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 
 	public String systemName = "scorelli.tno.gov.bc.ca";
 	
-	public Optional getSessionFactory() {
+	public Optional<SessionFactory> getSessionFactory() {
 		
 		logger.trace("Getting production Hibernate session factory.");
 		
