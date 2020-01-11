@@ -2,7 +2,9 @@ package ca.bc.gov.tno.jorel2.controller;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.inject.Inject;
@@ -43,13 +45,13 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	/** RSS Event processor service */
 	@Inject
     private RssEventProcessor rssEventProcessor;
-		
+	
 	/** 
 	 * Contains a list of Jorel tasks for processing. E.g. if a single occurrence, or multiple occurrences, of RSS 
 	 * is present, RSS processing is triggered. This is true for other event types like monitor, schedule and capture.
 	 * Conversion to lower case mitigates the inconsistent use of camel case in the EVENT_TYPES.EVENT_TYPE column.
 	 */
-	List<String> tasksLowerCase = new ArrayList<>();
+	List<String> tasksUpperCase = new ArrayList<>();
     
 	/**
 	 * Perform some initial setup tasks and then enter a loop that repeatedly gets events to process and calls their
@@ -64,22 +66,33 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	        
 	    	if(sessionFactory.isEmpty()) {
 	    		IllegalStateException e = new IllegalStateException("No session factory provided.");
-	    		logger.error("While getting TNO session factory.", e);
+	    		logger.error("Getting TNO session factory.", e);
 	    		throw e;
 	    	} else {
 		        Session session = sessionFactory.get().openSession();
+		        String taskUpperCase;
+		        Map<String, EventType> eventMap = new HashMap<>();
 		    	
 		    	session.beginTransaction();
 		        List<EventsDao> results = EventsDao.getEventsForProcessing(session);
 		        
+		        // Create Map containing list of unique event-types for processing
 		        for(EventsDao event : results) {
 		        	EventTypesDao thisEvent = event.getEventType();
-					tasksLowerCase.add(thisEvent.getEventType().toLowerCase());
+					taskUpperCase = thisEvent.getEventType().toUpperCase().replace("/", "");
+					eventMap.put(taskUpperCase, EventType.valueOf(taskUpperCase));
 		        }
-		        
-		        if(true) { // RSS feed for processing
-		        	rssResult = rssEventProcessor.processEvents();
-		        	System.out.println("RSS Title: " + rssResult.get().toString());
+		              
+		        // Trigger processing of each event type in eventMap
+		        for (EventType eventEnum : eventMap.values()) {
+		        	switch (eventEnum) {
+		        		case NEWRSS: 
+				        	rssResult = rssEventProcessor.processEvents();
+				        	System.out.println("RSS Title: " + rssResult.get().toString());
+				        	break;
+				        default:
+				        	break;
+		        	}
 		        }
 		        
 		        session.getTransaction().commit();
@@ -87,7 +100,7 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	    	}
 	        
 	        try {
-	        	Thread.sleep(2000);
+	        	Thread.sleep(10000);
 	        } 
 	        catch (InterruptedException e) {
 	        	e.printStackTrace();

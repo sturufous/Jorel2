@@ -6,6 +6,7 @@
         <xsd:element name="channel">
           <xsd:complexType>
             <xsd:sequence>
+              <xsd:element name="title" type="xsd:string" />
               <xsd:element name="atomlink">
                 <xsd:complexType>
                   <xsd:attribute name="href" type="xsd:string" />
@@ -13,31 +14,39 @@
                   <xsd:attribute name="type" type="xsd:string" />
                 </xsd:complexType>
               </xsd:element>
-              <xsd:element name="title" type="xsd:string" />
               <xsd:element name="link" type="xsd:string" />
               <xsd:element name="description" type="xsd:string" />
+              <xsd:element name="lastBuildDate" type="xsd:dateTime" />
               <xsd:element name="language" type="xsd:string" />
-              <xsd:element name="copyright" type="xsd:string" />
-              <xsd:element name="pubDate" type="xsd:dateTime" />
               <xsd:element name="generator" type="xsd:string" />
-              <xsd:element name="docs" type="xsd:string" />
+              <xsd:element name="image">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="title" type="xsd:string" />
+                    <xsd:element name="url" type="xsd:string" />
+                    <xsd:element name="link" type="xsd:string" />
+                    <xsd:element name="width" type="xsd:int" />
+                    <xsd:element name="height" type="xsd:int" />
+                    <xsd:element name="description" type="xsd:string" />
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
               <xsd:element maxOccurs="unbounded" name="item">
                 <xsd:complexType>
                   <xsd:sequence>
                     <xsd:element name="title" type="xsd:string" />
+                    <xsd:element name="dccreator" type="xsd:string" />
                     <xsd:element name="link" type="xsd:string" />
-                    <xsd:element name="description" type="xsd:string" />
+                    <xsd:element name="comments" type="xsd:string" />
+                    <xsd:element name="pubDate" type="xsd:dateTime" />
+                    <xsd:element maxOccurs="unbounded" name="category" type="xsd:string" />
                     <xsd:element name="guid">
                       <xsd:complexType>
                         <xsd:attribute name="isPermaLink" type="xsd:boolean" />
                       </xsd:complexType>
                     </xsd:element>
-                    <xsd:element name="pubDate" type="xsd:dateTime" />
-                    <xsd:element name="enclosure">
-                      <xsd:complexType>
-                        <xsd:attribute name="type" type="xsd:string" />
-                      </xsd:complexType>
-                    </xsd:element>
+                    <xsd:element name="description" type="xsd:string" />
+                    <xsd:element name="contentencoded" type="xsd:string" />
                   </xsd:sequence>
                 </xsd:complexType>
               </xsd:element>

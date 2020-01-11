@@ -1,0 +1,38 @@
+	/**
+	 * Returns all Jorel entries in the EVENTS table that have a LAST_FTP_RUN value prior to the current date.
+	 * 
+	 * @param session - The currently active Hibernate DB session
+	 * @return List of EventsDao objects that match the Events_FindEventsForProcessing named query.
+	 */
+	public static List<EventsDao> getEventsForProcessing(Session session) {
+
+		// Process the current date using the JDK 1.8 Time API
+		LocalDate now = LocalDate.now();
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy");
+		
+		// Format the current date to match values in LAST_FTP_RUN
+		String dateMatch = now.format(formatter);
+		
+		Query<EventsDao> query = session.createNamedQuery("Events_FindEventsForProcessing", EventsDao.class);
+		query.setParameter("process", "jorel");
+		query.setParameter("runDate", dateMatch);
+        List<EventsDao> results = query.getResultList();
+        
+        return results;
+	}
+	
+	/**
+	 * Returns all Jorel entries in the EVENTS table that have an EVENT_TYPE of RSS or NEWRSS (created for testing).
+	 * 
+	 * @param session - The currently active Hibernate DB session
+	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
+	 */
+	public static List<EventsDao> getRssEvents(Session session) {
+
+		Query<EventsDao> query = session.createNamedQuery("Events_FindEventsByType", EventsDao.class);
+		query.setParameter("process", "jorel");
+		query.setParameter("eventType", "NEWRSS");
+        List<EventsDao> results = query.getResultList();
+        
+        return results;
+	}

@@ -22,6 +22,7 @@ import java.sql.Statement;
  * <ul>
  * <li>There will be no conditional logic in constructors, therefore they will not be unit tested.
  * <li>Hibernate exceptions inherit from RuntimeException, are unchecked, and will not be tried.
+ * <li>All Hibernate named queries are defined in Jore2Root
  * </ul>
  * 
  * @author Stuart Morse
