@@ -5,6 +5,9 @@ import org.springframework.core.env.Environment;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import javax.inject.Inject;
+
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -18,6 +21,8 @@ import org.springframework.context.annotation.Bean;
 @ComponentScan("ca.bc.gov.tno.jorel2")
 public class Jorel2Configuration extends Jorel2Root {
 	
+	@Inject
+	
 	/**
 	 * Loads all configuration information for use throughout the system.
 	 * 
@@ -26,6 +31,7 @@ public class Jorel2Configuration extends Jorel2Root {
 	public Jorel2Configuration(Environment env) {
 		
 		// Unused for now
+
 	}
 	
     @Bean

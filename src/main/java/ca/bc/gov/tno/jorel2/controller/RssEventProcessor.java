@@ -21,6 +21,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
+import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 
 /**
@@ -50,160 +51,52 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents() {
-    	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
+	public Optional<String> processEvents(Session session) {
     	
     	try {
-	    	if(sessionFactory.isEmpty()) {
-	    		IllegalStateException e = new IllegalStateException("No session factory provided.");
-	    		logger.error("Getting TNO session factory.", e);
-	    		throw e;
-	    	} else {
-		        Session session = sessionFactory.get().openSession();
-
-		        List<Object[]> results = EventsDao.getRssEvents(session);
-	    		
-		        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
-		        for (Object[] entityPair : results) {
-		        	if (entityPair[0] instanceof EventsDao) {
-		        		EventsDao currentEvent = (EventsDao) entityPair[0];
-			    		JAXBContext context = JAXBContext.newInstance(Rss.class);
-			    		Unmarshaller unmarshaller = context.createUnmarshaller();
-			    		rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
-			    		
-			    		insertItems(rssContent);
-		        	} else {
-			    		IllegalArgumentException e = new IllegalArgumentException("Wrong data type in query results.");
-			    		logger.error("Expecting EventsDao object at position [0].", e);
-			    		throw e;		        		
-		        	}
-		        	
-		        } 
-	    	}
+	        List<Object[]> results = EventsDao.getRssEvents(session);
+    		
+	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
+	        for (Object[] entityPair : results) {
+	        	if (entityPair[0] instanceof EventsDao) {
+	        		EventsDao currentEvent = (EventsDao) entityPair[0];
+		    		JAXBContext context = JAXBContext.newInstance(Rss.class);
+		    		Unmarshaller unmarshaller = context.createUnmarshaller();
+		    		rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
+		    		
+		    		insertNewsItems(rssContent, session);
+	        	} else {
+		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
+	        	}
+	        	
+	        } 
     	} 
     	catch (Exception e) {
-    		logger.error("Retrieving RSS feed", e);
+    		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
     	return Optional.of(rssContent.toString());
 	}
 	
-	private void insertItems(Rss rss) {
+	@SuppressWarnings("preview")
+	private void insertNewsItems(Rss rss, Session session) {
 		
 		List<Rss.Channel.Item> items = rss.getChannel().getItem();
+		NewsItemsDao newsItem;
+		RssSource rssSource = RssSource.valueOf(rss.getChannel().getTitle().toUpperCase());
+		
+		session.beginTransaction();
 		
 		for (Rss.Channel.Item item : items) {
-			NewsItemsDao rssItem = new NewsItemsDao(
-				//this.rsn = rsn;
-				new BigDecimal(10),
-				//this.itemDate = itemDate;
-				new Date(2020, 6, 10),
-				//this.source = source;
-				rss.getChannel().getTitle(),
-				//this.itemTime = itemTime
-				new Date(2020, 6, 10),
-				//this.summary = summary;
-				item.getDescription(),
-				//this.title = title;
-				item.getTitle(),
-				//this.type = type;
-				"News",
-				//this.frontpagestory = frontpagestory;
-				false,
-				//this.published = published;
-				false,
-				//this.archived = archived;
-				false,
-				//this.archivedTo = archivedTo;
-				"Archived to",
-				//this.recordCreated = recordCreated;
-				new Date(2020, 6, 10),
-				//this.recordModified = recordModified;
-				new Date(2020, 6, 10),
-				//this.string1 = string1;
-				"",
-				//this.string2 = string2;
-				"",
-				//this.string3 = string3;
-				"",
-				//this.string4 = string4;
-				"",
-				//this.string5 = string5;
-				"",
-				//this.string6 = string6;
-				"",
-				//this.string7 = string7;
-				"",
-				//this.string8 = string8;
-				"",
-				//this.string9 = string9;
-				"",
-				//this.number1 = number1;
-				new BigDecimal(10),
-				//this.number2 = number2;
-				new BigDecimal(10),
-				//this.date1 = date1;
-				new Date(2020, 6, 10),
-				//this.date2 = date2;
-				new Date(2020, 6, 10),
-				//this.filename = filename;
-				"Filename",
-				//this.fullfilepath = fullfilepath;
-				"Fullpath",
-				//this.webpath = webpath;
-				item.getLink(),
-				//this.thisjustin = thisjustin;
-				false,
-				//this.importedfrom = importedfrom;
-				rss.getChannel().getTitle(),
-				//this.expireRule = expireRule;
-				new BigDecimal(10),
-				//this.commentary = commentary;
-				false,
-				//this.text = text;
-				null,
-				//this.binary = binary;
-				null,
-				//this.contenttype = contenttype;
-				"application/rss+xml",
-				//this.binaryloaded = binaryloaded;
-				false,
-				//this.loadbinary = loadbinary;
-				false,
-				//this.externalbinary = externalbinary;
-				false,
-				//this.cbraNonqsm = cbraNonqsm;
-				false,
-				//this.postedby = postedby;
-				"Posted by",
-				//this.onticker = onticker;
-				false,
-				//this.waptopstory = waptopstory;
-				false,
-				//this.alert = alert;
-				false,
-				//this.autoTone = autoTone;
-				new BigDecimal(10),
-				//this.categoriesLocked = categoriesLocked;
-				false,
-				//this.coreAlert = coreAlert;
-				false,
-				//this.commentaryTimeout = commentaryTimeout;
-				1000D,
-				//this.commentaryExpireTime = commentaryExpireTime;
-				new BigDecimal(10),
-				//this.transcript = transcript;
-				null,
-				//this.eodCategory = eodCategory;
-				"eodCategory",
-				//this.eodCategoryGroup = eodCategoryGroup;
-				"eodCategoryGroup",
-				//this.eodDate = eodDate;
-				"eodDate"
-			);
+	    	newsItem = switch (rssSource) {
+				case IPOLITICS -> NewsItemFactory.createIpoliticsNewsItem(rss, item);
+				default -> new NewsItemsDao();
+	    	};
 					
+			session.persist(newsItem);
 			System.out.println(item.getTitle());
 		}
 		
+		session.getTransaction().commit();
 	}
 }

@@ -57,6 +57,7 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	 * Perform some initial setup tasks and then enter a loop that repeatedly gets events to process and calls their
 	 * respective handlers.
 	 */
+	@SuppressWarnings("preview")
 	public void run() {
     	   			
     	Optional<String> rssResult;
@@ -65,16 +66,17 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	    	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
 	        
 	    	if(sessionFactory.isEmpty()) {
-	    		IllegalStateException e = new IllegalStateException("No session factory provided.");
-	    		logger.error("Getting TNO session factory.", e);
-	    		throw e;
+	    		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
+	    		System.exit(-1);
 	    	} else {
 		        Session session = sessionFactory.get().openSession();
 		        String taskUpperCase;
 		        Map<String, EventType> eventMap = new HashMap<>();
 		    	
+		        // Retrieve 
 		    	session.beginTransaction();
 		        List<EventsDao> results = EventsDao.getEventsForProcessing(session);
+		        session.getTransaction().commit();
 		        
 		        // Create Map containing list of unique event-types for processing
 		        for(EventsDao event : results) {
@@ -85,26 +87,23 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 		              
 		        // Trigger processing of each event type in eventMap
 		        for (EventType eventEnum : eventMap.values()) {
-		        	switch (eventEnum) {
-		        		case NEWRSS: 
-				        	rssResult = rssEventProcessor.processEvents();
-				        	System.out.println("RSS Title: " + rssResult.get().toString());
-				        	break;
-				        default:
-				        	break;
-		        	}
+		        	rssResult = switch (eventEnum) {
+		        		case NEWRSS -> rssEventProcessor.processEvents(session);
+				        default -> Optional.empty();
+		        	};
 		        }
 		        
-		        session.getTransaction().commit();
 		        session.close();
 	    	}
+	    	
+	    	System.exit(-1);
 	        
-	        try {
+	        /* try {
 	        	Thread.sleep(10000);
 	        } 
 	        catch (InterruptedException e) {
 	        	e.printStackTrace();
-	        }
+	        } */
 	    }
     }
 }

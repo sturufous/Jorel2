@@ -110,55 +110,20 @@
 	   <artifactId>hibernate-core</artifactId>
 	   <version>5.4.10.Final</version>
 	</dependency>
-	<!-- https://mvnrepository.com/artifact/com.oracle.jdbc/ojdbc8 -->
 	<dependency>
 	  <groupId>com.oracle</groupId>
 	  <artifactId>ojdbc8</artifactId>
 	  <version>12.2.0.1</version>
 	</dependency>
-	<!-- https://mvnrepository.com/artifact/javax.inject/javax.inject -->
 	<dependency>
 	    <groupId>javax.inject</groupId>
 	    <artifactId>javax.inject</artifactId>
 	    <version>1</version>
 	</dependency>
-    <!-- API, java.xml.bind module
-    <dependency>
-        <groupId>jakarta.xml.bind</groupId>
-        <artifactId>jakarta.xml.bind-api</artifactId>
-        <version>2.3.2</version>
-    </dependency> -->
-    <!-- dependency>
-        <groupId>org.glassfish.jaxb</groupId>
-        <artifactId>jaxb-runtime</artifactId>
-        <version>2.3.2</version>
-    </dependency -->
-    <!-- https://mvnrepository.com/artifact/com.sun.xml.bind/jaxb-impl -->
-	<!-- dependency>
-	    <groupId>javax.xml.bind</groupId>
-	    <artifactId>jaxb-api</artifactId>
-	    <version>2.2.12</version>
-	</dependency -->
-	<!--  dependency>
-	    <groupId>com.sun.xml.bind</groupId>
-	    <artifactId>jaxb-impl</artifactId>
-	    <version>2.2.11</version>
-	</dependency -->
-    <!-- https://mvnrepository.com/artifact/com.sun.xml.bind/jaxb-xjc -->
     <dependency>
         <groupId>com.sun.xml.bind</groupId>
         <artifactId>jaxb-xjc</artifactId>
         <version>2.3.0</version>
     </dependency>
-    <!-- dependency>     
-		<groupId>com.sun.xml.bind</groupId>
-		<artifactId>jaxb-core</artifactId>
-		<version>2.3.0.1</version>
-	</dependency -->
-    <!-- dependency>
-        <groupId>javax.activation</groupId>
-        <artifactId>activation</artifactId>
-        <version>1.1.1</version>
-    </dependency -->
   </dependencies>
 </project>

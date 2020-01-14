@@ -48,9 +48,12 @@ final class DevDataSourceConfig extends DataSourceConfig {
 	        settings.put(Environment.SHOW_SQL, "true");
 	        
 	        config.setProperties(settings);
+	        
+	        // Register all Hibernate classes used in Jorel2
 	        config.addAnnotatedClass(PreferencesDao.class);
 	        config.addAnnotatedClass(EventsDao.class);
 	        config.addAnnotatedClass(EventTypesDao.class);
+	        config.addAnnotatedClass(NewsItemsDao.class);
 	        
 	        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 	        

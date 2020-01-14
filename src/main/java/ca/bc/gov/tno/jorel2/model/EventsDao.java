@@ -16,6 +16,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 import org.hibernate.Session;
@@ -35,6 +36,10 @@ import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 @Table(name = "EVENTS", schema = "TNO")
 public class EventsDao extends Jorel2Root implements java.io.Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String name;
 	private BigDecimal eventTypeRsn;
@@ -59,8 +64,8 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	private Boolean ccCapture;
 	private EventTypesDao eventType;
 	
+	@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
 	@JoinColumn(name = "EVENT_TYPE_RSN")
-	@ManyToOne(fetch = FetchType.LAZY)
 	public EventTypesDao getEventType() {
 		return this.eventType;
 	}
@@ -69,17 +74,17 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 		this.eventType = eventType;
 	}
 	
-	public void Events() {
+	public EventsDao() {
 	}
 
-	public void Events(BigDecimal rsn, String name, BigDecimal eventTypeRsn, String process) {
+	public EventsDao(BigDecimal rsn, String name, BigDecimal eventTypeRsn, String process) {
 		this.rsn = rsn;
 		this.name = name;
 		this.eventTypeRsn = eventTypeRsn;
 		this.process = process;
 	}
 
-	public void Events(BigDecimal rsn, String name, BigDecimal eventTypeRsn, String process, String channel, String source,
+	public EventsDao(BigDecimal rsn, String name, BigDecimal eventTypeRsn, String process, String channel, String source,
 			String fileName, String lastFtpRun, String startTime, String stopTime, String frequency,
 			BigDecimal keepTrying, String keepTryingStatus, BigDecimal attemptsLimit, BigDecimal attemptsMade,
 			Boolean triggerImport, String definitionName, String title, String launchTime, String captureCommand,
@@ -109,7 +114,6 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	}
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
 	@Column(name = "RSN", unique = true, nullable = false, precision = 38, scale = 0)
 	public BigDecimal getRsn() {
 		return this.rsn;
@@ -331,7 +335,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns all Jorel entries in the EVENTS table that have an EVENT_TYPE of RSS or NEWRSS (created for testing).
+	 * Returns all Jorel entries in the EVENTS table that have an EVENT_TYPE of RSS or NEWRSS (NEWRSS created for testing).
 	 * 
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.

@@ -2,6 +2,8 @@ package ca.bc.gov.tno.jorel2.controller;
 
 import java.util.Optional;
 
+import org.hibernate.Session;
+
 /**
  * Interface for Jorel2 even processor services.
  * 
@@ -11,5 +13,5 @@ import java.util.Optional;
 
 public interface Jorel2EventProcessor {
 
-	Optional<String> processEvents();
+	Optional<String> processEvents(Session session);
 }
