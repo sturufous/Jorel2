@@ -51,7 +51,7 @@ public class NewsItemFactory extends Jorel2Root {
 				rss.getChannel().getTitle(),            // String importedfrom
 				new BigDecimal(10),                     // BigDecimal expireRule
 				false,                                  // Boolean commentary
-				stringToClob("This is the content."),   // Clob text
+				stringToClob(item.getEncoded()),        // Clob text
 				null,                                   // Blob binary
 				"application/rss+xml",                  // String contenttype
 				false,                                  // Boolean binaryloaded

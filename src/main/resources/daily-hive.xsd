@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xsd:schema attributeFormDefault="unqualified" elementFormDefault="qualified" version="1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<xsd:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
   <xsd:element name="rss">
     <xsd:complexType>
       <xsd:sequence>
@@ -7,7 +7,7 @@
           <xsd:complexType>
             <xsd:sequence>
               <xsd:element name="title" type="xsd:string" />
-              <xsd:element name="atomlink">
+              <xsd:element name="atom:link">
                 <xsd:complexType>
                   <xsd:attribute name="href" type="xsd:string" />
                   <xsd:attribute name="rel" type="xsd:string" />
@@ -46,7 +46,7 @@
                       </xsd:complexType>
                     </xsd:element>
                     <xsd:element name="description" type="xsd:string" />
-                    <xsd:element name="contentencoded" type="xsd:string" />
+                    <xsd:element name="content:encoded" type="xsd:string" />
                   </xsd:sequence>
                 </xsd:complexType>
               </xsd:element>

@@ -18,8 +18,6 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSchemaType;
 import javax.xml.bind.annotation.XmlType;
-import javax.xml.datatype.XMLGregorianCalendar;
-
 
 /**
  * <p>Java class for anonymous complex type.
@@ -90,7 +88,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
  *                               &lt;/complexType&gt;
  *                             &lt;/element&gt;
  *                             &lt;element name="description" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
- *                             &lt;element name="contentencoded" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
+ *                             &lt;element name="encoded" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
  *                           &lt;/sequence&gt;
  *                         &lt;/restriction&gt;
  *                       &lt;/complexContent&gt;
@@ -235,7 +233,7 @@ public class Rss {
      *                     &lt;/complexType&gt;
      *                   &lt;/element&gt;
      *                   &lt;element name="description" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
-     *                   &lt;element name="contentencoded" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
+     *                   &lt;element name="encoded" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
      *                 &lt;/sequence&gt;
      *               &lt;/restriction&gt;
      *             &lt;/complexContent&gt;
@@ -273,7 +271,7 @@ public class Rss {
         protected String description;
         @XmlElement(required = true)
         @XmlSchemaType(name = "dateTime")
-        protected XMLGregorianCalendar lastBuildDate;
+        protected String lastBuildDate;
         @XmlElement(required = true)
         protected String language;
         @XmlElement(required = true)
@@ -384,10 +382,10 @@ public class Rss {
          * 
          * @return
          *     possible object is
-         *     {@link XMLGregorianCalendar }
+         *     {@link String }
          *     
          */
-        public XMLGregorianCalendar getLastBuildDate() {
+        public String getLastBuildDate() {
             return lastBuildDate;
         }
 
@@ -396,10 +394,10 @@ public class Rss {
          * 
          * @param value
          *     allowed object is
-         *     {@link XMLGregorianCalendar }
+         *     {@link String }
          *     
          */
-        public void setLastBuildDate(XMLGregorianCalendar value) {
+        public void setLastBuildDate(String value) {
             this.lastBuildDate = value;
         }
 
@@ -813,7 +811,7 @@ public class Rss {
          *           &lt;/complexType&gt;
          *         &lt;/element&gt;
          *         &lt;element name="description" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
-         *         &lt;element name="contentencoded" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
+         *         &lt;element name="encoded" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
          *       &lt;/sequence&gt;
          *     &lt;/restriction&gt;
          *   &lt;/complexContent&gt;
@@ -832,7 +830,7 @@ public class Rss {
             "category",
             "guid",
             "description",
-            "contentencoded"
+            "encoded"
         })
         public static class Item {
 
@@ -846,15 +844,15 @@ public class Rss {
             protected String comments;
             @XmlElement(required = true)
             @XmlSchemaType(name = "dateTime")
-            protected XMLGregorianCalendar pubDate;
+            protected String pubDate;
             @XmlElement(required = true)
             protected List<String> category;
             @XmlElement(required = true)
             protected Rss.Channel.Item.Guid guid;
             @XmlElement(required = true)
             protected String description;
-            @XmlElement(required = true)
-            protected String contentencoded;
+            @XmlElement(required = true, namespace = "http://purl.org/rss/1.0/modules/content/")
+            protected String encoded;
 
             /**
              * Gets the value of the title property.
@@ -957,10 +955,10 @@ public class Rss {
              * 
              * @return
              *     possible object is
-             *     {@link XMLGregorianCalendar }
+             *     {@link String}
              *     
              */
-            public XMLGregorianCalendar getPubDate() {
+            public String getPubDate() {
                 return pubDate;
             }
 
@@ -969,10 +967,10 @@ public class Rss {
              * 
              * @param value
              *     allowed object is
-             *     {@link XMLGregorianCalendar }
+             *     {@link String }
              *     
              */
-            public void setPubDate(XMLGregorianCalendar value) {
+            public void setPubDate(String value) {
                 this.pubDate = value;
             }
 
@@ -1054,15 +1052,15 @@ public class Rss {
             }
 
             /**
-             * Gets the value of the contentencoded property.
+             * Gets the value of the encoded property.
              * 
              * @return
              *     possible object is
              *     {@link String }
              *     
              */
-            public String getContentencoded() {
-                return contentencoded;
+            public String getEncoded() {
+                return encoded;
             }
 
             /**
@@ -1074,7 +1072,7 @@ public class Rss {
              *     
              */
             public void setContentencoded(String value) {
-                this.contentencoded = value;
+                this.encoded = value;
             }
 
 

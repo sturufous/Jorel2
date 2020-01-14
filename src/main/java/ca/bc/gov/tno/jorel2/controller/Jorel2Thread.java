@@ -78,6 +78,7 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 		        List<EventsDao> results = EventsDao.getEventsForProcessing(session);
 		        session.getTransaction().commit();
 		        
+		        
 		        // Create Map containing list of unique event-types for processing
 		        for(EventsDao event : results) {
 		        	EventTypesDao thisEvent = event.getEventType();
