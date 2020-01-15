@@ -349,5 +349,10 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
         
         return results;
 	}
+	
+	public static int getRecordCountBySource(String source) {
+		
+		return 1;
+	}
 
 }

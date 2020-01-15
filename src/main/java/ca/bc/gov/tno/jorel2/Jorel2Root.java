@@ -35,4 +35,8 @@ public class Jorel2Root {
 		
 		IPOLITICS, DAILYHIVE;
 	}
+	
+	protected static void skip() {
+		
+	}
 }

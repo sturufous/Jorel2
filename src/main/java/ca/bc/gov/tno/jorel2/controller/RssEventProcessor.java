@@ -5,8 +5,13 @@ import java.net.URL;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.xml.bind.JAXBContext;
@@ -19,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
+import ca.bc.gov.tno.jorel2.jaxb.Rss.Channel;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
@@ -55,6 +61,7 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
     	
     	try {
 	        List<Object[]> results = EventsDao.getRssEvents(session);
+	        List<Rss.Channel.Item> newRssItems;
     		
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
 	        for (Object[] entityPair : results) {
@@ -64,7 +71,9 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		    		Unmarshaller unmarshaller = context.createUnmarshaller();
 		    		rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
 		    		
-		    		insertNewsItems(rssContent, session);
+		    		newRssItems = getNewRssItems(currentEvent.getSource(), session, rssContent);
+		    		
+		    		insertNewsItems(newRssItems, session, rssContent);
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
@@ -78,25 +87,70 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
     	return Optional.of(rssContent.toString());
 	}
 	
-	@SuppressWarnings("preview")
-	private void insertNewsItems(Rss rss, Session session) {
+	/**
+	 * Filters out Rss.Channel.Items objects that correspond with existing entries in the
+	 * NEWS_ITEMS table. This prevents the creation of duplicate records.
+	 * 
+	 * @param source The name of the publisher of this rss feed (e.g. iPolitics, Daily Hive)
+	 * @param session The active Hibernate persistence context
+	 * @param rss The feed retrieved from the publisher
+	 * @return News items that are not currently in the NEWS_ITEMS table
+	 */
+	private List<Rss.Channel.Item> getNewRssItems(String source, Session session, Rss rss) {
 		
-		List<Rss.Channel.Item> items = rss.getChannel().getItem();
-		NewsItemsDao newsItem;
-		RssSource rssSource = RssSource.valueOf(rss.getChannel().getTitle().toUpperCase());
+		List<Rss.Channel.Item> newRssItems = new ArrayList<>();
+		List<NewsItemsDao> existingItems = NewsItemsDao.getItemsAddedSinceYesterday(source, session);
+		Set<String> existingNewsItems = new HashSet<>();
 		
-		session.beginTransaction();
-		
-		for (Rss.Channel.Item item : items) {
-	    	newsItem = switch (rssSource) {
-				case IPOLITICS -> NewsItemFactory.createIpoliticsNewsItem(rss, item);
-				default -> new NewsItemsDao();
-	    	};
-					
-			session.persist(newsItem);
-			System.out.println(item.getTitle());
+		// Create a list of articles that are already in the NEWS_ITEMS table
+		for (NewsItemsDao newsItem : existingItems) {
+			existingNewsItems.add(newsItem.getWebpath());
 		}
 		
-		session.getTransaction().commit();
+		// Create a list of items in the current feed that are not yet in the NEWS_ITEMS table
+		for (Rss.Channel.Item rssItem : rss.getChannel().getItem()) {
+			if (existingNewsItems.contains(rssItem.getLink())) {
+				skip();
+			} else {
+				newRssItems.add(rssItem);
+			}
+		}
+		
+		return newRssItems;
+	}
+	
+	/**
+	 * Create a record in the NEWS_ITEMS table that corresponds with each rss news item in
+	 * the newsItems ArrayList.
+	 * 
+	 * @param newsItems The list of news items retrieved from the publisher
+	 * @param session The current Hibernate persistence context
+	 * @param rss The entire rss feed retrieved from the publisher
+	 */
+	@SuppressWarnings("preview")
+	private void insertNewsItems(List<Rss.Channel.Item> newsItems, Session session, Rss rss) {
+		
+		NewsItemsDao newsItem = null;
+		RssSource source = RssSource.valueOf(rss.getChannel().getTitle().toUpperCase());
+		
+		if (newsItems.isEmpty()) {
+			skip();
+		} else {
+			session.beginTransaction();
+			
+			for (Rss.Channel.Item item : newsItems) {
+		    	newsItem = switch (source) {
+					case IPOLITICS -> NewsItemFactory.createIpoliticsNewsItem(rss, item);
+					default -> null;
+		    	};
+						
+		    	if (newsItem != null) {
+		    		session.persist(newsItem);
+		    		System.out.println(item.getTitle());
+		    	}
+			}
+			
+			session.getTransaction().commit();
+		}
 	}
 }
