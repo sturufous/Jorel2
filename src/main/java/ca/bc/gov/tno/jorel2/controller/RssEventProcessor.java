@@ -1,30 +1,18 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.math.BigDecimal;
 import java.net.URL;
-import java.sql.Date;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-
 import javax.inject.Inject;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
-
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.query.Query;
 import org.springframework.stereotype.Service;
-
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
-import ca.bc.gov.tno.jorel2.jaxb.Rss.Channel;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
@@ -131,16 +119,16 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 	private void insertNewsItems(List<Rss.Channel.Item> newsItems, Session session, Rss rss) {
 		
 		NewsItemsDao newsItem = null;
-		RssSource source = RssSource.valueOf(rss.getChannel().getTitle().toUpperCase());
+		String enumKey = rss.getChannel().getTitle().toUpperCase().replaceAll("\\s+","");
+		RssSource source = RssSource.valueOf(enumKey);
 		
-		if (newsItems.isEmpty()) {
-			skip();
-		} else {
+		if (!newsItems.isEmpty()) {
 			session.beginTransaction();
 			
 			for (Rss.Channel.Item item : newsItems) {
 		    	newsItem = switch (source) {
 					case IPOLITICS -> NewsItemFactory.createIpoliticsNewsItem(rss, item);
+					case DAILYHIVE -> NewsItemFactory.createDailyHiveNewsItem(rss, item);
 					default -> null;
 		    	};
 						

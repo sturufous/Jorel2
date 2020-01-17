@@ -73,7 +73,7 @@ import javax.xml.bind.annotation.XmlType;
  *                         &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType"&gt;
  *                           &lt;sequence&gt;
  *                             &lt;element name="title" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
- *                             &lt;element name="dccreator" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
+ *                             &lt;element name="creator" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
  *                             &lt;element name="link" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
  *                             &lt;element name="comments" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
  *                             &lt;element name="pubDate" type="{http://www.w3.org/2001/XMLSchema}dateTime"/&gt;
@@ -218,7 +218,7 @@ public class Rss {
      *               &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType"&gt;
      *                 &lt;sequence&gt;
      *                   &lt;element name="title" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
-     *                   &lt;element name="dccreator" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
+     *                   &lt;element name="creator" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
      *                   &lt;element name="link" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
      *                   &lt;element name="comments" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
      *                   &lt;element name="pubDate" type="{http://www.w3.org/2001/XMLSchema}dateTime"/&gt;
@@ -796,7 +796,7 @@ public class Rss {
          *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType"&gt;
          *       &lt;sequence&gt;
          *         &lt;element name="title" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
-         *         &lt;element name="dccreator" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
+         *         &lt;element name="creator" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
          *         &lt;element name="link" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
          *         &lt;element name="comments" type="{http://www.w3.org/2001/XMLSchema}string"/&gt;
          *         &lt;element name="pubDate" type="{http://www.w3.org/2001/XMLSchema}dateTime"/&gt;
@@ -823,7 +823,7 @@ public class Rss {
         @XmlAccessorType(XmlAccessType.FIELD)
         @XmlType(name = "", propOrder = {
             "title",
-            "dccreator",
+            "creator",
             "link",
             "comments",
             "pubDate",
@@ -836,8 +836,8 @@ public class Rss {
 
             @XmlElement(required = true)
             protected String title;
-            @XmlElement(required = true)
-            protected String dccreator;
+            @XmlElement(required = true, namespace = "http://purl.org/dc/elements/1.1/")
+            protected String creator;
             @XmlElement(required = true)
             protected String link;
             @XmlElement(required = true)
@@ -879,27 +879,27 @@ public class Rss {
             }
 
             /**
-             * Gets the value of the dccreator property.
+             * Gets the value of the creator property.
              * 
              * @return
              *     possible object is
              *     {@link String }
              *     
              */
-            public String getDccreator() {
-                return dccreator;
+            public String getCreator() {
+                return creator;
             }
 
             /**
-             * Sets the value of the dccreator property.
+             * Sets the value of the creator property.
              * 
              * @param value
              *     allowed object is
              *     {@link String }
              *     
              */
-            public void setDccreator(String value) {
-                this.dccreator = value;
+            public void setCreator(String value) {
+                this.creator = value;
             }
 
             /**
@@ -1071,7 +1071,7 @@ public class Rss {
              *     {@link String }
              *     
              */
-            public void setContentencoded(String value) {
+            public void setEncoded(String value) {
                 this.encoded = value;
             }
 
