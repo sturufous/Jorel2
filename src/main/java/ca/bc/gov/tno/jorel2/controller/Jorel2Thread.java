@@ -43,6 +43,10 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	@Inject
     private RssEventProcessor rssEventProcessor;
 	
+	/** RSS Event processor service */
+	@Inject
+    private SyndicationEventProcessor syndicationEventProcessor;
+	
 	/** 
 	 * Contains a list of Jorel tasks for processing. E.g. if a single occurrence, or multiple occurrences, of RSS 
 	 * is present, RSS processing is triggered. This is true for other event types like monitor, schedule and capture.
@@ -87,6 +91,7 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 		        for (EventType eventEnum : eventMap.values()) {
 		        	rssResult = switch (eventEnum) {
 		        		case NEWRSS -> rssEventProcessor.processEvents(session);
+		        		case SYNDICATION -> syndicationEventProcessor.processEvents(session);
 				        default -> Optional.empty();
 		        	};
 		        }

@@ -13,6 +13,10 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import javax.sql.rowset.serial.SerialException;
+
+import com.vdurmont.emoji.EmojiManager;
+import com.vdurmont.emoji.EmojiParser;
+
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
@@ -104,9 +108,16 @@ public class NewsItemFactory extends Jorel2Root {
 		String content = Jorel2StringUtil.removeHTML(item.getDescription());
 		String title = Jorel2StringUtil.removeHTML(item.getTitle());
 		String summary = Jorel2StringUtil.removeHTML(item.getTitle());
-		String source = rss.getChannel().getTitle();
+		String source = rss.getChannel().getTitle().replaceAll("\\s+","");
 		LocalDate itemLocalDate = LocalDate.now();
 		Date itemDate = Date.from(itemLocalDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+		
+		Boolean containsEmoji = EmojiManager.containsEmoji(content);
+		
+		// Transform unicode emojis into their HTML encoded representations
+		if (containsEmoji) {
+			content = EmojiParser.parseToHtmlDecimal(content);
+		}
 
 		NewsItemsDao newsItem = new NewsItemsDao(
 				null,                   // BigDecimal rsn
@@ -114,7 +125,7 @@ public class NewsItemFactory extends Jorel2Root {
 				source,                 // String source
 				new Date(),             // Date itemTime. TODO not sure how to save the actual time value in the db
 				summary,                // String summary
-				item.getTitle(),        // String title
+				title,                  // String title
 				"Internet",             // String type
 				true,                   // Boolean frontpagestory
 				false,                  // Boolean published
