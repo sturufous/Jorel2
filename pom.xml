@@ -64,6 +64,10 @@
       <id>my-local-repo</id>
       <url>file://${basedir}/lib</url>
     </repository>
+    <repository>
+      <id>boundlessgeo</id>
+      <url>https://repo.boundlessgeo.com/main/</url>
+    </repository>
   </repositories>
   <dependencies>
     <dependency>
@@ -125,5 +129,24 @@
         <artifactId>jaxb-xjc</artifactId>
         <version>2.3.0</version>
     </dependency>
+    <dependency>
+	  <groupId>com.vdurmont</groupId>
+	  <artifactId>emoji-java</artifactId>
+	  <version>5.1.1</version>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/com.sun.syndication/rome -->
+	<dependency>
+	    <groupId>com.sun.syndication</groupId>
+	    <artifactId>rome</artifactId>
+	    <version>0.9</version>
+	</dependency>
+  	<dependency>
+	  <groupId>org.jdom</groupId>
+	  <artifactId>jdom</artifactId>
+	  <version>1.0.1</version>
+	  <scope>system</scope>
+	  <systemPath>${basedir}/lib/jdom.zip</systemPath>
+      <classifier>jar-with-dependencies</classifier>
+  	</dependency>
   </dependencies>
 </project>
