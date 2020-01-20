@@ -31,9 +31,9 @@ public class Jorel2Root {
 		PAGEWATCHER, RSS, NEWRSS, CLEANLOCALBINARYROOT, CAPTURE, SHELLCOMMAND, AUTORUN, BUZZSUMMARY, SYNDICATION
 	}
 	
-	protected enum RssSource {
+	public enum RssSource {
 		
-		IPOLITICS, DAILYHIVE;
+		IPOLITICS, DAILYHIVE, CBC, CPNEWS;
 	}
 	
 	protected static void skip() {

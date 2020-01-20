@@ -164,6 +164,36 @@ public class Jorel2StringUtil {
 		return in;
 	}
 	
+	public static String GetTitle(String articlePage) {
+		String articlePageUpper = articlePage.toUpperCase();
+		String titleStr = "";
+		titleStr = articlePage.substring(articlePageUpper.indexOf("<TITLE>") + 7,
+				articlePageUpper.indexOf("</TITLE>"));
+	
+		return titleStr;
+	}
+	
+	public static String GetArticle(String articlePage) {
+		String articlePageUpper = articlePage.toUpperCase();
+		String articleStr = "";
+		int p=articlePageUpper.indexOf("<ARTICLE>");
+		if(p>0)
+		{
+			articleStr = articlePage.substring(articlePageUpper.indexOf("<ARTICLE>") + 9, articlePageUpper.indexOf("</ARTICLE>"));
+		}
+		else
+		{
+			p=articlePageUpper.indexOf("<CONTENT:ENCODED>");
+			if(p>0)
+			{
+				articleStr = articlePage.substring(articlePageUpper.indexOf("<CONTENT:ENCODED>") + 17, articlePageUpper.indexOf("</CONTENT:ENCODED>"));
+			}
+		}
+		articleStr = Jorel2StringUtil.removeHTML(articleStr);
+		return articleStr;
+	}
+
+	
 	/* public long getAutoToneVal(String content){
 
 	     double dblVal = 0;

@@ -343,6 +343,22 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
         return results;
 	}
 	
+	/**
+	 * Returns all Jorel entries in the EVENTS table that have an EVENT_TYPE of RSS or Syndication.
+	 * 
+	 * @param session - The currently active Hibernate DB session
+	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
+	 */
+	public static List<Object[]> getSyndicationEvents(Session session) {
+
+		Query<Object[]> query = session.createQuery("from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype");
+		query.setParameter("process", "jorel");
+		query.setParameter("eventtype", "Syndication");
+        List<Object[]> results = query.getResultList();
+        
+        return results;
+	}
+	
 	public static int getRecordCountBySource(String source) {
 		
 		return 1;

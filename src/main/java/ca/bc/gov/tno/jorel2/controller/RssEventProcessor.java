@@ -120,6 +120,9 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		
 		NewsItemsDao newsItem = null;
 		String enumKey = rss.getChannel().getTitle().toUpperCase().replaceAll("\\s+","");
+		if (enumKey.startsWith("CBC")) {
+			enumKey = "CBC";
+		}
 		RssSource source = RssSource.valueOf(enumKey);
 		
 		if (!newsItems.isEmpty()) {
@@ -129,6 +132,7 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		    	newsItem = switch (source) {
 					case IPOLITICS -> NewsItemFactory.createIpoliticsNewsItem(rss, item);
 					case DAILYHIVE -> NewsItemFactory.createDailyHiveNewsItem(rss, item);
+					case CBC -> NewsItemFactory.createDailyHiveNewsItem(rss, item);
 					default -> null;
 		    	};
 						

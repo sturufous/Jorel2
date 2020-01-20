@@ -10,6 +10,8 @@ package ca.bc.gov.tno.jorel2.jaxb;
 
 import javax.xml.bind.annotation.XmlRegistry;
 
+import ca.bc.gov.tno.jorel2.jaxb.Rss.Channel.Atomlink;
+
 
 /**
  * This object contains factory methods for each 
@@ -64,8 +66,8 @@ public class ObjectFactory {
      * Create an instance of {@link Rss.Channel.Atomlink }
      * 
      */
-    public Rss.Channel.Atomlink createRssChannelAtomlink() {
-        return new Rss.Channel.Atomlink();
+    public Atomlink createRssChannelAtomlink() {
+        return new Atomlink();
     }
 
     /**
