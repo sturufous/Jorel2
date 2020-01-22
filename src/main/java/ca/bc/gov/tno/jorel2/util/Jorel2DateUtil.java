@@ -1,7 +1,13 @@
 package ca.bc.gov.tno.jorel2.util;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
@@ -11,6 +17,38 @@ public class Jorel2DateUtil extends Jorel2Root {
 
 	public void DateUtil() {
 	}
+	
+	public static Date getPubTimeAsDate(String pubDate) {
+	
+		String zone = pubDate.substring(26, pubDate.length());
+		String zoneSymbol;
+		
+		if (zone.length() > 3) { // offset format (e.g. +0000 [iPolitics])
+			zoneSymbol = "Z";
+		} else {
+			zoneSymbol = "z"; // Zone name (e.g. GMT [DailyHive])
+		}
+		
+		String formatPattern = "E, dd LLL yyyy HH:mm:ss " + zoneSymbol;
+		
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(formatPattern);
+		ZoneOffset offset = ZoneOffset.ofHours(-8) ;
+		LocalDateTime dateTime = LocalDateTime.parse(pubDate, formatter);
+		Date itemTime = Date.from(dateTime.toInstant(offset));
+
+		return itemTime;
+	}
+	
+	public static Date getDateAtMidnight() {
+		
+		LocalDate itemLocalDate = LocalDate.now();
+		Date itemDate = Date.from(itemLocalDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+		
+		return itemDate;
+	}
+
+	
+	// *************************** Legacy methods to support CP News **********************************//
 	
 	public static java.util.Date convertESTtoPST(java.util.Date date) {
 

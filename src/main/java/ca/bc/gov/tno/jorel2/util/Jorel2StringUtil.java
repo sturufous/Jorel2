@@ -1,9 +1,28 @@
 package ca.bc.gov.tno.jorel2.util;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.vdurmont.emoji.EmojiManager;
+import com.vdurmont.emoji.EmojiParser;
+
+import ca.bc.gov.tno.jorel2.jaxb.Rss;
 
 public class Jorel2StringUtil {
+	
+	public static Rss.Channel.Item cleanUpItem(Rss.Channel.Item item) {
+		
+		String content = "";
+		
+		// Daily Hive stores item text in <description>, iPolitics stores it in <encoded>. Reconcile them.
+		if (item.getEncoded() == null) {
+			content = item.getDescription();
+		} else {
+			content = removeHTML(item.getEncoded());
+		}
+		
+		content = Jorel2StringUtil.SubstituteEmojis(content);	
+		item.setEncoded(content);
+		
+		return item;
+	}
 	
 	public static String removeHTML(String in) {
 		int p, p2;
@@ -193,7 +212,18 @@ public class Jorel2StringUtil {
 		return articleStr;
 	}
 
+	public static String SubstituteEmojis(String content) {
+		
+		Boolean containsEmoji = EmojiManager.containsEmoji(content);
+		
+		// Transform unicode emojis into their HTML encoded representations
+		if (containsEmoji) {
+			content = EmojiParser.parseToHtmlDecimal(content);
+		}
 	
+		return content;
+	}
+
 	/* public long getAutoToneVal(String content){
 
 	     double dblVal = 0;

@@ -24,7 +24,7 @@ public class Jorel2Root {
 	
     protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
     
-	protected enum EventType {
+	public enum EventType {
 		
 		DURATION, CHANNELWATCHER, INFLUENCERSCORE, TRENDINGSCRAPER, SMAMONITOR, SMAPOLLING, FTP, SCHEDULE, ARCHIVER, USER, 
 		HTML, TRIGGER, PLSQL, MONITOR, LAUNCH, SYNC, CLEANUP, EXPIRE, LOADBINARY, CLEANBINARYROOT, ALERT, CONVERTER, EXPIRE3GP,

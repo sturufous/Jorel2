@@ -1,48 +1,29 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TimeZone;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Unmarshaller;
-
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
-
-import com.sun.syndication.feed.synd.SyndContent;
 import com.sun.syndication.feed.synd.SyndEntry;
 import com.sun.syndication.feed.synd.SyndFeed;
 import com.sun.syndication.io.SyndFeedInput;
 import com.sun.syndication.io.XmlReader;
-
 import ca.bc.gov.tno.jorel2.Jorel2Root;
-import ca.bc.gov.tno.jorel2.Jorel2Root.RssSource;
-import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
-import ca.bc.gov.tno.jorel2.util.Jorel2DateUtil;
-//import jorel.dbRSS.rssItem;
-import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
 
 @Service
 public class SyndicationEventProcessor extends Jorel2Root implements Jorel2EventProcessor {
 
 	/**
-	 * Manages the retrieval and processing of the CP feed using the 
+	 * Manages the retrieval and processing of the CP feed using the 'Page full of links' format.
 	 * 
 	 * @author Stuart Morse
 	 * @version 0.0.1
@@ -58,7 +39,6 @@ public class SyndicationEventProcessor extends Jorel2Root implements Jorel2Event
 	 */
 	public Optional<String> processEvents(Session session) {
 	
-		int i = 0;
 		SyndFeed feed = null;
 		
     	try {
@@ -70,6 +50,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements Jorel2Event
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	    			URLConnection feedUrlConnection = new URL(currentEvent.getTitle()).openConnection();
+	    			
 	    			feedUrlConnection.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
 	    			SyndFeedInput input = new SyndFeedInput();
 	    			XmlReader xmlReader = new XmlReader(feedUrlConnection);
@@ -77,11 +58,10 @@ public class SyndicationEventProcessor extends Jorel2Root implements Jorel2Event
 
 		    		newSyndItems = getNewRssItems(currentEvent.getSource(), session, feed);
 		    		
-		    		insertNewsItems(newSyndItems, session);
+		    		insertNewsItems(currentEvent.getSource(), session, newSyndItems);
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
-	        	
 	        } 
     	} 
     	catch (Exception e) {
@@ -100,20 +80,19 @@ public class SyndicationEventProcessor extends Jorel2Root implements Jorel2Event
 	 * @param rss The entire rss feed retrieved from the publisher
 	 */
 	@SuppressWarnings("preview")
-	private void insertNewsItems(List<SyndEntry> newsItems, Session session) {
+	private void insertNewsItems(String source, Session session, List<SyndEntry> newsItems) {
 		
 		NewsItemsDao newsItem = null;
-		//String enumKey = rss.getChannel().getTitle().toUpperCase().replaceAll("\\s+","");
-		String enumKey = "CPNEWS";
+		String enumKey = source.toUpperCase().replaceAll("\\s+","");
 
-		RssSource source = RssSource.valueOf(enumKey);
+		RssSource sourceEnum = RssSource.valueOf(enumKey);
 		
 		if (!newsItems.isEmpty()) {
 			session.beginTransaction();
 			
 			for (SyndEntry item : newsItems) {
-		    	newsItem = switch (source) {
-					case CPNEWS -> NewsItemFactory.createCPNewsItem(item);
+		    	newsItem = switch (sourceEnum) {
+					case CPNEWS -> NewsItemFactory.createCPNewsItem(item, source);
 					default -> null;
 		    	};
 						

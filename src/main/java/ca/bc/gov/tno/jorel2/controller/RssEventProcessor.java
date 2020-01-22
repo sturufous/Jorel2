@@ -17,6 +17,7 @@ import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
+import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
 
 /**
  * Manages the retrieval and processing of various RSS feeds using JAXB objects in the
@@ -61,7 +62,7 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		    		
 		    		newRssItems = getNewRssItems(currentEvent.getSource(), session, rssContent);
 		    		
-		    		insertNewsItems(newRssItems, session, rssContent);
+		    		insertNewsItems(currentEvent.getSource(), newRssItems, session, rssContent);
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
@@ -76,8 +77,10 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 	}
 	
 	/**
-	 * Filters out Rss.Channel.Items objects that correspond with existing entries in the
-	 * NEWS_ITEMS table. This prevents the creation of duplicate records.
+	 * Filters out Rss.Channel.Items objects that correspond with existing entries in the NEWS_ITEMS table. This prevents the creation of duplicate records. 
+	 * While the RSS XML DTD is a fixed standard, different publications may choose to interpret fields within the standard differently. For example, the 
+	 * Daily Hive feed stores the article body text in the <code>description</code> field, while iPolitics stores it in the <code>content:encoded</code> field. 
+	 * Before a new item is added to the newRssItems List it is processed by Jorel2StringUtil.cleanUpItem() to address these disparities.
 	 * 
 	 * @param source The name of the publisher of this rss feed (e.g. iPolitics, Daily Hive)
 	 * @param session The active Hibernate persistence context
@@ -116,23 +119,21 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 	 * @param rss The entire rss feed retrieved from the publisher
 	 */
 	@SuppressWarnings("preview")
-	private void insertNewsItems(List<Rss.Channel.Item> newsItems, Session session, Rss rss) {
+	private void insertNewsItems(String source, List<Rss.Channel.Item> newsItems, Session session, Rss rss) {
 		
 		NewsItemsDao newsItem = null;
-		String enumKey = rss.getChannel().getTitle().toUpperCase().replaceAll("\\s+","");
-		if (enumKey.startsWith("CBC")) {
-			enumKey = "CBC";
-		}
-		RssSource source = RssSource.valueOf(enumKey);
+		String enumKey = source.toUpperCase().replaceAll("\\s+","");
+		RssSource sourceEnum = RssSource.valueOf(enumKey);
 		
 		if (!newsItems.isEmpty()) {
 			session.beginTransaction();
 			
+			// While most feeds are handled in a generic manner, allow for custom handling with a createXXXXNewsItem() method if needed.
 			for (Rss.Channel.Item item : newsItems) {
-		    	newsItem = switch (source) {
-					case IPOLITICS -> NewsItemFactory.createIpoliticsNewsItem(rss, item);
-					case DAILYHIVE -> NewsItemFactory.createDailyHiveNewsItem(rss, item);
-					case CBC -> NewsItemFactory.createDailyHiveNewsItem(rss, item);
+		    	newsItem = switch (sourceEnum) {
+					case IPOLITICS -> NewsItemFactory.createGenericNewsItem(rss, item, source);
+					case DAILYHIVE -> NewsItemFactory.createGenericNewsItem(rss, item, source);
+					//case CBC -> NewsItemFactory.createGenericNewsItem(rss, item, source);
 					default -> null;
 		    	};
 						
