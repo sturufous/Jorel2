@@ -61,7 +61,6 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		    		rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
 		    		
 		    		newRssItems = getNewRssItems(currentEvent.getSource(), session, rssContent);
-		    		
 		    		insertNewsItems(currentEvent.getSource(), newRssItems, session, rssContent);
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
@@ -78,9 +77,6 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 	
 	/**
 	 * Filters out Rss.Channel.Items objects that correspond with existing entries in the NEWS_ITEMS table. This prevents the creation of duplicate records. 
-	 * While the RSS XML DTD is a fixed standard, different publications may choose to interpret fields within the standard differently. For example, the 
-	 * Daily Hive feed stores the article body text in the <code>description</code> field, while iPolitics stores it in the <code>content:encoded</code> field. 
-	 * Before a new item is added to the newRssItems List it is processed by Jorel2StringUtil.cleanUpItem() to address these disparities.
 	 * 
 	 * @param source The name of the publisher of this rss feed (e.g. iPolitics, Daily Hive)
 	 * @param session The active Hibernate persistence context
@@ -131,9 +127,9 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 			// While most feeds are handled in a generic manner, allow for custom handling with a createXXXXNewsItem() method if needed.
 			for (Rss.Channel.Item item : newsItems) {
 		    	newsItem = switch (sourceEnum) {
-					case IPOLITICS -> NewsItemFactory.createGenericNewsItem(rss, item, source);
-					case DAILYHIVE -> NewsItemFactory.createGenericNewsItem(rss, item, source);
-					//case CBC -> NewsItemFactory.createGenericNewsItem(rss, item, source);
+					case IPOLITICS -> NewsItemFactory.createXmlNewsItem(item, source);
+					case DAILYHIVE -> NewsItemFactory.createXmlNewsItem(item, source);
+					//case CBC -> NewsItemFactory.createGenericNewsItem(item, source);
 					default -> null;
 		    	};
 						

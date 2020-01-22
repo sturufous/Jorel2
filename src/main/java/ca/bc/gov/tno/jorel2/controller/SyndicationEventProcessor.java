@@ -72,8 +72,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements Jorel2Event
 	}
 	
 	/**
-	 * Create a record in the NEWS_ITEMS table that corresponds with each rss news item in
-	 * the newsItems ArrayList.
+	 * Create a record in the NEWS_ITEMS table that corresponds with each rss news item in the newsItems ArrayList.
 	 * 
 	 * @param newsItems The list of news items retrieved from the publisher
 	 * @param session The current Hibernate persistence context
@@ -107,8 +106,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements Jorel2Event
 	}
 	
 	/**
-	 * Filters out objects that correspond with existing entries in the
-	 * NEWS_ITEMS table. This prevents the creation of duplicate records.
+	 * Filters out objects that correspond with existing entries in the NEWS_ITEMS table. This prevents the creation of duplicate records.
 	 * 
 	 * @param source The name of the publisher of this rss feed (e.g. iPolitics, Daily Hive)
 	 * @param session The active Hibernate persistence context

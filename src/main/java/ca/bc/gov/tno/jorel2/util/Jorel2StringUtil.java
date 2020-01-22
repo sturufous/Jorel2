@@ -5,25 +5,22 @@ import com.vdurmont.emoji.EmojiParser;
 
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 
+/**
+ * Provides String processing functionality for use by Jorel2.
+ * 
+ * @author Stuart Morse
+ * @version 0.0.1
+ *
+ */
 public class Jorel2StringUtil {
 	
-	public static Rss.Channel.Item cleanUpItem(Rss.Channel.Item item) {
-		
-		String content = "";
-		
-		// Daily Hive stores item text in <description>, iPolitics stores it in <encoded>. Reconcile them.
-		if (item.getEncoded() == null) {
-			content = item.getDescription();
-		} else {
-			content = removeHTML(item.getEncoded());
-		}
-		
-		content = Jorel2StringUtil.SubstituteEmojis(content);	
-		item.setEncoded(content);
-		
-		return item;
-	}
-	
+	/**
+	 * This method substitutes various html tags and entities with values that display correctly in news item content in Otis.
+	 * removeHTML was inherited from Jorel1.
+	 * 
+	 * @param in The article text for processing.
+	 * @return The sanitized version of the article text.
+	 */
 	public static String removeHTML(String in) {
 		int p, p2;
 
@@ -170,6 +167,15 @@ public class Jorel2StringUtil {
 		return in;
 	}
 	
+	/**
+	 * Used by removeHTML() to substitute a unicode character or HTML entity with a value that will display properly in Otis.
+	 * replaceEntity() was inherited from Jorel1.
+	 * 
+	 * @param in The input string.
+	 * @param entity The entity to search for in the <code>in</code> parameter.
+	 * @param replace The string that is to be inserted in place of <code>entity</code>
+	 * @return The sanitized string.
+	 */
 	private static String replaceEntity(String in, String entity, String replace) {
 		int p, length;
 
@@ -183,16 +189,14 @@ public class Jorel2StringUtil {
 		return in;
 	}
 	
-	public static String GetTitle(String articlePage) {
-		String articlePageUpper = articlePage.toUpperCase();
-		String titleStr = "";
-		titleStr = articlePage.substring(articlePageUpper.indexOf("<TITLE>") + 7,
-				articlePageUpper.indexOf("</TITLE>"));
-	
-		return titleStr;
-	}
-	
-	public static String GetArticle(String articlePage) {
+	/**
+	 * Strips tags from CP News articles. getArticle() was inherited from Jorel1.
+	 * 
+	 * @param articlePage The article content.
+	 * @return The sanitized article content.
+	 */
+	public static String getArticle(String articlePage) {
+		
 		String articlePageUpper = articlePage.toUpperCase();
 		String articleStr = "";
 		int p=articlePageUpper.indexOf("<ARTICLE>");
@@ -212,6 +216,12 @@ public class Jorel2StringUtil {
 		return articleStr;
 	}
 
+	/**
+	 * Replaces Unicode emoji characters with their decimal representations which display correctly in Otis.
+	 * 
+	 * @param content The article content.
+	 * @return The content with Unicode characters substituted with their decimal representations.
+	 */
 	public static String SubstituteEmojis(String content) {
 		
 		Boolean containsEmoji = EmojiManager.containsEmoji(content);
@@ -223,55 +233,4 @@ public class Jorel2StringUtil {
 	
 		return content;
 	}
-
-	/* public long getAutoToneVal(String content){
-
-	     double dblVal = 0;
-	     long toneVal = 0; //neutral by default
-	     boolean atLeastOneHit = false;
-
-	     if ((phrases.length == 0) | (content == null)) return toneVal;
-	        try {
-
-	          //loop through each item in the phrase array accumilating the phVal total
-
-	          int counter = 0;
-	          Pattern pattern;
-	          Matcher matcher;
-	          content = content.toLowerCase();
-
-	          while (counter < phrases.length){
-
-	           pattern=Pattern.compile("\\b"+phrases[counter].toLowerCase()+"\\b");
-	           matcher=pattern.matcher(content);
-
-	           while (matcher.find()) {
-	                dblVal = dblVal + phraseVals[counter];
-	                atLeastOneHit = true;
-	                }
-	            counter++;
-
-	          }
-
-
-	        } catch (Exception err) {
-	          setLastError("dbAutoTone.getAutoToneVal(): Error "+err);
-	          return 0;
-	        }
-
-	        // round toneVal to an long number
-	        toneVal = Math.round(dblVal);
-
-	        // truncate to max range of -5 to +5
-	        if (toneVal > 5) toneVal = 5;
-	        if (toneVal < -5) toneVal = -5;
-
-	if(atLeastOneHit)
-	        {
-	          return toneVal;}
-	        else{
-	          // a return value of -99 means there were no hits so no hits
-	          return -99;}
-
-	 } */
 }
