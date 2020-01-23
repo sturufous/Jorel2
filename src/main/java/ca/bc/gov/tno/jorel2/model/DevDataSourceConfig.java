@@ -54,6 +54,7 @@ final class DevDataSourceConfig extends DataSourceConfig {
 	        config.addAnnotatedClass(EventsDao.class);
 	        config.addAnnotatedClass(EventTypesDao.class);
 	        config.addAnnotatedClass(NewsItemsDao.class);
+	        config.addAnnotatedClass(IssuesDao.class);
 	        
 	        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 	        

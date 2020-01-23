@@ -5,6 +5,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+
+import javax.inject.Inject;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -15,6 +17,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
+
+import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 
@@ -328,32 +332,19 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns all Jorel entries in the EVENTS table that have an EVENT_TYPE of RSS or NEWRSS (NEWRSS created for testing).
+	 * Returns all Jorel entries in the EVENTS table that have an EVENT_TYPE of NEWRSS (NEWRSS created for testing).
 	 * 
+	 * @param process Name of the currently executing process, e.g. "jorel", "jorelMini3"
+	 * @param eventType Type of event, e.g. "Monitor", "RSS"
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
 	 */
-	public static List<Object[]> getRssEvents(Session session) {
+	public static List<Object[]> getEventsByEventType(Jorel2Process process, String eventType, Session session) {
 
-		Query<Object[]> query = session.createQuery("from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype");
-		query.setParameter("process", "jorel");
-		query.setParameter("eventtype", "NEWRSS");
-        List<Object[]> results = query.getResultList();
-        
-        return results;
-	}
-	
-	/**
-	 * Returns all Jorel entries in the EVENTS table that have an EVENT_TYPE of RSS or Syndication.
-	 * 
-	 * @param session - The currently active Hibernate DB session
-	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
-	 */
-	public static List<Object[]> getSyndicationEvents(Session session) {
-
-		Query<Object[]> query = session.createQuery("from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype");
-		query.setParameter("process", "jorel");
-		query.setParameter("eventtype", "Syndication");
+		@SuppressWarnings("unchecked")
+		Query<Object[]> query = session.createNamedQuery("Events_FindEventsByEventType");
+		query.setParameter("process", process.getProcessName());
+		query.setParameter("eventtype", eventType);
         List<Object[]> results = query.getResultList();
         
         return results;

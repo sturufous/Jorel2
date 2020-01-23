@@ -4,6 +4,8 @@ import java.util.Optional;
 
 import org.hibernate.Session;
 
+import ca.bc.gov.tno.jorel2.Jorel2Process;
+
 /**
  * Interface for Jorel2 even processor services.
  * 
@@ -13,5 +15,5 @@ import org.hibernate.Session;
 
 public interface Jorel2EventProcessor {
 
-	Optional<String> processEvents(Session session);
+	Optional<String> processEvents(String eventType, Session session);
 }

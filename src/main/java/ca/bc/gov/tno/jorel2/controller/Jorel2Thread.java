@@ -2,8 +2,11 @@ package ca.bc.gov.tno.jorel2.controller;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
@@ -13,6 +16,8 @@ import org.hibernate.SessionFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+
+import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
@@ -46,6 +51,10 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	@Inject
     private SyndicationEventProcessor syndicationEventProcessor;
 	
+	/** Process we're running as (e.g. "jorel", "jorelMini3") */
+	@Inject
+	private Jorel2Process process;
+	
 	/** 
 	 * Contains a list of Jorel tasks for processing. E.g. if a single occurrence, or multiple occurrences, of RSS 
 	 * is present, RSS processing is triggered. This is also true for other event types like monitor, schedule and capture.
@@ -71,7 +80,7 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 	    	} else {
 		        Session session = sessionFactory.get().openSession();
 		        String taskUpperCase;
-		        Set<EventType> eventSet = new HashSet<>();
+		        Map<EventType, String> eventMap = new HashMap<>();
 		    	
 		        // Retrieve the events for processing 
 		    	session.beginTransaction();
@@ -82,15 +91,19 @@ final class Jorel2Thread extends Jorel2Root implements Runnable {
 		        // Create Set containing list of unique event-types for processing
 		        for(EventsDao event : results) {
 		        	EventTypesDao thisEvent = event.getEventType();
-					taskUpperCase = thisEvent.getEventType().toUpperCase().replace("/", "");
-					eventSet.add(EventType.valueOf(taskUpperCase));
+		        	String eventTypeName = thisEvent.getEventType();
+					taskUpperCase = eventTypeName.toUpperCase().replace("/", "");
+					eventMap.put(EventType.valueOf(taskUpperCase), eventTypeName);
 		        } 
 		              
 		        // Trigger processing of each event type in eventSet
-		        for (EventType eventEnum : eventSet) {
+		        for (Entry<EventType, String> eventEntry : eventMap.entrySet()) {
+		        	EventType eventEnum = eventEntry.getKey();
+		        	String eventTypeName = eventEntry.getValue();
+		        	
 		        	rssResult = switch (eventEnum) {
-		        		case NEWRSS -> rssEventProcessor.processEvents(session);
-		        		case SYNDICATION -> syndicationEventProcessor.processEvents(session);
+		        		case NEWRSS -> rssEventProcessor.processEvents(eventTypeName, session);
+		        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
 				        default -> Optional.empty();
 		        	};
 		        }

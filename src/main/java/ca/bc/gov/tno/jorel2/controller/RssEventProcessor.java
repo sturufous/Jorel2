@@ -11,10 +11,14 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
+
+import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
+import ca.bc.gov.tno.jorel2.model.IssuesDao;
+import ca.bc.gov.tno.jorel2.model.Jorel2ArticleFilter;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
@@ -30,26 +34,24 @@ import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
 @Service
 public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcessor {
 
-	/** Configuration object for the active data source. Contains system_name, port etc. */
+	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	private DataSourceConfig config;
+	Jorel2Process process;
 
 	Rss rssContent;
-	
-	RssEventProcessor() {
-		
-	}
 	
 	/**
 	 * Process all eligible RSS event records from the TNO_EVENTS table.
 	 * 
+	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
+	 * @session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(Session session) {
+	public Optional<String> processEvents(String eventType, Session session) {
     	
     	try {
-	        List<Object[]> results = EventsDao.getRssEvents(session);
+	        List<Object[]> results = EventsDao.getEventsByEventType(process, eventType, session);
 	        List<Rss.Channel.Item> newRssItems;
     		
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
@@ -124,11 +126,12 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		if (!newsItems.isEmpty()) {
 			session.beginTransaction();
 			
-			// While most feeds are handled in a generic manner, allow for custom handling with a createXXXXNewsItem() method if needed.
+			// While most feeds are handled in a generic manner, allow for custom handling with a createXXXNewsItem() method if needed.
 			for (Rss.Channel.Item item : newsItems) {
 		    	newsItem = switch (sourceEnum) {
 					case IPOLITICS -> NewsItemFactory.createXmlNewsItem(item, source);
 					case DAILYHIVE -> NewsItemFactory.createXmlNewsItem(item, source);
+					case BIV -> NewsItemFactory.createXmlNewsItem(item, source);
 					//case CBC -> NewsItemFactory.createGenericNewsItem(item, source);
 					default -> null;
 		    	};
@@ -136,10 +139,19 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		    	if (newsItem != null) {
 		    		session.persist(newsItem);
 		    		System.out.println(item.getTitle());
+		    		
+		    		insertfilters(session);
+		    		
+		    		
 		    	}
 			}
 			
 			session.getTransaction().commit();
 		}
+	}
+	
+	private void insertfilters(Session session) {
+		
+		List<IssuesDao> results = IssuesDao.getEnabledRecordList(session);
 	}
 }

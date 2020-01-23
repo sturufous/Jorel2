@@ -8,12 +8,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+
+import javax.inject.Inject;
+
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 import com.sun.syndication.feed.synd.SyndEntry;
 import com.sun.syndication.feed.synd.SyndFeed;
 import com.sun.syndication.io.SyndFeedInput;
 import com.sun.syndication.io.XmlReader;
+
+import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
@@ -29,20 +34,26 @@ public class SyndicationEventProcessor extends Jorel2Root implements Jorel2Event
 	 * @version 0.0.1
 	 */
 
+	/** Process we're running as (e.g. "jorel", "jorelMini3") */
+	@Inject
+	Jorel2Process process;
+	
 	SyndicationEventProcessor() {
 	}
 		
 	/**
 	 * Process all eligible non-XML syndication event records from the TNO_EVENTS table.
 	 * 
+	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
+	 * @session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
-	public Optional<String> processEvents(Session session) {
+	public Optional<String> processEvents(String eventType, Session session) {
 	
 		SyndFeed feed = null;
 		
     	try {
-	        List<Object[]> results = EventsDao.getSyndicationEvents(session);
+	        List<Object[]> results = EventsDao.getEventsByEventType(process, eventType, session);
 	        List<SyndEntry> newSyndItems;
     		
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects

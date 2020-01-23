@@ -44,4 +44,10 @@ public class Jorel2Configuration extends Jorel2Root {
         executor.initialize();
         return executor;
     }
+    
+    @Bean
+    public Jorel2Process getProcess() {
+    	
+		return new Jorel2Process("jorel");
+    }
 }
