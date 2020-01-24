@@ -1,10 +1,15 @@
 package ca.bc.gov.tno.jorel2.model;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.hibernate.Session;
 
 public interface Jorel2ArticleFilter {
 
-	public List<Jorel2ArticleFilter> getEnabledRecordList(Session session);
+	public BigDecimal getRsn();
+	public String getIssue();
+	public String getWords();
+	public String getWordsCaseSensitive();
+	public BigDecimal getMinOccurance();
 }

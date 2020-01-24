@@ -1,6 +1,9 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.lang.reflect.Method;
 import java.net.URL;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -20,6 +23,7 @@ import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.IssuesDao;
 import ca.bc.gov.tno.jorel2.model.Jorel2ArticleFilter;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
+import ca.bc.gov.tno.jorel2.model.NewsItemIssuesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
 
@@ -132,7 +136,6 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 					case IPOLITICS -> NewsItemFactory.createXmlNewsItem(item, source);
 					case DAILYHIVE -> NewsItemFactory.createXmlNewsItem(item, source);
 					case BIV -> NewsItemFactory.createXmlNewsItem(item, source);
-					//case CBC -> NewsItemFactory.createGenericNewsItem(item, source);
 					default -> null;
 		    	};
 						
@@ -140,8 +143,8 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		    		session.persist(newsItem);
 		    		System.out.println(item.getTitle());
 		    		
-		    		insertfilters(session);
-		    		
+		    		List<NewsItemIssuesDao> niIssues = NewsItemIssuesDao.getNewsItemIssues(session);
+		    		insertfilters(item, IssuesDao.class, NewsItemIssuesDao.class, session);
 		    		
 		    	}
 			}
@@ -150,8 +153,42 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		}
 	}
 	
-	private void insertfilters(Session session) {
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void insertfilters(Rss.Channel.Item item, Class filterTable, Class flaggerTable, Session session) {
 		
-		List<IssuesDao> results = IssuesDao.getEnabledRecordList(session);
+		int hits = 0;
+		String content = item.getEncoded() == null ? item.getDescription() : item.getEncoded();
+		
+		try {
+			Method filter = filterTable.getMethod("getEnabledRecordList", Session.class);
+			List<Jorel2ArticleFilter> results = (List<Jorel2ArticleFilter>) filter.invoke(null, session);
+			
+			for (Jorel2ArticleFilter stringList : results) {
+				String[] caseInsensitive = stringList.getWords().split(",");
+				String[] caseSensitive = stringList.getWordsCaseSensitive().split(",");
+				
+				for (String phrase : caseInsensitive) {
+					phrase = phrase.toLowerCase();
+					if (content.indexOf(phrase) >= 0) {
+						System.out.println("***** Match for: " + phrase + ", "+ item.getTitle());
+						hits++;
+					}		
+				}
+				
+				for (String phrase : caseSensitive) {
+					if (content.indexOf(phrase) >= 0) {
+						System.out.println("***** Match for: " + phrase + ", "+ item.getTitle());
+						hits++;
+					}		
+				}
+				
+				if (hits > 0) {
+				}
+			}
+		}
+		catch (Exception e) {
+			logger.error("Running static method getEnabledRecordList() on Method Object.", e);
+		}
+		
 	}
 }

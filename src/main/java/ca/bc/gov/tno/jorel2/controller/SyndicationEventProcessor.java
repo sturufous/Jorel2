@@ -38,9 +38,6 @@ public class SyndicationEventProcessor extends Jorel2Root implements Jorel2Event
 	@Inject
 	Jorel2Process process;
 	
-	SyndicationEventProcessor() {
-	}
-		
 	/**
 	 * Process all eligible non-XML syndication event records from the TNO_EVENTS table.
 	 * 

@@ -476,7 +476,7 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	public void setText(Clob text) {
 		this.text = text;
 	}
-
+	
 	@Column(name = "BINARY")
 	public Blob getBinary() {
 		return this.binary;
