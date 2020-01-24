@@ -15,8 +15,7 @@ import org.springframework.core.task.TaskExecutor;
  * @version 0.0.1
  */
 
-@Service
-final class Jorel2Service extends Jorel2Root {
+public final class Jorel2Service extends Jorel2Root {
 	
     @Inject
     private TaskExecutor taskExecutor;

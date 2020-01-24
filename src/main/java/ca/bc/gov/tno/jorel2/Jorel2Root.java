@@ -12,6 +12,8 @@ import org.hibernate.annotations.NamedQueries;
 	query = "from EventsDao e where e.process=:process and e.lastFtpRun <> :runDate"),
 	@NamedQuery(name = "Events_FindEventsByEventType", 
 	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype"),
+	@NamedQuery(name = "Quotes_FindWordsByType", 
+	query = "from WordsDao w where w.type=:type"),
 })
 /**
  * Maintains a global repository of variable and annotation definitions that are available throughout the system.
@@ -36,6 +38,11 @@ public class Jorel2Root {
 	public enum RssSource {
 		
 		IPOLITICS, DAILYHIVE, CBC, CPNEWS, BIV, GEORGIASTRAIGHT;
+	}
+	
+	public enum WordType {
+		
+		VERB, NOISE, TITLE, NOISENAME;
 	}
 	
 	protected static void skip() {

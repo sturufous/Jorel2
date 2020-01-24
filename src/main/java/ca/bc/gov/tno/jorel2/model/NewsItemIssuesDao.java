@@ -20,7 +20,7 @@ import org.hibernate.query.Query;
  */
 @Entity
 @Table(name = "NEWS_ITEM_ISSUES")
-public class NewsItemIssuesDao implements Jorel2ArticleFlagger, java.io.Serializable {
+public class NewsItemIssuesDao implements ArticleFlagger, java.io.Serializable {
 
 	/**
 	 * 

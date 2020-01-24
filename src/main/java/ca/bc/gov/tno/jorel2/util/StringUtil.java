@@ -12,7 +12,7 @@ import ca.bc.gov.tno.jorel2.jaxb.Rss;
  * @version 0.0.1
  *
  */
-public class Jorel2StringUtil {
+public class StringUtil {
 	
 	/**
 	 * This method substitutes various html tags and entities with values that display correctly in news item content in Otis.
@@ -43,7 +43,11 @@ public class Jorel2StringUtil {
 		in = in.replaceAll("\\</ul\\>", "[/ul]");
 		in = in.replaceAll("\\<li\\>", "[li]");
 		in = in.replaceAll("\\</li\\>", "[/li]");
-
+		//text = text.replace('â€œ', '"');
+		//text = text.replace('â€�', '"');
+		//text = text.replace('â€˜', '\'');
+		//text = text.replace('â€™', '\'');
+		
 		// get rid of anything between <>
 		p = in.indexOf("<");
 		while (p >= 0) {
@@ -212,7 +216,7 @@ public class Jorel2StringUtil {
 				articleStr = articlePage.substring(articlePageUpper.indexOf("<CONTENT:ENCODED>") + 17, articlePageUpper.indexOf("</CONTENT:ENCODED>"));
 			}
 		}
-		articleStr = Jorel2StringUtil.removeHTML(articleStr);
+		articleStr = StringUtil.removeHTML(articleStr);
 		return articleStr;
 	}
 

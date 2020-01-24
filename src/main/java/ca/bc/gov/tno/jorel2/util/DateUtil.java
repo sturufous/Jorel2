@@ -16,7 +16,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
  * @author StuartM
  * @version 0.0.1
  */
-public class Jorel2DateUtil extends Jorel2Root {
+public class DateUtil extends Jorel2Root {
 
 	/**
 	 * Takes the RSS formatted published date and converts it into java.util.Date object for storage in the TNO database.

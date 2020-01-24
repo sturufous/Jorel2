@@ -8,9 +8,9 @@ import javax.sql.rowset.serial.SerialException;
 import com.sun.syndication.feed.synd.SyndEntry;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
-import ca.bc.gov.tno.jorel2.util.Jorel2DateUtil;
-import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
-import ca.bc.gov.tno.jorel2.util.Jorel2UrlUtil;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
+import ca.bc.gov.tno.jorel2.util.StringUtil;
+import ca.bc.gov.tno.jorel2.util.UrlUtil;
 
 /**
  * Methods in this class create and instantiate new instances of the Hibernate NewsItemsDao object using values in their corresponding
@@ -98,19 +98,20 @@ public class NewsItemFactory extends Jorel2Root {
 	public static NewsItemsDao createXmlNewsItem(Rss.Channel.Item item, String source) {
 		
 		String content = "";
+		String title = StringUtil.removeHTML(item.getTitle());
 		
 		// Some feeds store the item content in item.encoded, others in item.description.
 		if (item.getEncoded() == null) {
-			content = Jorel2StringUtil.removeHTML(item.getDescription());
+			content = StringUtil.removeHTML(item.getDescription());
 		} else {
-			content = Jorel2StringUtil.removeHTML(item.getEncoded());
+			content = StringUtil.removeHTML(item.getEncoded());
 		}
 		
-		content = Jorel2StringUtil.SubstituteEmojis(content);
+		content = StringUtil.SubstituteEmojis(content);
 		
 		// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
-		Date itemDate = Jorel2DateUtil.getDateAtMidnight();
-		Date itemTime = Jorel2DateUtil.getPubTimeAsDate(item.getPubDate());
+		Date itemDate = DateUtil.getDateAtMidnight();
+		Date itemTime = DateUtil.getPubTimeAsDate(item.getPubDate());
 
 		NewsItemsDao newsItem = createNewsItemTemplate();
 				
@@ -118,7 +119,7 @@ public class NewsItemFactory extends Jorel2Root {
 		newsItem.setItemDate(itemDate);
 		newsItem.setItemTime(itemTime);
 		newsItem.setSource(source);
-		newsItem.setTitle(item.getTitle());
+		newsItem.setTitle(title);
 		newsItem.setString6(item.getCreator());
 		newsItem.setWebpath(item.getLink());
 		newsItem.setText(stringToClob(content));
@@ -137,13 +138,13 @@ public class NewsItemFactory extends Jorel2Root {
 		
 		String content;
 
-		content = Jorel2UrlUtil.retrieveCPNewsItem(item, source);
+		content = UrlUtil.retrieveCPNewsItem(item, source);
 		
 		// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
-		Date itemDate = Jorel2DateUtil.getDateAtMidnight();
+		Date itemDate = DateUtil.getDateAtMidnight();
 		Date itemTime = item.getPublishedDate();
 		
-		content = Jorel2StringUtil.SubstituteEmojis(content);
+		content = StringUtil.SubstituteEmojis(content);
 
 		NewsItemsDao newsItem = createNewsItemTemplate();
 

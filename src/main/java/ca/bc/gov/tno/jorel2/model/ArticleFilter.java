@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.hibernate.Session;
 
-public interface Jorel2ArticleFilter {
+public interface ArticleFilter {
 
 	public BigDecimal getRsn();
 	public String getIssue();

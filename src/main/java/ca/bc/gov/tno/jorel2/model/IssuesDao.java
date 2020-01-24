@@ -15,7 +15,7 @@ import org.hibernate.query.Query;
  */
 @Entity
 @Table(name = "ISSUES", schema = "TNO")
-public class IssuesDao implements Jorel2ArticleFilter, java.io.Serializable {
+public class IssuesDao implements ArticleFilter, java.io.Serializable {
 
 	/**
 	 * 
@@ -118,10 +118,10 @@ public class IssuesDao implements Jorel2ArticleFilter, java.io.Serializable {
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindEventsForProcessing named query.
 	 */
-	public static List<Jorel2ArticleFilter> getEnabledRecordList(Session session) {
+	public static List<ArticleFilter> getEnabledRecordList(Session session) {
 
-		Query<Jorel2ArticleFilter> query = session.createQuery("from IssuesDao where enabled=1", Jorel2ArticleFilter.class);
-        List<Jorel2ArticleFilter> results = query.getResultList();
+		Query<ArticleFilter> query = session.createQuery("from IssuesDao where enabled=1", ArticleFilter.class);
+        List<ArticleFilter> results = query.getResultList();
         
         return results;
 	}

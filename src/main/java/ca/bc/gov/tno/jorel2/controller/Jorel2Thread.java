@@ -31,9 +31,7 @@ import ca.bc.gov.tno.jorel2.controller.RssEventProcessor;
  * @version 0.0.1
  */
 
-@Component
-@Scope("prototype")
-final class Jorel2Thread extends Jorel2Root implements Runnable {
+public final class Jorel2Thread extends Jorel2Root implements Runnable {
 	
 	/** Configuration object for the active data source. Contains system_name, port etc. */
 	@Inject

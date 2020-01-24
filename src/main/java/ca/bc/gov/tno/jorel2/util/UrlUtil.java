@@ -17,7 +17,7 @@ import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
  * @version 0.0.1
  */
 
-public class Jorel2UrlUtil extends Jorel2Root {
+public class UrlUtil extends Jorel2Root {
 
 	/**
 	 * Takes the link contained in the SyndEntry object <code>item</code>, retrieves the article text (pretending to be a web browser)
@@ -48,7 +48,7 @@ public class Jorel2UrlUtil extends Jorel2Root {
 			in.close();
 
 			if (articlePage.length() > 0) {
-				content = Jorel2StringUtil.getArticle(articlePage);
+				content = StringUtil.getArticle(articlePage);
 			} else {
 				content = "No Content";
 			}

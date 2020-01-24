@@ -21,11 +21,11 @@ import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.IssuesDao;
-import ca.bc.gov.tno.jorel2.model.Jorel2ArticleFilter;
+import ca.bc.gov.tno.jorel2.model.ArticleFilter;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemIssuesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
-import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
+import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 /**
  * Manages the retrieval and processing of various RSS feeds using JAXB objects in the
@@ -36,11 +36,15 @@ import ca.bc.gov.tno.jorel2.util.Jorel2StringUtil;
  */
 
 @Service
-public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcessor {
+public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	Jorel2Process process;
+	
+	/** Quote extractor for processing article text  */
+	@Inject
+	QuoteExtractor quoteExtractor;
 
 	Rss rssContent;
 	
@@ -55,6 +59,9 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 	public Optional<String> processEvents(String eventType, Session session) {
     	
     	try {
+    		// Loads thousands for records from the WORDS table. Only do this for RSS events.
+    		quoteExtractor.init();
+
 	        List<Object[]> results = EventsDao.getEventsByEventType(process, eventType, session);
 	        List<Rss.Channel.Item> newRssItems;
     		
@@ -139,13 +146,14 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 					default -> null;
 		    	};
 						
+		    	// Persist the news item and perform post-processing
 		    	if (newsItem != null) {
 		    		session.persist(newsItem);
 		    		System.out.println(item.getTitle());
 		    		
 		    		List<NewsItemIssuesDao> niIssues = NewsItemIssuesDao.getNewsItemIssues(session);
-		    		insertfilters(item, IssuesDao.class, NewsItemIssuesDao.class, session);
-		    		
+		    		//insertfilters(item, IssuesDao.class, NewsItemIssuesDao.class, session);
+    		
 		    	}
 			}
 			
@@ -161,9 +169,9 @@ public class RssEventProcessor extends Jorel2Root implements Jorel2EventProcesso
 		
 		try {
 			Method filter = filterTable.getMethod("getEnabledRecordList", Session.class);
-			List<Jorel2ArticleFilter> results = (List<Jorel2ArticleFilter>) filter.invoke(null, session);
+			List<ArticleFilter> results = (List<ArticleFilter>) filter.invoke(null, session);
 			
-			for (Jorel2ArticleFilter stringList : results) {
+			for (ArticleFilter stringList : results) {
 				String[] caseInsensitive = stringList.getWords().split(",");
 				String[] caseSensitive = stringList.getWordsCaseSensitive().split(",");
 				

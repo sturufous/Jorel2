@@ -25,7 +25,7 @@ import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 
 @Service
-public class SyndicationEventProcessor extends Jorel2Root implements Jorel2EventProcessor {
+public class SyndicationEventProcessor extends Jorel2Root implements EventProcessor {
 
 	/**
 	 * Manages the retrieval and processing of the CP feed using the 'Page full of links' format.
