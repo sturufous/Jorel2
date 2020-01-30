@@ -41,6 +41,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Rss }
      * 
+     * @return The top level Rss object.
      */
     public Rss createRss() {
         return new Rss();
@@ -49,6 +50,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Rss.Channel }
      * 
+     * @return The channel.
      */
     public Rss.Channel createRssChannel() {
         return new Rss.Channel();
@@ -57,6 +59,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Rss.Channel.Item }
      * 
+     * @return The item.
      */
     public Rss.Channel.Item createRssChannelItem() {
         return new Rss.Channel.Item();
@@ -65,6 +68,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Rss.Channel.Atomlink }
      * 
+     * @return The link.
      */
     public Atomlink createRssChannelAtomlink() {
         return new Atomlink();
@@ -73,6 +77,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Rss.Channel.Image }
      * 
+     * @return The image.
      */
     public Rss.Channel.Image createRssChannelImage() {
         return new Rss.Channel.Image();
@@ -81,6 +86,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Rss.Channel.Item.Guid }
      * 
+     * @return The Guid.
      */
     public Rss.Channel.Item.Guid createRssChannelItemGuid() {
         return new Rss.Channel.Item.Guid();

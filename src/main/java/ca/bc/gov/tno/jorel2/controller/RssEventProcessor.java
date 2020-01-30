@@ -1,6 +1,7 @@
 package ca.bc.gov.tno.jorel2.controller;
 
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
@@ -18,14 +19,12 @@ import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
-import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
-import ca.bc.gov.tno.jorel2.model.IssuesDao;
 import ca.bc.gov.tno.jorel2.model.ArticleFilter;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemIssuesDao;
+import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
-import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 /**
  * Manages the retrieval and processing of various RSS feeds using JAXB objects in the
@@ -52,7 +51,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	 * Process all eligible RSS event records from the TNO_EVENTS table.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
-	 * @session The current Hibernate persistence context
+	 * @param session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
@@ -123,6 +122,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	 * Create a record in the NEWS_ITEMS table that corresponds with each rss news item in
 	 * the newsItems ArrayList.
 	 * 
+	 * @param source The source from which this feed was retrieved (e.g. iPolitics, DailyHive)
 	 * @param newsItems The list of news items retrieved from the publisher
 	 * @param session The current Hibernate persistence context
 	 * @param rss The entire rss feed retrieved from the publisher
@@ -151,9 +151,13 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    		session.persist(newsItem);
 		    		System.out.println(item.getTitle());
 		    		
-		    		List<NewsItemIssuesDao> niIssues = NewsItemIssuesDao.getNewsItemIssues(session);
+		    		//List<NewsItemIssuesDao> niIssues = NewsItemIssuesDao.getNewsItemIssues(session);
+		    		
+		    		// Extract all quotes, and who made them, from the news item.
+		    		quoteExtractor.extract(newsItem.content);
+		    		NewsItemQuotesDao.saveQuotes(quoteExtractor, newsItem, session);
+		    		
 		    		//insertfilters(item, IssuesDao.class, NewsItemIssuesDao.class, session);
-    		
 		    	}
 			}
 			

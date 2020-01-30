@@ -25,6 +25,8 @@ public class NewsItemFactory extends Jorel2Root {
 	/**
 	 * Creates a new instance of NewsItemDao containing the default values. A subset of these values are overwritten with data
 	 * retrieved from the news feed by the corresponding createXXXNewsItem() method.
+	 * 
+	 * @return The new NewsItemDao template object. This is modified by the caller.
 	 */
 	
 	private static NewsItemsDao createNewsItemTemplate() {
@@ -124,6 +126,9 @@ public class NewsItemFactory extends Jorel2Root {
 		newsItem.setWebpath(item.getLink());
 		newsItem.setText(stringToClob(content));
 		
+		// Saves converting back from Clob to string
+		newsItem.content = content;
+		
 		return newsItem;
 	}
 	
@@ -156,6 +161,9 @@ public class NewsItemFactory extends Jorel2Root {
 		newsItem.setTitle(item.getTitle());
 		newsItem.setWebpath(item.getLink());
 		newsItem.setText(stringToClob(content));
+		
+		// Saves converting back from Clob to string
+		newsItem.content = content;
 		
 		return newsItem;
 	}

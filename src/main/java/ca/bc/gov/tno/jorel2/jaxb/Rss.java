@@ -493,7 +493,7 @@ public class Rss {
          * Objects of the following type(s) are allowed in the list
          * {@link Rss.Channel.Item }
          * 
-         * 
+         * @return The RSS item.
          */
         public List<Rss.Channel.Item> getItem() {
             if (item == null) {
@@ -729,6 +729,7 @@ public class Rss {
             /**
              * Gets the value of the width property.
              * 
+             * @return The value of the width property.
              */
             public int getWidth() {
                 return width;
@@ -737,6 +738,7 @@ public class Rss {
             /**
              * Sets the value of the width property.
              * 
+             * @param value The value to assign to the width attribute.
              */
             public void setWidth(int value) {
                 this.width = value;
@@ -745,6 +747,7 @@ public class Rss {
             /**
              * Gets the value of the height property.
              * 
+             * @return The value of the height property.
              */
             public int getHeight() {
                 return height;
@@ -753,6 +756,7 @@ public class Rss {
             /**
              * Sets the value of the height property.
              * 
+             * @param value The value to assign to the height attribute.
              */
             public void setHeight(int value) {
                 this.height = value;
@@ -994,7 +998,7 @@ public class Rss {
              * Objects of the following type(s) are allowed in the list
              * {@link String }
              * 
-             * 
+             * @return The category list.
              */
             public List<String> getCategory() {
                 if (category == null) {

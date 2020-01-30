@@ -89,6 +89,7 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	private String eodCategory;
 	private String eodCategoryGroup;
 	private String eodDate;
+	public String content;
 
 	public NewsItemsDao() {
 	}
@@ -670,7 +671,7 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	 * Gets a list of existing news items for the current publisher. This list is used to
 	 * prevent the creation of duplicate articles in the NEWS_ITEMS table.
 	 * 
-	 * @param The name of the current RSS publisher
+	 * @param source The name of the current RSS publisher
 	 * @param session The current Hibernate persistence context
 	 * @return A list of this publisher's news items created since yesterday
 	 */

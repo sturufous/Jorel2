@@ -1,7 +1,6 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,16 +11,29 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.inject.Inject;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.stereotype.Component;
-
 import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.WordsDao;
+
+/**
+ * This class parses article text and determines the following information concerning a speaker:
+ * 
+ * <ul>
+ * <li>The name of the speaker
+ * <li>Any alias of the speaker
+ * <li>Start and end offsets of the quote
+ * </ul>
+ * 
+ * These data are persisted in the NEWS_ITEM_QUOTES table.
+ * 
+ * @author Stuart Morse
+ * @version 0.0.1
+ */
 
 @Component
 public class QuoteExtractor extends Jorel2Root {
@@ -49,22 +61,33 @@ public class QuoteExtractor extends Jorel2Root {
 	/** Hibernate persistence context for all quote related activities */
 	Session session;
 	
+	/** This, and all other instance variables, are inherited from the Aktiv package where they were largely uncommented */
 	static final char para = (char)10;
 	int counter;
-	private String g_results;
-	private List<Quote> quoteList;
-	private Map<String, String> quotedNames;
-	private List<String> noiseNameList;
-	private List<String> noiseList;
+	
+	private Map<String, String> quotedNames = new HashMap<>();
+	private List<Quote> quoteList = new ArrayList<>();
+	private List<String> noiseNameList = new ArrayList<>();
+	private List<String> noiseList = new ArrayList<>();;
+	private List<String> titleList = new ArrayList<>();
+	private List<String> verbList = new ArrayList<>();
+	
+	private String gResults;
+	private String gName="";
+	private String gAlias="";
+	private String gOffsetLengths="";
+	private String gQuoteText="";
+	
+	// special global flag if the last name was an unknown alias
+	private boolean gunk=true;
+	private boolean gUnknownAlias=false;
 	boolean online=true;
 	boolean updateVerbs=false;
 	boolean updateNoiseNames=false;
-	private List<String> titleList;
-	// special global flag if the last name was an unknown alias
-	private boolean gunk=true;
-	private List<String> verbList;
 
-
+	/**
+	 * Loads the contents of the WORDS table, by type, into java.util.Set variables that are used to categorize words in the news item text.
+	 */
     public void init() {
     	
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
@@ -77,14 +100,21 @@ public class QuoteExtractor extends Jorel2Root {
     		if (verbs == null || titles == null || noiseWords == null || noiseNameWords == null) {
 		        session = sessionFactory.get().openSession();
 		        
-				verbs = loadWords(WordsDao.getWordsByWordType(process, WordType.VERB, session));
-				titles = loadWords(WordsDao.getWordsByWordType(process, WordType.TITLE, session));
-				noiseWords = loadWords(WordsDao.getWordsByWordType(process, WordType.NOISE, session));
-				noiseNameWords = loadWords(WordsDao.getWordsByWordType(process, WordType.NOISENAME, session));
+				verbs = loadWords(WordsDao.getWords(process, WordType.VERB, session));
+				titles = loadWords(WordsDao.getWords(process, WordType.TITLE, session));
+				noiseWords = loadWords(WordsDao.getWords(process, WordType.NOISE, session));
+				noiseNameWords = loadWords(WordsDao.getWords(process, WordType.NOISENAME, session));
     		}
     	}
     }
 
+    /**
+     * Cycles through the list of WordsDao objects retrieved from the WORDS table and inserts the <code>word</code> field contents
+     * into a HashSet. The fully populated Set is returned.
+     * 
+     * @param results The results of the WORDS table query based on type (verb, title, noise or noisename).
+     * @return Set containing a group of words.
+     */
     private Set<String> loadWords(List<WordsDao> results) {
     	
     	Set<String> wordSet = new HashSet<>();
@@ -96,7 +126,37 @@ public class QuoteExtractor extends Jorel2Root {
     	return wordSet;
     }
     
-	// extract quotes from newspaper text, put them in a list
+    /**
+     * Starts the extraction process using the default <code>type</code> of <code>empty string</code>
+     * 
+     * @param text The news article text.
+     * @return The number of words added to the WORDS table.
+     */
+    public long extract(String text) {
+    	return extract(text, "");
+    }
+    
+	/**
+	 * Starts the extraction process, allowing the caller to choose whether the item being extracted is of type, transcript, scrum, or news item.
+	 * 
+	 * @param text The article text to parse for quotes
+	 * @param type The classification of the text (transcript, scrum or news item)
+	 * @return A count of the number of quotes extracted
+	 */
+	public long extract(String text, String type) {
+		if ((type.equalsIgnoreCase("transcript")) | (type.equalsIgnoreCase("scrum"))) {
+			return -1L; //return extract_transcript(text);
+		} else {
+			return extractNewspaper(text);
+		}
+	}
+    
+	/**
+	 * Extract quotes from the newspaper text, put them in a list.
+	 * 
+	 * @param text The newspaper article text.
+	 * @return The number of quotes located.
+	 */
 	@SuppressWarnings("deprecation")
 	private long extractNewspaper(String text) {
 		long count=0;
@@ -118,7 +178,7 @@ public class QuoteExtractor extends Jorel2Root {
 
 		quoteList.clear();
 		counter = -1;
-		g_results = "";
+		gResults = "";
 
 		// CAREFUL: must keep text the same length, because we return offsets
 		if (text==null) text = "";
@@ -133,8 +193,6 @@ public class QuoteExtractor extends Jorel2Root {
 		text = text.replace('}', ')');
 		text = text+para;
 
-		//System.out.println(text);
-
 		nameMap = markQuotedNames(text); //make note of the places where the names from the quotednames table are
 
 		for (i=0;i<text.length();i++) {
@@ -143,7 +201,6 @@ public class QuoteExtractor extends Jorel2Root {
 			skip = false;
 			if (!inQuote) {
 				if (nameMap.containsKey(new Integer(i))) {
-					@SuppressWarnings("deprecation")
 					String tname = (String)nameMap.get(new Integer(i));
 					i = i+tname.length()-1;
 					currentPara.append(upperName.toString().toLowerCase());
@@ -158,12 +215,7 @@ public class QuoteExtractor extends Jorel2Root {
 			if (!skip) {
 				chr=text.charAt(i);
 
-				//System.out.println(chr);
-				//System.out.println((int)chr);
-
 				switch(chr){
-
-
 				/***** quote *****/
 				case '"':
 					if(inQuote){
@@ -278,7 +330,7 @@ public class QuoteExtractor extends Jorel2Root {
 					if (!inQuote) {
 						if (!fullQuote.equals("")){ // paragraph with a quote
 							String paragraph = identifyNoise(currentPara.toString());
-							//System.out.println(para);
+
 							NameAlias na = determineName(paragraph, nameList, lastName);
 							if(na != null)
 							{
@@ -290,7 +342,7 @@ public class QuoteExtractor extends Jorel2Root {
 							offsets="";
 						} else { // paragraph without a quote
 							if (!currentPara.toString().trim().equals("")) { // current paragraph is not blank
-								String paragraph = identify_noise(currentPara.toString());
+								String paragraph = identifyNoise(currentPara.toString());
 								String ln = lastSaid(paragraph,nameList,lastName);
 								if(ln.equalsIgnoreCase("she") | ln.equalsIgnoreCase("he"))
 								{
@@ -387,7 +439,10 @@ public class QuoteExtractor extends Jorel2Root {
 	}
 	
 	/**
-	 * Remember all the places where names/aliases (from the quotednames table) are.
+	 * Remember all the places where names/aliases (from the quotednames table) are located. 
+	 * 
+	 * @param t The entire article text.
+	 * @return A map with the offsets as keys and the names as values.
 	 */
 	@SuppressWarnings("deprecation")
 	private Map<Integer, String> markQuotedNames(String t) {
@@ -411,14 +466,27 @@ public class QuoteExtractor extends Jorel2Root {
 		return m;
 	}
 	
-	// append to the current quote
+	/**
+	 * Append to the current quote.
+	 * 
+	 * @param q The current quote.
+	 * @param a The StringBuilder to append to.
+	 * @return The appended quote.
+	 */
 	private String appendQuote(String q, StringBuilder a) {
 		if (!q.equals("")) q = q+" ";
 		q = q+a.toString().trim();
 		return q;
 	}
 	
-	// append offset and length for this quote
+	/**
+	 * Append offset and length for this quote.
+	 * 
+	 * @param ol Incoming string
+	 * @param o The starting offset of the quote.
+	 * @param len The length of the quote.
+	 * @return Appended string with offset and length.
+	 */
 	private String appendOffset(String ol, int o, int len) {
 		if (!ol.equals("")) ol = ol+";";
 		ol = ol+Integer.toString(o)+","+Integer.toString(len);
@@ -426,7 +494,13 @@ public class QuoteExtractor extends Jorel2Root {
 	}
 
 
-	// maintain a list of names that appear in the text
+	/**
+	 * Maintain a list of names that appear in the text.
+	 * 
+	 * @param nl The name list to append to.
+	 * @param name The name to append.
+	 * @return The object addressed by the nl parameter.
+	 */
 	private List<String> appendNamelist(List<String> nl, String name) {
 		if (!nl.contains(name)) {
 			nl.add(name);
@@ -434,12 +508,19 @@ public class QuoteExtractor extends Jorel2Root {
 		return nl;
 	}
 
-	/*
-	  Input: a name (sequence of uppercase words)
-	   Remove possessive
-	   Remove trailing period
-	   Delete name if it is a noise name
-		 */
+	/**
+	 * 
+	 * Input: a name (sequence of uppercase words) and:
+	 * 
+	 * <ul>
+	 * <li>Remove possessive
+	 * <li>Remove trailing period
+	 * <li>Delete name if it is a noise name
+	 * </ul>
+	 * 
+	 * @param n The name to parse.
+	 * @return The processed version of the input name.
+	 */
 	private String fixName(String n) {
 		String name = n.trim();
 
@@ -475,34 +556,15 @@ public class QuoteExtractor extends Jorel2Root {
 		return name;
 	}
 	
-	// does word exist in this list?
+	/**
+	 * Does word exist in this list?
+	 * 
+	 * @param wl The list against which to check the word <code>w</code>.
+	 * @param w The word whose membership in the list <code>wl</code> is being assessed.
+	 * @return Boolean indicating whether the <code>w</code> exists in the list <code>wl</code>.
+	 */
 	private boolean wordExists(List<String> wl, String w) {
 		return wl.contains(w.toLowerCase());
-	}
-
-	/*
-	  Given a paragraph, identify noise names and put them into the noise names table,
-	  and return the fixed paragraph
-		 */
-	private String identify_noise(String para) {
-		String noiseName, noiseName2;
-
-		// match patterns like "of the Victoria School Board."
-		Pattern pattern=Pattern.compile("(of|to|at|by|for|from|with|in|about) the \\{name:([^\\}]*)\\}[,;\\.]");
-		Matcher matcher=pattern.matcher(para);
-		while (matcher.find()) {
-			noiseName = matcher.group(2);
-			noiseName2 = fixName(noiseName);
-			if (!noiseName2.equals("")) {
-				if (!quotedNames.containsKey(noiseName2)) { //not in the quoted names table
-					para = replacement(para, "{name:"+noiseName+"}", noiseName.toLowerCase());
-					noiseNameList.add(noiseName2.toLowerCase());
-					insertWord(noiseName2, WordType.NOISENAME);
-				}
-			}
-		}
-
-		return para;
 	}
 
 	// insert into the words table
@@ -512,33 +574,35 @@ public class QuoteExtractor extends Jorel2Root {
 			if ((!updateVerbs) && (type == WordType.VERB)) cont=false;
 			if ((!updateNoiseNames) && (type == WordType.NOISENAME)) cont=false;
 			if (cont) {
-				String sqlString="insert into tno.words values (tno.QUOTED_RSN.nextval, ?, ?)";
-				PreparedStatement ps=null;
 				try{
-					ps=c.prepareStatement(sqlString);
-					ps.setString(1,word);
-					ps.setLong(2,type);
-					ps.executeUpdate();
-					c.commit();
-
+					// Transaction protection handled in calling method
+					WordsDao wordRecord = new WordsDao(null, word, new BigDecimal(type.ordinal()));
+					session.persist(wordRecord);
+					
 					if (type == WordType.VERB) appendResults("verb '"+word+"' added");
 
-				} catch (SQLException err) {;}
-				try { if (ps != null) ps.close(); } catch (SQLException err) {;}
+				} catch (Exception err) {;}
 			}
 		}
 	}
 
-	// append to the results
+	/**
+	 * Append any news verbs to gResults.
+	 * 
+	 * @param r The string to append.
+	 */
 	private void appendResults(String r) {
-		if (!g_results.equals("")) g_results = g_results+", ";
-		g_results = g_results+r;
+		if (!gResults.equals("")) gResults = gResults+", ";
+		gResults = gResults+r;
 	}
 	
-	/*
-	  Given a paragraph, identify noise names and put them into the noise names table,
-	  and return the fixed paragraph
-		 */
+   /**
+	* Given a paragraph, identify noise names and put them into the noise names table,
+	* and return the fixed paragraph.
+	* 
+	* @param para The text to anlyze.
+	* @return The remediated paragraph text.
+	*/
 	private String identifyNoise(String para) {
 		String noiseName, noiseName2;
 
@@ -560,6 +624,13 @@ public class QuoteExtractor extends Jorel2Root {
 		return para;
 	}
 
+	/**
+	 * 
+	 * @param s TLDR;
+	 * @param o TLDR;
+	 * @param n TLDR;
+	 * @return TLDR;
+	 */
 	public static String replacement(String s, String o, String n) {
 
 		String org = s;
@@ -577,7 +648,12 @@ public class QuoteExtractor extends Jorel2Root {
 		return result;
 	}
 
-	// what is the last word in this sequence?
+	/**
+	 * What is the last word in this sequence?
+	 *  
+	 * @param s The string to parse.
+	 * @return The last word in the string <code>s</code>
+	 */
 	private String lastWord(String s) {
 		int pos = s.lastIndexOf(" ");
 		int pos2 = s.lastIndexOf(".");
@@ -588,22 +664,26 @@ public class QuoteExtractor extends Jorel2Root {
 		}
 	}
 	
-	/*
-	  Given a paragraph (without quotes), determine who the latest speaker is
-		 */
+	/**
+	 * 
+	 * Given a paragraph (without quotes), determine who the latest speaker is.
+	 * 
+	 * @param currPara The paragraph to analyze.
+	 * @param nl The name list to match against.
+	 * @param last The name of the last speaker in the previous paragraph.
+	 * @return The name of the last speaker in the paragraph.
+     */
 	private String lastSaid(String currPara, List<String> nl, String last) {
 		int i;
 		String said = "";
 
-		// match patterns like "John said"
-		//                  or "John, descriptor, said"
+		// match patterns like "John said" or "John, descriptor, said"
 		for (i=0;i<verbList.size();i++) {
 			said = patternMatch(currPara, "\\{name:([^\\}]*)\\}(, ([a-z\\s']|\\{name:([^\\}]*)\\})+,)? "+(String)verbList.get(i));
 			if (!said.equals("")) break;
 		}
 
-		// match patterns like ", said John"
-		//                  or ", said descriptor John"
+		// match patterns like ", said John" or ", said descriptor John"
 		if (said.equals("")) {
 			for(i=0;i<verbList.size();i++){
 				said=patternMatch(currPara,", "+(String)verbList.get(i)+" [a-z\\s']*\\{name:([^\\}]*)\\}");
@@ -637,11 +717,16 @@ public class QuoteExtractor extends Jorel2Root {
 		return said;
 	}
 	
-	/*
-	  Convert an alias to a name, found either higher in the story or in the quoted names table
-		 */
-	private String aliasToName(String name, List<String> nl) {
-		name = removeTitles(name);
+	/**
+	 * 
+	 * Convert an alias to a name, found either higher in the story or in the quoted names table.
+	 * 
+	 * @param alias Alias to match in the name list.
+	 * @param nl The name list to use while processing.
+	 * @return The name corresponding with the alias.
+	 */
+	private String aliasToName(String alias, List<String> nl) {
+		String name = removeTitles(alias);
 		gunk = true; // global boolean - unknown alias
 		int i;
 		// see if there is a longer form of this name higher in the story
@@ -658,7 +743,12 @@ public class QuoteExtractor extends Jorel2Root {
 		return name;
 	}
 
-	// remove words from the front of a name if they are titles
+	/**
+	 * Remove words from the front of a name if they are titles.
+	 * 
+	 * @param name Name, including titles.
+	 * @return Name with titles removed.
+	 */
 	private String removeTitles(String name) {
 		String word;
 		int pos;
@@ -688,7 +778,14 @@ public class QuoteExtractor extends Jorel2Root {
 		return patternMatch(text, p, 1);
 	}
 
-	// helper method for simple (one group) regular expressions
+	/**
+	 * Helper method for simple (one group) regular expressions.
+	 * 
+	 * @param text TLDR;
+	 * @param p TLDR;
+	 * @param num TLDR;
+	 * @return TLDR;
+	 */
 	private String patternMatch(String text, String p, int num) {
 		String result="";
 		Pattern pattern=Pattern.compile(p);
@@ -699,37 +796,38 @@ public class QuoteExtractor extends Jorel2Root {
 		return result;
 	}
 
-	/*
-	  Given a paragraph containing a quote, a list of names that have so far appeared
-	  in the story, and the last name from the previous paragraph, determine who said the quote
-		 */
+	/**
+	 * Given a paragraph containing a quote, a list of names that have so far appeared in the story, and the last name 
+	 * from the previous paragraph, determine who said the quote.
+	 * 
+	 * @param currPara The text of the current paragraph.
+	 * @param nl List of names that have appeared so far in the story.
+	 * @param last Last name from previous paragraph.
+	 * @return The name of the person being quoted.
+	 */
 	private NameAlias determineName(String currPara, List<String> nl, String last) {
 		int i;
 		String alias = "";
-		// match patterns like ""blah blah," John said"
-		//                  or ""blah blah," John, descriptor, said"
+		// match patterns like ""blah blah," John said" or ""blah blah," John, descriptor, said"
 		for (i=0;i<verbList.size();i++) {
 			alias = patternMatch(currPara, "\\{quote,\\} \\{name:([^\\}]*)\\}(, ([a-z\\s']|\\{name:([^\\}]*)\\})+,)? "+(String)verbList.get(i));
 			if (!alias.equals("")) break;
 		}
-		// match patterns like ""blah blah," said John"
-		//                  or ""blah blah," said descriptor John"
+		// match patterns like ""blah blah," said John" or ""blah blah," said descriptor John"
 		if (alias.equals("")) {
 			for (i=0;i<verbList.size();i++) {
 				alias = patternMatch(currPara, "\\{quote,\\} "+(String)verbList.get(i)+" [a-z\\s']*\\{name:([^\\}]*)\\}");
 				if (!alias.equals("")) break;
 			}
 		}
-		// match patterns like "said John, "blah blah""
-		//                  or "said descriptor John, "blah blah""
+		// match patterns like "said John, "blah blah"" or "said descriptor John, "blah blah""
 		if (alias.equals("")) {
 			for (i=0;i<verbList.size();i++) {
 				alias = patternMatch(currPara, (String)verbList.get(i)+" [a-z\\s']*\\{name:([^\\}]*)\\}[,:] \\{quote.\\}");
 				if (!alias.equals("")) break;
 			}
 		}
-		// match patterns like "John said, "blah blah""
-		//                  or "John, descriptor, said, "blah blah""
+		// match patterns like "John said, "blah blah"" or "John, descriptor, said, "blah blah""
 		if (alias.equals("")) {
 			for (i=0;i<verbList.size();i++) {
 				alias = patternMatch(currPara, "\\{name:([^\\}]*)\\}(, ([a-z\\s']|\\{name:([^\\}]*)\\})+,)? "+(String)verbList.get(i)+"[,:]? \\{quote.\\}");
@@ -769,8 +867,7 @@ public class QuoteExtractor extends Jorel2Root {
 			}
 		}
 
-		// match patterns like "John said"
-		//                  or "John, descriptor, said"
+		// match patterns like "John said" or "John, descriptor, said"
 		if (alias.equals("")) {
 			for(i=0;i<verbList.size();i++){
 				alias=patternMatch(currPara, "\\{name:([^\\}]*)\\}(, ([a-z\\s']|\\{name:([^\\}]*)\\})+,)? "+(String)verbList.get(i));
@@ -778,8 +875,7 @@ public class QuoteExtractor extends Jorel2Root {
 			}
 		}
 
-		// match patterns like ", said John"
-		//                  or ", said descriptor John"
+		// match patterns like ", said John" or ", said descriptor John"
 		if (alias.equals("")) {
 			for(i=0;i<verbList.size();i++){
 				alias=patternMatch(currPara,", "+(String)verbList.get(i)+" [a-z\\s']*\\{name:([^\\}]*)\\}");
@@ -809,13 +905,12 @@ public class QuoteExtractor extends Jorel2Root {
 		if (alias.equals(""))
 		{
 			// Determine if the quote is a full paragraph quote 
-			//	(remove email addresses, some stories end the last paragraph with email address of the story writer)
+			// (remove email addresses, some stories end the last paragraph with email address of the story writer)
 			String EMAIL_PATTERN = "([^.@\\s]+)(\\.[^.@\\s]+)*@([^.@\\s]+\\.)+([^.@\\s]+)";
 			String paragraph = currPara.replaceAll(EMAIL_PATTERN, "").trim();
 			if(paragraph.equalsIgnoreCase("{quote.}") | paragraph.equalsIgnoreCase("{quote,}") | paragraph.equalsIgnoreCase("{quote,} she said.") | paragraph.equalsIgnoreCase("{quote,} he said."))
 			{
-				// It is a full paragraph quote,
-				//	person is still unknown, just use last name, probably from the previous paragraph
+				// It is a full paragraph quote, person is still unknown, just use last name, probably from the previous paragraph
 				if (alias.equals("")) {
 					alias=last;
 				}
@@ -836,8 +931,27 @@ public class QuoteExtractor extends Jorel2Root {
 		return new NameAlias(name, alias);
 	}
 	
-	/*
-	This class stores information about a name / alias.
+	public boolean next() {
+		counter++;
+		if (counter < quoteList.size()) {
+			gName=((Quote)quoteList.get(counter)).name;
+			gAlias=((Quote)quoteList.get(counter)).alias;
+			gOffsetLengths=((Quote)quoteList.get(counter)).offset_lengths;
+			gQuoteText=((Quote)quoteList.get(counter)).quote_text;
+			gUnknownAlias=((Quote)quoteList.get(counter)).unknown_alias;
+			return true;
+		} else {
+			gName="";
+			gAlias="";
+			gOffsetLengths="";
+			gQuoteText="";
+			gUnknownAlias=false;
+			return false;
+		}
+	}
+	
+	/**
+	 * This class stores information about a name / alias.
 	 */
 	class NameAlias {
 		String  name;
@@ -851,8 +965,8 @@ public class QuoteExtractor extends Jorel2Root {
 		}
 	}
 	
-	/*
-	This class stores information about a single quote.
+	/**
+	 * This class stores information about a single quote.
 	 */
 	class Quote {
 		String  name;
@@ -869,5 +983,11 @@ public class QuoteExtractor extends Jorel2Root {
 			unknown_alias=u;
 		}
 	}
-
+	
+	public String getName() { return gName; }
+	public String getAlias() { return gAlias; }
+	public String getOffsetLengths() { return gOffsetLengths; }
+	public String getQuote() { return gQuoteText; }
+	public boolean getUnknownAlias() { return gUnknownAlias; }
+	public String getResults() { return gResults; }
 }

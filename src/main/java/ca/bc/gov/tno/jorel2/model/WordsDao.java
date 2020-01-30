@@ -6,7 +6,10 @@ import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 import org.hibernate.Session;
@@ -40,7 +43,8 @@ public class WordsDao extends Jorel2Root implements java.io.Serializable {
 	}
 
 	@Id
-
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "next_rsn")
+	@SequenceGenerator(name = "next_rsn", sequenceName = "NEXT_RSN", allocationSize=1)
 	@Column(name = "RSN", unique = true, nullable = false, precision = 38, scale = 0)
 	public BigDecimal getRsn() {
 		return this.rsn;
@@ -76,7 +80,7 @@ public class WordsDao extends Jorel2Root implements java.io.Serializable {
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
 	 */
-	public static List<WordsDao> getWordsByWordType(Jorel2Process process, WordType wordType, Session session) {
+	public static List<WordsDao> getWords(Jorel2Process process, WordType wordType, Session session) {
 
 		BigDecimal type = BigDecimal.valueOf(wordType.ordinal()+1);
 		

@@ -15,7 +15,7 @@ public class Jorel2Process {
 	/**
 	 * Takes the process name as the single argument with no setter method, making this an immutable object.
 	 * 
-	 * @param processName
+	 * @param processName The system this process is running on (e.g. jorel, jorelMini3)
 	 */
 	Jorel2Process(String processName) {
 		

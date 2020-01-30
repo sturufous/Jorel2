@@ -22,6 +22,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
+import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 
 @Service
@@ -38,11 +39,15 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	@Inject
 	Jorel2Process process;
 	
+	/** Quote extractor for processing article text  */
+	@Inject
+	QuoteExtractor quoteExtractor;
+
 	/**
 	 * Process all eligible non-XML syndication event records from the TNO_EVENTS table.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
-	 * @session The current Hibernate persistence context
+	 * @param session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
 	public Optional<String> processEvents(String eventType, Session session) {
@@ -50,6 +55,9 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		SyndFeed feed = null;
 		
     	try {
+    		// Loads thousands for records from the WORDS table. Only do this for RSS events.
+    		quoteExtractor.init();
+    		
 	        List<Object[]> results = EventsDao.getEventsByEventType(process, eventType, session);
 	        List<SyndEntry> newSyndItems;
     		
@@ -82,9 +90,9 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	/**
 	 * Create a record in the NEWS_ITEMS table that corresponds with each rss news item in the newsItems ArrayList.
 	 * 
-	 * @param newsItems The list of news items retrieved from the publisher
+	 * @param source The source from which this feed was retrieved (e.g. 'CP News')
 	 * @param session The current Hibernate persistence context
-	 * @param rss The entire rss feed retrieved from the publisher
+	 * @param newsItems The list of news items retrieved from the publisher
 	 */
 	@SuppressWarnings("preview")
 	private void insertNewsItems(String source, Session session, List<SyndEntry> newsItems) {
@@ -106,6 +114,8 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		    	if (newsItem != null) {
 		    		session.persist(newsItem);
 		    		System.out.println(item.getTitle());
+		    		quoteExtractor.extract(newsItem.content);
+		    		NewsItemQuotesDao.saveQuotes(quoteExtractor, newsItem, session);
 		    	}
 			}
 			
@@ -118,7 +128,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	 * 
 	 * @param source The name of the publisher of this rss feed (e.g. iPolitics, Daily Hive)
 	 * @param session The active Hibernate persistence context
-	 * @param rss The feed retrieved from the publisher
+	 * @param feed The feed retrieved from the publisher
 	 * @return News items that are not currently in the NEWS_ITEMS table
 	 */
 	private List<SyndEntry> getNewRssItems(String source, Session session, SyndFeed feed) {
