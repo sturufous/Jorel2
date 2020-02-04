@@ -87,8 +87,10 @@ public class QuoteExtractor extends Jorel2Root {
 
 	/**
 	 * Loads the contents of the WORDS table, by type, into java.util.Set variables that are used to categorize words in the news item text.
+	 * This is a long running task (up to 26 seconds), so a second Jorel2Thread instance may try to access this method before completion,
+	 * hence the use of the synchronized modifier.
 	 */
-    public void init() {
+    public synchronized void init() {
     	
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
         

@@ -349,7 +349,28 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
         
         return results;
 	}
-	
+		
+	/**
+	 * Returns all Jorel entries in the EVENTS table that have an EVENT_TYPE of NEWRSS (NEWRSS created for testing) and have not
+	 * already been processed today.
+	 * 
+	 * @param process Name of the currently executing process, e.g. "jorel", "jorelMini3"
+	 * @param eventType Type of event, e.g. "Monitor", "RSS"
+	 * @param session - The currently active Hibernate DB session
+	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
+	 */
+	public static List<Object[]> getElligibleEventsByEventType(Jorel2Process process, String eventType, Session session) {
+
+		@SuppressWarnings("unchecked")
+		Query<Object[]> query = session.createNamedQuery("Events_FindElligibleEventsByEventType");
+		query.setParameter("process", process.getProcessName());
+		query.setParameter("eventtype", eventType);
+		query.setParameter("runDate", getDateNow());
+        List<Object[]> results = query.getResultList();
+        
+        return results;
+	}
+		
 	public static int getRecordCountBySource(String source) {
 		
 		return 1;

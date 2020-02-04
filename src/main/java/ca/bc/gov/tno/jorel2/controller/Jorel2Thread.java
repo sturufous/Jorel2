@@ -66,57 +66,46 @@ public final class Jorel2Thread extends Jorel2Root implements Runnable {
 	 */
 	@SuppressWarnings("preview")
 	public void run() {
+		
+		System.out.println("Running Jorel2Thread");
     	   			
     	Optional<String> rssResult;
-
-    	while(true) {
-	    	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
-	        
-	    	if(sessionFactory.isEmpty()) {
-	    		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
-	    		System.exit(-1);
-	    	} else {
-		        Session session = sessionFactory.get().openSession();
-		        String taskUpperCase;
-		        Map<EventType, String> eventMap = new HashMap<>();
-		    	
-		        // Retrieve the events for processing 
-		    	session.beginTransaction();
-		        List<EventsDao> results = EventsDao.getEventsForProcessing(session);
-		        session.getTransaction().commit();
-		        
-		        
-		        // Create Set containing list of unique event-types for processing
-		        for(EventsDao event : results) {
-		        	EventTypesDao thisEvent = event.getEventType();
-		        	String eventTypeName = thisEvent.getEventType();
-					taskUpperCase = eventTypeName.toUpperCase().replace("/", "");
-					eventMap.put(EventType.valueOf(taskUpperCase), eventTypeName);
-		        } 
-		              
-		        // Trigger processing of each event type in eventSet
-		        for (Entry<EventType, String> eventEntry : eventMap.entrySet()) {
-		        	EventType eventEnum = eventEntry.getKey();
-		        	String eventTypeName = eventEntry.getValue();
-		        	
-		        	rssResult = switch (eventEnum) {
-		        		case NEWRSS -> rssEventProcessor.processEvents(eventTypeName, session);
-		        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
-				        default -> Optional.empty();
-		        	};
-		        }
-		        
-		        session.close();
-	    	}
+    	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
+    	
+    	if(sessionFactory.isEmpty()) {
+    		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
+    	} else {
+	        Session session = sessionFactory.get().openSession();
+	        String taskUpperCase;
+	        Map<EventType, String> eventMap = new HashMap<>();
 	    	
-	    	System.exit(-1);
+	        // Retrieve the events for processing 
+	    	session.beginTransaction();
+	        List<EventsDao> results = EventsDao.getEventsForProcessing(session);
+	        session.getTransaction().commit();
 	        
-	        /* try {
-	        	Thread.sleep(10000);
+	        
+	        // Create Set containing list of unique event-types for processing
+	        for(EventsDao event : results) {
+	        	EventTypesDao thisEvent = event.getEventType();
+	        	String eventTypeName = thisEvent.getEventType();
+				taskUpperCase = eventTypeName.toUpperCase().replace("/", "");
+				eventMap.put(EventType.valueOf(taskUpperCase), eventTypeName);
 	        } 
-	        catch (InterruptedException e) {
-	        	e.printStackTrace();
-	        } */
-	    }
+	              
+	        // Trigger processing of each event type in eventMap
+	        for (Entry<EventType, String> eventEntry : eventMap.entrySet()) {
+	        	EventType eventEnum = eventEntry.getKey();
+	        	String eventTypeName = eventEntry.getValue();
+	        	
+	        	rssResult = switch (eventEnum) {
+	        		case NEWRSS -> rssEventProcessor.processEvents(eventTypeName, session);
+	        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
+			        default -> Optional.empty();
+	        	};
+	        }
+	        
+	        session.close();
+    	} 
     }
 }

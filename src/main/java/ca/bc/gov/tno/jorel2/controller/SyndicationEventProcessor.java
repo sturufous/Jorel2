@@ -58,7 +58,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     		// Loads thousands for records from the WORDS table. Only do this for RSS events.
     		quoteExtractor.init();
     		
-	        List<Object[]> results = EventsDao.getEventsByEventType(process, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
 	        List<SyndEntry> newSyndItems;
     		
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
@@ -73,8 +73,14 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	    			feed = input.build(xmlReader);
 
 		    		newSyndItems = getNewRssItems(currentEvent.getSource(), session, feed);
-		    		
 		    		insertNewsItems(currentEvent.getSource(), session, newSyndItems);
+		    		
+		    		currentEvent.setLastFtpRun(getDateNow());
+		    		
+					session.beginTransaction();
+		    		session.persist(currentEvent);
+		    		session.getTransaction().commit();
+
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
@@ -103,7 +109,6 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		RssSource sourceEnum = RssSource.valueOf(enumKey);
 		
 		if (!newsItems.isEmpty()) {
-			session.beginTransaction();
 			
 			for (SyndEntry item : newsItems) {
 		    	newsItem = switch (sourceEnum) {
@@ -111,15 +116,18 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 					default -> null;
 		    	};
 						
+		    	// Persist the news item and perform post-processing				
 		    	if (newsItem != null) {
-		    		session.persist(newsItem);
-		    		System.out.println(item.getTitle());
+					session.beginTransaction();
+					session.persist(newsItem);
+					
+		    		// Extract all quotes, and who made them, from the news item.
 		    		quoteExtractor.extract(newsItem.content);
 		    		NewsItemQuotesDao.saveQuotes(quoteExtractor, newsItem, session);
+		    		
+					session.getTransaction().commit();
 		    	}
 			}
-			
-			session.getTransaction().commit();
 		}
 	}
 	

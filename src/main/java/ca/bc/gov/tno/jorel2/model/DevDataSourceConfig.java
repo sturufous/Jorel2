@@ -8,6 +8,7 @@ import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Environment;
 import org.hibernate.service.ServiceRegistry;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
 import org.hibernate.cfg.Configuration;
@@ -23,10 +24,23 @@ import org.hibernate.cfg.Configuration;
 @Profile("dev")
 final class DevDataSourceConfig extends DataSourceConfig {
 
-	private String systemName = "vongole.tno.gov.bc.ca";
-	private String port = "1521";
-	private String sid = "tnotst02";
-	private String systemIp = "142.34.249.240";
+	@Value("${dev.dbSystemName}")
+	private String systemName;
+	
+	@Value("${dev.dbPort}")
+	private String port;
+	
+	@Value("${dev.dbSid}")
+	private String sid;
+	
+	@Value("${dev.dbUserName}")
+	private String userId;
+	
+	@Value("${dev.dbPassword}")
+	private String userPw;
+	
+	@Value("${dev.dbDialect}")	
+	private String dialect;
 	
 	private static StandardServiceRegistry registry = null;
 	private static SessionFactory sessionFactory = null;
@@ -42,9 +56,9 @@ final class DevDataSourceConfig extends DataSourceConfig {
 			Properties settings = new Properties();
 	        settings.put(Environment.DRIVER, "oracle.jdbc.OracleDriver");
 	        settings.put(Environment.URL, "jdbc:oracle:thin:@" + systemName + ":" + port + ":" + sid);
-	        settings.put(Environment.USER, "tno");
-	        settings.put(Environment.PASS, "tn29tst");
-	        settings.put(Environment.DIALECT, "org.hibernate.dialect.Oracle12cDialect");
+	        settings.put(Environment.USER, userId);
+	        settings.put(Environment.PASS, userPw);
+	        settings.put(Environment.DIALECT, dialect);
 	        settings.put(Environment.SHOW_SQL, "true");
 	        
 	        config.setProperties(settings);

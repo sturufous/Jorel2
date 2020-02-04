@@ -58,10 +58,10 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	public Optional<String> processEvents(String eventType, Session session) {
     	
     	try {
-    		// Loads thousands for records from the WORDS table. Only do this for RSS events.
+    		// Loads thousands for records from the WORDS table. Only does this for the first RSS event of the execution cycle.
     		quoteExtractor.init();
 
-	        List<Object[]> results = EventsDao.getEventsByEventType(process, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
 	        List<Rss.Channel.Item> newRssItems;
     		
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
@@ -74,6 +74,12 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    		
 		    		newRssItems = getNewRssItems(currentEvent.getSource(), session, rssContent);
 		    		insertNewsItems(currentEvent.getSource(), newRssItems, session, rssContent);
+		    		
+		    		currentEvent.setLastFtpRun(getDateNow());
+		    		
+					session.beginTransaction();
+		    		session.persist(currentEvent);
+		    		session.getTransaction().commit();
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
@@ -84,7 +90,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
-    	return Optional.of(rssContent.toString());
+    	return Optional.of(rssContent != null ? rssContent.toString() : "No results.");
 	}
 	
 	/**
@@ -135,7 +141,6 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		RssSource sourceEnum = RssSource.valueOf(enumKey);
 		
 		if (!newsItems.isEmpty()) {
-			session.beginTransaction();
 			
 			// While most feeds are handled in a generic manner, allow for custom handling with a createXXXNewsItem() method if needed.
 			for (Rss.Channel.Item item : newsItems) {
@@ -146,25 +151,35 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 					default -> null;
 		    	};
 						
-		    	// Persist the news item and perform post-processing
+		    	// Persist the news item and perform post-processing				
 		    	if (newsItem != null) {
+					session.beginTransaction();
 		    		session.persist(newsItem);
-		    		System.out.println(item.getTitle());
-		    		
-		    		//List<NewsItemIssuesDao> niIssues = NewsItemIssuesDao.getNewsItemIssues(session);
 		    		
 		    		// Extract all quotes, and who made them, from the news item.
 		    		quoteExtractor.extract(newsItem.content);
 		    		NewsItemQuotesDao.saveQuotes(quoteExtractor, newsItem, session);
 		    		
-		    		//insertfilters(item, IssuesDao.class, NewsItemIssuesDao.class, session);
+					session.getTransaction().commit();
 		    	}
 			}
-			
-			session.getTransaction().commit();
 		}
 	}
 	
+	/**
+	 * Allows filters to be set up in a generic manner. This is a placeholder method created during a rewrite of
+	 * functionality that proved to be obsolete. It is retained in case this functionality is required again.
+	 * The initial (unfinished) implementation of filters uses a table to detect RSS items to be flagged, and
+	 * a flagger table to indicate to Otis that the article should be flagged with relation to the filter.
+	 * 
+	 * Hibernate classes that provide filtering capabilities implement the <code>ArticleFilter</code> interface
+	 * allowing them to receive generic treatment by the <code>insertfilters</code> method.
+	 * 
+	 * @param item
+	 * @param filterTable
+	 * @param flaggerTable
+	 * @param session
+	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void insertfilters(Rss.Channel.Item item, Class filterTable, Class flaggerTable, Session session) {
 		
@@ -173,6 +188,8 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		
 		try {
 			Method filter = filterTable.getMethod("getEnabledRecordList", Session.class);
+			
+			// First argument of invoke() is null because getEnabledRecordList() is a static method.
 			List<ArticleFilter> results = (List<ArticleFilter>) filter.invoke(null, session);
 			
 			for (ArticleFilter stringList : results) {
@@ -182,14 +199,12 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 				for (String phrase : caseInsensitive) {
 					phrase = phrase.toLowerCase();
 					if (content.indexOf(phrase) >= 0) {
-						System.out.println("***** Match for: " + phrase + ", "+ item.getTitle());
 						hits++;
 					}		
 				}
 				
 				for (String phrase : caseSensitive) {
 					if (content.indexOf(phrase) >= 0) {
-						System.out.println("***** Match for: " + phrase + ", "+ item.getTitle());
 						hits++;
 					}		
 				}

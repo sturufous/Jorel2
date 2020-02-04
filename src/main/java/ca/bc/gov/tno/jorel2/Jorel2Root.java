@@ -1,5 +1,8 @@
 package ca.bc.gov.tno.jorel2;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 import javax.persistence.MappedSuperclass;
 
 import org.apache.logging.log4j.LogManager;
@@ -12,6 +15,8 @@ import org.hibernate.annotations.NamedQueries;
 	query = "from EventsDao e where e.process=:process and e.lastFtpRun <> :runDate"),
 	@NamedQuery(name = "Events_FindEventsByEventType", 
 	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype"),
+	@NamedQuery(name = "Events_FindElligibleEventsByEventType", 
+	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype and e.lastFtpRun <> :runDate"),
 	@NamedQuery(name = "Quotes_FindWordsByType", 
 	query = "from WordsDao w where w.type=:type"),
 })
@@ -47,5 +52,17 @@ public class Jorel2Root {
 	
 	protected static void skip() {
 		
+	}
+	
+	protected static String getDateNow() {
+		
+		// Process the current date using the JDK 1.8 Time API
+		LocalDate now = LocalDate.now();
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy");
+		
+		// Format the current date to match values in LAST_FTP_RUN
+		String dateMatch = now.format(formatter);
+		
+		return dateMatch;
 	}
 }

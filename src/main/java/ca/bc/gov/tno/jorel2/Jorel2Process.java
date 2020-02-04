@@ -1,5 +1,7 @@
 package ca.bc.gov.tno.jorel2;
 
+import org.springframework.beans.factory.annotation.Value;
+
 /**
  * Indicates the process we're running on (e.g. "jorel", "jorelMini3")
  * 
@@ -10,16 +12,10 @@ package ca.bc.gov.tno.jorel2;
 public class Jorel2Process {
 
 	/** The name of the process */
+	@Value("${instanceName}")
 	private String processName;
 	
-	/**
-	 * Takes the process name as the single argument with no setter method, making this an immutable object.
-	 * 
-	 * @param processName The system this process is running on (e.g. jorel, jorelMini3)
-	 */
-	Jorel2Process(String processName) {
-		
-		this.processName = processName;
+	Jorel2Process() {
 	}
 	
 	/**
