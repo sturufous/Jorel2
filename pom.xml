@@ -62,7 +62,7 @@
   <repositories>
     <repository>
       <id>central</id>
-      <url>http://repo.maven.apache.org/maven2/</url>
+      <url>https://repo.maven.apache.org/maven2/</url>
     </repository>
     <repository>
       <id>my-local-repo</id>
@@ -144,13 +144,11 @@
 	    <artifactId>rome</artifactId>
 	    <version>0.9</version>
 	</dependency>
-  	<dependency>
-	  <groupId>org.jdom</groupId>
-	  <artifactId>jdom</artifactId>
-	  <version>1.0.1</version>
-	  <scope>system</scope>
-	  <systemPath>${basedir}/lib/jdom.zip</systemPath>
-      <classifier>jar-with-dependencies</classifier>
-  	</dependency>
+	<!-- https://mvnrepository.com/artifact/org.jdom/jdom -->
+	<dependency>
+	    <groupId>org.jdom</groupId>
+	    <artifactId>jdom</artifactId>
+	    <version>1.1</version>
+	</dependency>
   </dependencies>
 </project>

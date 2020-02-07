@@ -58,7 +58,7 @@ public class Jorel2Configuration extends Jorel2Root {
     public ThreadPoolTaskScheduler threadPoolTaskScheduler(){
         ThreadPoolTaskScheduler threadPoolTaskScheduler
           = new ThreadPoolTaskScheduler();
-        threadPoolTaskScheduler.setPoolSize(5);
+        threadPoolTaskScheduler.setPoolSize(3);
         threadPoolTaskScheduler.setThreadNamePrefix(
           "Jorel2EventThread");
         return threadPoolTaskScheduler;

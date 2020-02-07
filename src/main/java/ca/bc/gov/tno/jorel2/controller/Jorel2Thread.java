@@ -1,22 +1,17 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
-
 import javax.inject.Inject;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.springframework.context.annotation.Scope;
 import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
-
 import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
@@ -67,9 +62,17 @@ public final class Jorel2Thread extends Jorel2Root implements Runnable {
 	@SuppressWarnings("preview")
 	public void run() {
 		
-		System.out.println("Running Jorel2Thread");
-    	   			
-    	Optional<String> rssResult;
+		Optional<String> rssResult;
+		
+		// Get the start time
+		LocalDateTime start = LocalDateTime.now();
+		
+		Thread t = Thread.currentThread();
+      	String name = t.getName();
+      	System.out.println("Starting thread: " + name);
+   	   			
+		logger.trace("***** Starting thread: " + name);
+		
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
     	
     	if(sessionFactory.isEmpty()) {
@@ -106,6 +109,12 @@ public final class Jorel2Thread extends Jorel2Root implements Runnable {
 	        }
 	        
 	        session.close();
-    	} 
+    	}
+    	
+    	LocalDateTime stop = LocalDateTime.now();
+	    long diff = ChronoUnit.SECONDS.between(start, stop);		
+
+		logger.trace("***** Completing thread: " + name + ", task took " + diff + " seconds");
+      	System.out.println("Completing thread: " + name);
     }
 }

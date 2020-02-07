@@ -44,8 +44,6 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	/** Quote extractor for processing article text  */
 	@Inject
 	QuoteExtractor quoteExtractor;
-
-	Rss rssContent;
 	
 	/**
 	 * Process all eligible RSS event records from the TNO_EVENTS table.
@@ -57,7 +55,10 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	
 	public Optional<String> processEvents(String eventType, Session session) {
     	
+		Rss rssContent = null;
+		
     	try {
+    		
     		// Loads thousands for records from the WORDS table. Only does this for the first RSS event of the execution cycle.
     		quoteExtractor.init();
 
@@ -74,12 +75,6 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    		
 		    		newRssItems = getNewRssItems(currentEvent.getSource(), session, rssContent);
 		    		insertNewsItems(currentEvent.getSource(), newRssItems, session, rssContent);
-		    		
-		    		currentEvent.setLastFtpRun(getDateNow());
-		    		
-					session.beginTransaction();
-		    		session.persist(currentEvent);
-		    		session.getTransaction().commit();
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
@@ -139,6 +134,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		NewsItemsDao newsItem = null;
 		String enumKey = source.toUpperCase().replaceAll("\\s+","");
 		RssSource sourceEnum = RssSource.valueOf(enumKey);
+		int articleCount = 0;
 		
 		if (!newsItems.isEmpty()) {
 			
@@ -161,8 +157,11 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    		NewsItemQuotesDao.saveQuotes(quoteExtractor, newsItem, session);
 		    		
 					session.getTransaction().commit();
+					articleCount++;
 		    	}
 			}
+			
+			logger.trace("***** Added: " + articleCount + " articles from " + source);
 		}
 	}
 	

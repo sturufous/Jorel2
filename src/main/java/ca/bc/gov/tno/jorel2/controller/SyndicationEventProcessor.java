@@ -74,14 +74,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 
 		    		newSyndItems = getNewRssItems(currentEvent.getSource(), session, feed);
 		    		insertNewsItems(currentEvent.getSource(), session, newSyndItems);
-		    		
-		    		currentEvent.setLastFtpRun(getDateNow());
-		    		
-					session.beginTransaction();
-		    		session.persist(currentEvent);
-		    		session.getTransaction().commit();
-
-	        	} else {
+		    	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
 	        } 
@@ -105,6 +98,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		
 		NewsItemsDao newsItem = null;
 		String enumKey = source.toUpperCase().replaceAll("\\s+","");
+		int articleCount = 0;
 
 		RssSource sourceEnum = RssSource.valueOf(enumKey);
 		
@@ -127,7 +121,11 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		    		
 					session.getTransaction().commit();
 		    	}
+		    	
+		    	articleCount++;
 			}
+			
+			logger.trace("***** Added: " + articleCount + " articles from " + source);
 		}
 	}
 	
@@ -151,7 +149,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		}
 		
 		// Create a list of items in the current feed that are not yet in the NEWS_ITEMS table
-		for (Iterator iter = feed.getEntries().iterator(); iter.hasNext(); ) {
+		for (Iterator<?> iter = feed.getEntries().iterator(); iter.hasNext(); ) {
 			SyndEntry item = (SyndEntry) iter.next();
 			if (existingNewsItems.contains(item.getLink())) {
 				skip();
