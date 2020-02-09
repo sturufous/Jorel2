@@ -21,6 +21,7 @@ import org.hibernate.query.Query;
 import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
  * Hibernate entity representing a record in TNO.EVENTS.
@@ -365,7 +366,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 		Query<Object[]> query = session.createNamedQuery("Events_FindElligibleEventsByEventType");
 		query.setParameter("process", process.getProcessName());
 		query.setParameter("eventtype", eventType);
-		query.setParameter("runDate", getDateNow());
+		query.setParameter("runDate", DateUtil.getDateNow());
         List<Object[]> results = query.getResultList();
         
         return results;

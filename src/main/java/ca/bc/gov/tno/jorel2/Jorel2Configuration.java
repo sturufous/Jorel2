@@ -2,14 +2,17 @@ package ca.bc.gov.tno.jorel2;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import ca.bc.gov.tno.jorel2.controller.Jorel2Service;
-import ca.bc.gov.tno.jorel2.controller.Jorel2Thread;
+import ca.bc.gov.tno.jorel2.controller.Jorel2Runnable;
 import ca.bc.gov.tno.jorel2.controller.QuoteExtractor;
+import ca.bc.gov.tno.jorel2.controller.FifoThreadPoolScheduler;
 
 /**
  * Spring Framework configuration for Jorel2. 
@@ -31,7 +34,7 @@ public class Jorel2Configuration extends Jorel2Root {
 	 * @return a new instance of Jorel2Service.
 	 */
 	@Bean("jorel2Service") 
-	@DependsOn({"quoteExtractor", "taskScheduler"})
+	@DependsOn({"quoteExtractor"})
 	public Jorel2Service jorel2Service() {
 		return new Jorel2Service();
 	}
@@ -48,20 +51,12 @@ public class Jorel2Configuration extends Jorel2Root {
 		return new QuoteExtractor();
 	}
 	
-	/**
-	 * Pool of schedule-capable threads that run event processing tasks embodied by instances of Jorel2Thread. These run asynchronously every
-	 * 30 seconds, so there may be some overlap.
-	 * 
-	 * @return a new instance of ThreadPoolTaskScheduler.
-	 */
-    @Bean("taskScheduler")
-    public ThreadPoolTaskScheduler threadPoolTaskScheduler(){
-        ThreadPoolTaskScheduler threadPoolTaskScheduler
-          = new ThreadPoolTaskScheduler();
-        threadPoolTaskScheduler.setPoolSize(3);
-        threadPoolTaskScheduler.setThreadNamePrefix(
-          "Jorel2EventThread");
-        return threadPoolTaskScheduler;
+    @Bean("jorel2Scheduler")
+	@DependsOn({"jorel2Runnable"})
+    public FifoThreadPoolScheduler jorel2Scheduler() {
+    	
+    	FifoThreadPoolScheduler scheduler = new FifoThreadPoolScheduler();
+    	return scheduler;
     }
     
     /**
@@ -69,9 +64,10 @@ public class Jorel2Configuration extends Jorel2Root {
      * 
      * @return a new instance of Jorel2Thread.
      */
-    @Bean("jorel2Thread")
-    public Jorel2Thread jorel2Thread() {
-    	return new Jorel2Thread();
+    @Bean("jorel2Runnable")
+    @Scope("prototype")
+    public Jorel2Runnable jorel2Thread() {
+    	return new Jorel2Runnable();
     }
     
     /**

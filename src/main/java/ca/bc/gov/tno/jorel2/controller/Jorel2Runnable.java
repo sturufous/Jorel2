@@ -9,9 +9,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import javax.inject.Inject;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
 import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
@@ -26,7 +33,7 @@ import ca.bc.gov.tno.jorel2.controller.RssEventProcessor;
  * @version 0.0.1
  */
 
-public final class Jorel2Thread extends Jorel2Root implements Runnable {
+public final class Jorel2Runnable implements Runnable {
 	
 	/** Configuration object for the active data source. Contains system_name, port etc. */
 	@Inject
@@ -48,6 +55,11 @@ public final class Jorel2Thread extends Jorel2Root implements Runnable {
 	@Inject
 	private Jorel2Process process;
 	
+	@Inject
+	private Jorel2Service service;
+	
+    protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
+    
 	/** 
 	 * Contains a list of Jorel tasks for processing. E.g. if a single occurrence, or multiple occurrences, of RSS 
 	 * is present, RSS processing is triggered. This is also true for other event types like monitor, schedule and capture.
@@ -60,6 +72,7 @@ public final class Jorel2Thread extends Jorel2Root implements Runnable {
 	 * respective handlers.
 	 */
 	@SuppressWarnings("preview")
+	@Override
 	public void run() {
 		
 		Optional<String> rssResult;
@@ -67,13 +80,18 @@ public final class Jorel2Thread extends Jorel2Root implements Runnable {
 		// Get the start time
 		LocalDateTime start = LocalDateTime.now();
 		
-		Thread t = Thread.currentThread();
-      	String name = t.getName();
+      	String name = Thread.currentThread().getName();
       	System.out.println("Starting thread: " + name);
    	   			
 		logger.trace("***** Starting thread: " + name);
 		
-    	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+    	/* Optional<SessionFactory> sessionFactory = config.getSessionFactory();
     	
     	if(sessionFactory.isEmpty()) {
     		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
@@ -115,6 +133,7 @@ public final class Jorel2Thread extends Jorel2Root implements Runnable {
 	    long diff = ChronoUnit.SECONDS.between(start, stop);		
 
 		logger.trace("***** Completing thread: " + name + ", task took " + diff + " seconds");
-      	System.out.println("Completing thread: " + name);
+      	System.out.println("Completing thread: " + name); */
+		service.notifyThreadComplete(Thread.currentThread());
     }
 }

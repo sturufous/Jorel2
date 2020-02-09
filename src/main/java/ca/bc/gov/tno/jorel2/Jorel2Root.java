@@ -30,6 +30,8 @@ import org.hibernate.annotations.NamedQueries;
 public class Jorel2Root {
 	
     protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
+    protected static final int THREAD_POOL_SIZE = 3;
+    protected static final int MAX_THREAD_RUN_TIME = 1800000;
     
 	public enum EventType {
 		
@@ -51,17 +53,4 @@ public class Jorel2Root {
 	protected static void skip() {
 		
 	}
-	
-	protected static String getDateNow() {
-		
-		// Process the current date using the JDK 1.8 Time API
-		LocalDate now = LocalDate.now();
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy");
-		
-		// Format the current date to match values in LAST_FTP_RUN
-		String dateMatch = now.format(formatter);
-		
-		return dateMatch;
-	}
-	
 }

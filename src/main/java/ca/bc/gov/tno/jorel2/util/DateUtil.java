@@ -58,4 +58,21 @@ public class DateUtil extends Jorel2Root {
 		
 		return itemDate;
 	}
+	
+	/**
+	 * Formats a date for use in comparisons (or instantiations) of dates in standard TNO format.
+	 * 
+	 * @return The current date in "Feb 5 2020" format.
+	 */
+	public static String getDateNow() {
+		
+		// Process the current date using the JDK 1.8 Time API
+		LocalDate now = LocalDate.now();
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy");
+		
+		// Format the current date to match values in LAST_FTP_RUN
+		String dateMatch = now.format(formatter);
+		
+		return dateMatch;
+	}
 }
