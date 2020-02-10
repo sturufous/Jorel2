@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import ca.bc.gov.tno.jorel2.controller.Jorel2Runnable;
 import ca.bc.gov.tno.jorel2.controller.QuoteExtractor;
-import ca.bc.gov.tno.jorel2.controller.FifoThreadPoolScheduler;
+import ca.bc.gov.tno.jorel2.controller.FifoThreadQueueScheduler;
 
 /**
  * Spring Framework configuration for Jorel2. 
@@ -39,9 +39,9 @@ public class Jorel2Configuration extends Jorel2Root {
     @Bean("jorel2Scheduler")
 	@DependsOn({"quoteExtractor"})
     @Scope("singleton")
-    public FifoThreadPoolScheduler jorel2Scheduler() {
+    public FifoThreadQueueScheduler jorel2Scheduler() {
     	
-    	FifoThreadPoolScheduler scheduler = new FifoThreadPoolScheduler();
+    	FifoThreadQueueScheduler scheduler = new FifoThreadQueueScheduler();
     	return scheduler;
     }
     

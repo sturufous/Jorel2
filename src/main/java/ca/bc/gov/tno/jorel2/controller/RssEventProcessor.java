@@ -46,22 +46,19 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	QuoteExtractor quoteExtractor;
 	
 	/**
-	 * Process all eligible RSS event records from the TNO_EVENTS table.
+	 * Process all eligible RSS event records from the TNO_EVENTS table.  This method is synchronized to prevent 
+	 * two threads from processing the same event type at the same time.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public synchronized Optional<String> processEvents(String eventType, Session session) {
     	
 		Rss rssContent = null;
 		
     	try {
-    		
-    		// Loads thousands for records from the WORDS table. Only does this for the first RSS event of the execution cycle.
-    		quoteExtractor.init();
-
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
 	        List<Rss.Channel.Item> newRssItems;
     		
@@ -78,13 +75,13 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
-	        	
 	        } 
     	} 
     	catch (Exception e) {
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
+    	notifyAll();
     	return Optional.of(rssContent != null ? rssContent.toString() : "No results.");
 	}
 	

@@ -42,6 +42,7 @@ public final class Jorel2Main extends Jorel2Root {
 		
 		try {
 			System.out.println("hello world!");
+			logger.trace("/============================= Execution Start ===============================/");
 			
 			// Get the Spring environment
             AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(); 

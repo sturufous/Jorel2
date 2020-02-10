@@ -1,32 +1,43 @@
 package ca.bc.gov.tno.jorel2.controller;
 
 import java.time.Instant;
-import java.util.AbstractQueue;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
-public class FifoThreadPoolScheduler extends Jorel2Root {
+/**
+ * Manages the execution of Jorel2Runnable objects using a three member ArrayBlockingQueue. Initially the array is populated with three threads
+ * and their associated runnable objects. This is done <code>PostConstruct</code> so all injected instance variables are guaranteed to be instantiated.
+ * The scheduler is associated with the <code>run()</code> method, which is executed using a schedule defined by the <code>cron.expression</code> in
+ * the <code>jorel.properties</code> file. At the time of writing this will spin off a new thread every 30 seconds.
+ * 
+ * The blocking array insures that there will never be more than three threads executing at the same time. If the array is empty, and the scheduler
+ * runs again, it will wait for the <code>notifyComplete()</code> method to push a new thread onto the queue.
+ * 
+ * @author Stuart Morse
+ * @version 0.0.1
+ */
+
+public class FifoThreadQueueScheduler extends Jorel2Root {
 	
     /** Context from which to extract the Jorel2Thread singleton */
     @Inject
     private ApplicationContext ctx;
     
+    /** Map used to record the start times of each thread. This allows the enforcement of MAX_THREAD_RUN_TIME. */
 	private Map<Thread, Instant> threadStartTimestamps = new ConcurrentHashMap<>();
 	
-	private Map<Thread, Jorel2Runnable> runnables = new ConcurrentHashMap<>();
-	
+	/** Queue that lets us push threads in one end and pull them out the other. If there are none the scheduler blocks. */
 	ArrayBlockingQueue<Thread> threadPool = null;
 	
+	/** Used to cycle through the thread names Jorel2Thread-0, -1 and -2. A maximum of three threads can run concurrently. */
 	int threadCounter = 0;
 	
 	@PostConstruct
@@ -37,13 +48,12 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
 			
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
-			runnables.put(thread, runnable);
 			thread.setName("Jorel2Thread-" + threadCounter++);
 			threadPool.add(thread);
 		}
 	}
 	
-	@Scheduled(fixedRate = 30000)
+	@Scheduled(cron = "${cron.expression}")
 	public void run() {
 		try {
 			Thread currentThread = threadPool.take();
@@ -80,13 +90,7 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
 			logger.error("Attempting to store the tail of the thread pool.", e);
 		}
     	
-    	// Null out all instance variables to insure garbage collection.
-    	Jorel2Runnable runnable = runnables.get(initiator);
-    	runnable.destroy();
-    	
     	threadStartTimestamps.remove(initiator);
-    	runnables.remove(initiator);
-    	
     }
     
     public long getMaxRunTime() {

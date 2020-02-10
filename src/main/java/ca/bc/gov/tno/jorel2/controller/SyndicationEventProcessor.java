@@ -44,20 +44,18 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	QuoteExtractor quoteExtractor;
 
 	/**
-	 * Process all eligible non-XML syndication event records from the TNO_EVENTS table.
+	 * Process all eligible non-XML syndication event records from the TNO_EVENTS table. This method is synchronized to prevent 
+	 * two threads from processing the same event type at the same time.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
-	public Optional<String> processEvents(String eventType, Session session) {
+	public synchronized Optional<String> processEvents(String eventType, Session session) {
 	
 		SyndFeed feed = null;
 		
     	try {
-    		// Loads thousands for records from the WORDS table. Only do this for RSS events.
-    		quoteExtractor.init();
-    		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
 	        List<SyndEntry> newSyndItems;
     		
@@ -83,6 +81,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
+    	notifyAll();
     	return Optional.of("empty");
 	}
 	

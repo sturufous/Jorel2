@@ -53,7 +53,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	
 	/** Task scheduler used to manage CronTrigger based scheduling */    
 	@Inject
-	private FifoThreadPoolScheduler jorelScheduler;
+	private FifoThreadQueueScheduler jorelScheduler;
 	
 	/** 
 	 * Contains a list of Jorel tasks for processing. E.g. if a single occurrence, or multiple occurrences, of RSS 
@@ -69,37 +69,16 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@SuppressWarnings("preview")
 	@Override
 	public void run() {
-		
 		Optional<String> rssResult;
-		
-		// Get the start time
-		LocalDateTime start = LocalDateTime.now();
-		
-      	String name = Thread.currentThread().getName();
-      	System.out.println("Starting thread: " + name);
-   	   			
-		logger.trace("***** Starting thread: " + name);
-		
-		/*try {
-			if (Thread.currentThread().getName().contains("0")) {
-				Thread.sleep(20000);
-			} else
-			if (Thread.currentThread().getName().contains("1")) {
-				Thread.sleep(20000);
-			} else {
-				Thread.sleep(15000);
-			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} */
-		
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
-    	
+    	LocalDateTime startTime = null;
+				
+		startTime = logThreadStartup();
+		
     	if(sessionFactory.isEmpty()) {
     		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
     	} else {
 	        Session session = sessionFactory.get().openSession();
-	        String taskUpperCase;
 	        Map<EventType, String> eventMap = new HashMap<>();
 	    	
 	        // Retrieve the events for processing 
@@ -107,15 +86,8 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        List<EventsDao> results = EventsDao.getEventsForProcessing(session);
 	        session.getTransaction().commit();
 	        
+	        getUniqueEventTypes(eventMap, results);
 	        
-	        // Create Set containing list of unique event-types for processing
-	        for(EventsDao event : results) {
-	        	EventTypesDao thisEvent = event.getEventType();
-	        	String eventTypeName = thisEvent.getEventType();
-				taskUpperCase = eventTypeName.toUpperCase().replace("/", "");
-				eventMap.put(EventType.valueOf(taskUpperCase), eventTypeName);
-	        } 
-	              
 	        // Trigger processing of each event type in eventMap
 	        for (Entry<EventType, String> eventEntry : eventMap.entrySet()) {
 	        	EventType eventEnum = eventEntry.getKey();
@@ -131,23 +103,49 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        session.close();
     	}
     	
+    	logThreadCompletion(startTime);
+	}
+	
+	/**
+	 * Take the list of events matching the named query <code>Events_FindEventsForProcessing</code> and remove duplicate entries
+	 * putting the resulting list of unique event types to be processed in eventMap. An EventType <code>enum</code> is used as the
+	 * key to eventMap, and the case dependent event type name is stored as the value. This case-dependent string is used in later
+	 * processing.
+	 * 
+	 * @param eventMap Map of Unique event types to be processed by this runnable.
+	 * @param results The query results, potentially containing multiple entries for each event type.
+	 */
+	private void getUniqueEventTypes(Map<EventType, String> eventMap, List<EventsDao> results) {
+        String taskUpperCase;
+        
+        for(EventsDao event : results) {
+        	EventTypesDao thisEvent = event.getEventType();
+        	String eventTypeName = thisEvent.getEventType();
+			taskUpperCase = eventTypeName.toUpperCase().replace("/", "");
+			eventMap.put(EventType.valueOf(taskUpperCase), eventTypeName);
+        } 
+	}
+	
+	public LocalDateTime logThreadStartup() {
+		// Get the start time
+		LocalDateTime start = LocalDateTime.now();
+		
+      	String name = Thread.currentThread().getName();
+      	System.out.println("Starting thread: " + name);
+   	   			
+		logger.trace("***** Starting thread: " + name);
+		
+		return start;
+	}
+	
+	private void logThreadCompletion(LocalDateTime startTime) {
     	LocalDateTime stop = LocalDateTime.now();
-	    long diff = ChronoUnit.SECONDS.between(start, stop);		
+	    long diff = ChronoUnit.SECONDS.between(startTime, stop);		
+      	String name = Thread.currentThread().getName();
 
 		logger.trace("***** Completing thread: " + name + ", task took " + diff + " seconds");
       	System.out.println("Completing thread: " + name);
 	
 		jorelScheduler.notifyThreadComplete(Thread.currentThread());
-	}
-	
-	public void destroy() {
-		
-		config = null;
-		environment = null;
-		rssEventProcessor = null;
-		syndicationEventProcessor = null;
-		process = null;
-		jorelScheduler = null;
-	    tasksUpperCase = null;
 	}
 }
