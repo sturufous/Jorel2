@@ -9,16 +9,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import javax.inject.Inject;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-
 import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
@@ -34,7 +29,7 @@ import ca.bc.gov.tno.jorel2.controller.RssEventProcessor;
  * @version 0.0.1
  */
 
-public final class Jorel2Runnable implements Runnable {
+public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	
 	/** Configuration object for the active data source. Contains system_name, port etc. */
 	@Inject
@@ -56,11 +51,10 @@ public final class Jorel2Runnable implements Runnable {
 	@Inject
 	private Jorel2Process process;
 	
+	/** Task scheduler used to manage CronTrigger based scheduling */    
 	@Inject
-	private Jorel2Service service;
+	private FifoThreadPoolScheduler jorelScheduler;
 	
-    protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
-    
 	/** 
 	 * Contains a list of Jorel tasks for processing. E.g. if a single occurrence, or multiple occurrences, of RSS 
 	 * is present, RSS processing is triggered. This is also true for other event types like monitor, schedule and capture.
@@ -142,6 +136,18 @@ public final class Jorel2Runnable implements Runnable {
 
 		logger.trace("***** Completing thread: " + name + ", task took " + diff + " seconds");
       	System.out.println("Completing thread: " + name);
-		service.notifyThreadComplete(Thread.currentThread());
-    }
+	
+		jorelScheduler.notifyThreadComplete(Thread.currentThread());
+	}
+	
+	public void destroy() {
+		
+		config = null;
+		environment = null;
+		rssEventProcessor = null;
+		syndicationEventProcessor = null;
+		process = null;
+		jorelScheduler = null;
+	    tasksUpperCase = null;
+	}
 }

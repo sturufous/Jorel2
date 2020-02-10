@@ -23,6 +23,8 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
     
 	private Map<Thread, Instant> threadStartTimestamps = new ConcurrentHashMap<>();
 	
+	private Map<Thread, Jorel2Runnable> runnables = new ConcurrentHashMap<>();
+	
 	ArrayBlockingQueue<Thread> threadPool = null;
 	
 	int threadCounter = 0;
@@ -35,6 +37,7 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
 			
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
+			runnables.put(thread, runnable);
 			thread.setName("Jorel2Thread-" + threadCounter++);
 			threadPool.add(thread);
 		}
@@ -58,7 +61,7 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
     		// If any thread has been running for more than 30 minutes, shut down this Jorel2 process.
     		if (getMaxRunTime() > MAX_THREAD_RUN_TIME) {
     			IllegalStateException e = new IllegalStateException("Maximum thread run time exceeded.");
-    			logger.error("A Jorel 2 processing thread ran for more than 30 minutes.", e);
+    			logger.error("A Jorel 2 processing thread ran for more than " + (MAX_THREAD_RUN_TIME/60) + " minutes.", e);
     			System.exit(-1);
     		}
     		
@@ -76,7 +79,13 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
 		} catch (InterruptedException e) {
 			logger.error("Attempting to store the tail of the thread pool.", e);
 		}
+    	
+    	// Null out all instance variables to insure garbage collection.
+    	Jorel2Runnable runnable = runnables.get(initiator);
+    	runnable.destroy();
+    	
     	threadStartTimestamps.remove(initiator);
+    	runnables.remove(initiator);
     	
     }
     

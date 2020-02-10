@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -87,10 +89,11 @@ public class QuoteExtractor extends Jorel2Root {
 
 	/**
 	 * Loads the contents of the WORDS table, by type, into java.util.Set variables that are used to categorize words in the news item text.
-	 * This is a long running task (up to 26 seconds), so a second Jorel2Thread instance may try to access this method before completion,
-	 * hence the use of the synchronized modifier.
+	 * The loading of this data is a pre-requisite to booting up the FifoThreadPoolScheduler.
 	 */
-    public synchronized void init() {
+	
+	@PostConstruct
+    public void init() {
     	
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
         
@@ -102,6 +105,7 @@ public class QuoteExtractor extends Jorel2Root {
     		if (verbs == null || titles == null || noiseWords == null || noiseNameWords == null) {
 		        session = sessionFactory.get().openSession();
 		        
+		        logger.trace("Loading data from the WORDS table in QuoteExtractor...");
 				verbs = loadWords(WordsDao.getWords(process, WordType.VERB, session));
 				titles = loadWords(WordsDao.getWords(process, WordType.TITLE, session));
 				noiseWords = loadWords(WordsDao.getWords(process, WordType.NOISE, session));
