@@ -40,14 +40,13 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
 		}
 	}
 	
-	@Scheduled(fixedRate = 5000)
+	@Scheduled(fixedRate = 30000)
 	public void run() {
 		try {
 			Thread currentThread = threadPool.take();
 			//System.out.println("Thread " + currentThread.getName() + " is alive = " +currentThread.isAlive() + " status = " + currentThread.getState());
 			currentThread.start();
 		   	threadStartTimestamps.put((Thread) currentThread, Instant.now());
-
 		} catch (InterruptedException e) {
 			logger.error("Attempting to get head entry in the thread pool.", e);
 		}
@@ -56,14 +55,23 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
     public void notifyThreadComplete(Thread initiator) {
     	
     	try {
+    		// If any thread has been running for more than 30 minutes, shut down this Jorel2 process.
+    		if (getMaxRunTime() > MAX_THREAD_RUN_TIME) {
+    			IllegalStateException e = new IllegalStateException("Maximum thread run time exceeded.");
+    			logger.error("A Jorel 2 processing thread ran for more than 30 minutes.", e);
+    			System.exit(-1);
+    		}
+    		
+    		// Create a new runnable and add it to the tail of the thread pool to replace the one that terminated
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
 			thread.setName("Jorel2Thread-" + threadCounter++ % THREAD_POOL_SIZE);
 			threadPool.put(thread);
 			
-			Instant runTime = threadStartTimestamps.get(initiator);
-			long runtimeSecond = Instant.now().getEpochSecond() - runTime.getEpochSecond();
-			System.out.println("Thread " + initiator.getName() + " took " + runtimeSecond + " to complete.");
+			if (threadStartTimestamps.size() == THREAD_POOL_SIZE) {
+				logger.trace("WARNING: Three threads running concurrently.");
+			}
+			
 			threadStartTimestamps.remove(initiator);
 		} catch (InterruptedException e) {
 			logger.error("Attempting to store the tail of the thread pool.", e);
@@ -74,11 +82,14 @@ public class FifoThreadPoolScheduler extends Jorel2Root {
     
     public long getMaxRunTime() {
     	
-    	long max = 0;
+    	long maxRunTime = 0;
     	
-    	for (Entry<Thread, Instant> entry : threadStartTimestamps.entrySet()) {
-    		long i = Instant.now().getEpochSecond() - entry.getValue().getEpochSecond();
+    	for (Entry < Thread, Instant > entry : threadStartTimestamps.entrySet()) {
+    		long runTime = Instant.now().getEpochSecond() - entry.getValue().getEpochSecond();
+    		if (runTime > maxRunTime) {
+    			maxRunTime = runTime;
+    		}
     	}
-		return threadCounter;
+		return maxRunTime;
     }
 }

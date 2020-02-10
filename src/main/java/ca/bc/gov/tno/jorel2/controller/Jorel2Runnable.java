@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import ca.bc.gov.tno.jorel2.Jorel2Process;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
+import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
@@ -85,13 +86,20 @@ public final class Jorel2Runnable implements Runnable {
    	   			
 		logger.trace("***** Starting thread: " + name);
 		
-		try {
-			Thread.sleep(2000);
+		/*try {
+			if (Thread.currentThread().getName().contains("0")) {
+				Thread.sleep(20000);
+			} else
+			if (Thread.currentThread().getName().contains("1")) {
+				Thread.sleep(20000);
+			} else {
+				Thread.sleep(15000);
+			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-		}
+		} */
 		
-    	/* Optional<SessionFactory> sessionFactory = config.getSessionFactory();
+    	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
     	
     	if(sessionFactory.isEmpty()) {
     		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
@@ -133,7 +141,7 @@ public final class Jorel2Runnable implements Runnable {
 	    long diff = ChronoUnit.SECONDS.between(start, stop);		
 
 		logger.trace("***** Completing thread: " + name + ", task took " + diff + " seconds");
-      	System.out.println("Completing thread: " + name); */
+      	System.out.println("Completing thread: " + name);
 		service.notifyThreadComplete(Thread.currentThread());
     }
 }
