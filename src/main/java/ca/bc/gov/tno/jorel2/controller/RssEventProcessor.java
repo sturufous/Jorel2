@@ -164,17 +164,17 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	
 	/**
 	 * Allows filters to be set up in a generic manner. This is a placeholder method created during a rewrite of
-	 * functionality that proved to be obsolete. It is retained in case this functionality is required again.
+	 * functionality that proved to be obsolete. It is retained in case this functionality is required in future.
 	 * The initial (unfinished) implementation of filters uses a table to detect RSS items to be flagged, and
 	 * a flagger table to indicate to Otis that the article should be flagged with relation to the filter.
-	 * 
+	 * <p>
 	 * Hibernate classes that provide filtering capabilities implement the <code>ArticleFilter</code> interface
 	 * allowing them to receive generic treatment by the <code>insertfilters</code> method.
 	 * 
-	 * @param item
-	 * @param filterTable
-	 * @param flaggerTable
-	 * @param session
+	 * @param item The news item to be filtered.
+	 * @param filterTable Tables used to determine the phrases on which to filter.
+	 * @param flaggerTable Table to write records to indicating that the current item matches the filter.
+	 * @param session The Hibernate session being used by this thread.
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void insertfilters(Rss.Channel.Item item, Class filterTable, Class flaggerTable, Session session) {

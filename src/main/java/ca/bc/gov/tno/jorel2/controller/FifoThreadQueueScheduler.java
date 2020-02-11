@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import org.springframework.context.ApplicationContext;
@@ -13,58 +15,104 @@ import org.springframework.scheduling.annotation.Scheduled;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
- * Manages the execution of Jorel2Runnable objects using a three member ArrayBlockingQueue. Initially the array is populated with three threads
+ * <p>Manages the execution of Jorel2Runnable objects using a three member ArrayBlockingQueue. Initially the array is populated with three threads
  * and their associated runnable objects. This is done <code>PostConstruct</code> so all injected instance variables are guaranteed to be instantiated.
  * The scheduler is associated with the <code>run()</code> method, which is executed using a schedule defined by the <code>cron.expression</code> in
- * the <code>jorel.properties</code> file. At the time of writing this will spin off a new thread every 30 seconds.
- * 
- * The blocking array insures that there will never be more than three threads executing at the same time. If the array is empty, and the scheduler
- * runs again, it will wait for the <code>notifyComplete()</code> method to push a new thread onto the queue.
- * 
+ * the <code>jorel.properties</code> file. At the time of writing this will spin off a new thread every 30 seconds. There is no explicit call from
+ * any of the Jorel2 code that starts this proces, Spring handles everything.
+ * </p>
+ * <p>The blocking array insures that there will never be more than three threads executing at the same time. If the array is empty, and the scheduler
+ * runs again, it will wait for the <code>notifyComplete()</code> method to push a new thread onto the queue. This happens when a previously executed
+ * thread completes. It is the last call from the Jorel2Runnable <code>run()</code> method.
+ * </p>
+ * <p>An entry is added to the <code>threadStartTimestamps</code> map each time a thread is started in the <code>run()</code> method. The key for this
+ * map is the thread itself, the value is a <code>java.time Instant</code> representing the time at which the thread was started. When the thread 
+ * terminates, and <code>notifyComplete()</code> is called, the start time for the thread is compared with the current time and the run time for
+ * the thread is written to the log file.
+ * </p>
+ * <p><code>notifyComplete()</code> also checks all running threads to make sure no thread's run time has exceeded <code>MAX_THREAD_RUN_TIME</code> 
+ * seconds. If three threads are running at the same time a warning is written to the log file. This doesn't necessarily indicate pathological
+ * behaviour, it just means that the time taken to process a previous Jorel event has exceeded the scheduler period. Currently Jorel2 runs every thirty 
+ * seconds and the RSS extraction process (for example) takes around twenty seconds to complete. If three threads are already running, the remaining ten 
+ * seconds for each execution will ensure that any threads that have fallen behind will catch up.
+ * </p>
+ * <p>The blocking function of the threadQueue ensures that the scheduled process waits until one of the three threads completes, thus avoiding the 
+ * proliferation of blocked threads.
+ * </p>
  * @author Stuart Morse
  * @version 0.0.1
  */
 
 public class FifoThreadQueueScheduler extends Jorel2Root {
 	
-    /** Context from which to extract the Jorel2Thread singleton */
+    /** Context from which to extract the Jorel2Thread Prototype */
     @Inject
     private ApplicationContext ctx;
     
-    /** Map used to record the start times of each thread. This allows the enforcement of MAX_THREAD_RUN_TIME. */
+    /** Map used to record the start times of each thread. This is used for logging and the enforcement of MAX_THREAD_RUN_TIME. */
 	private Map<Thread, Instant> threadStartTimestamps = new ConcurrentHashMap<>();
 	
-	/** Queue that lets us push threads in one end and pull them out the other. If there are none the scheduler blocks. */
-	ArrayBlockingQueue<Thread> threadPool = null;
+	/** Queue that lets Jorel2 push threads in one end and pull them out the other. If there are none the scheduler blocks. */
+	ArrayBlockingQueue<Thread> threadQueue = null;
 	
 	/** Used to cycle through the thread names Jorel2Thread-0, -1 and -2. A maximum of three threads can run concurrently. */
 	int threadCounter = 0;
 	
+	/**
+	 * Adds the initial three threads and their associated runnable objects to the <code>threadQueue</code>. This is done <code>PostConstruct</code>
+	 * so it is guaranteed to finish prior to the first execution of the <code>@Scheduled run()</code> method.
+	 */
 	@PostConstruct
 	public void init() {
 		
-		threadPool = new ArrayBlockingQueue<>(THREAD_POOL_SIZE);
+		threadQueue = new ArrayBlockingQueue<>(THREAD_POOL_SIZE);
 		for (int count=0; count < THREAD_POOL_SIZE; count++) {
 			
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
 			thread.setName("Jorel2Thread-" + threadCounter++);
-			threadPool.add(thread);
+			threadQueue.add(thread);
 		}
 	}
 	
+	/**
+	 * Takes a thread from the threadQueue (if one is available) starts it, and stores it's start time in the <code>threadStartTimestamps</code> map.
+	 * If no thread is available this method blocks until <code>notifyThreadComplete()</code> pushes a new thred onto the queue.
+	 * 
+	 * Waiting for too long for a new thread indicates that a pathological condition exists, so the thread is retrieved from the queue using 
+	 * <code>ArrayBlockingQueue</code>'s <code>poll(long timeout, TimeUnit unit)</code> method which will timeout after <code>MAX_THREAD_RUN_TIME</code>
+	 * seconds. In this case an error is logged and the VM will shut down.
+	 */
 	@Scheduled(cron = "${cron.expression}")
 	public void run() {
 		try {
-			Thread currentThread = threadPool.take();
-			//System.out.println("Thread " + currentThread.getName() + " is alive = " +currentThread.isAlive() + " status = " + currentThread.getState());
-			currentThread.start();
-		   	threadStartTimestamps.put((Thread) currentThread, Instant.now());
+			Thread currentThread = threadQueue.poll(MAX_THREAD_RUN_TIME, TimeUnit.SECONDS);
+			
+			if (currentThread == null) { // Timeout occurred
+    			IllegalStateException e = new IllegalStateException("Waited too long to obtain a new thread from the thread queue.");
+    			logger.error("Waited to obtain a thread from the thread queue for more than " + (MAX_THREAD_RUN_TIME/60) + " minutes.", e);
+    			System.exit(-1);
+    		} else {
+    			currentThread.start();
+    		   	threadStartTimestamps.put((Thread) currentThread, Instant.now());    			
+    		}
 		} catch (InterruptedException e) {
 			logger.error("Attempting to get head entry in the thread pool.", e);
 		}
 	}
 	
+	/**
+	 * Invokes the <code>getBean()</code> method of Spring's <code>ApplicationContext</code> to create a new instance of Jorel2Runnable. As the
+	 * <code>Jorel2Runnable</code> bean is annotated with <code>@Prototype</code> this method creates a new thread instance every time it is called. 
+	 * All other beans used by Jorel2 are singletons. This approach gives Spring control to instantiate all injected instance variables in 
+	 * <code>Jorel2Runnable</code>, of which there are six at this time of writing. 
+	 * 
+	 * This method also monitors all running threads to ensure their run-times do not exceed <code>MAX_THREAD_RUN_TIME</code> seconds. If this
+	 * condition is violated a message is written to the log and Jorel2 will shut down. A warning is also written to the log if all three threads were
+	 * running when this message was called. This might indicate a problem if it continues to occur.
+	 * 
+	 * @param initiator The thread who's <code>run()</code> method just completed.
+	 */
     public void notifyThreadComplete(Thread initiator) {
     	
     	try {
@@ -79,7 +127,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
 			thread.setName("Jorel2Thread-" + threadCounter++ % THREAD_POOL_SIZE);
-			threadPool.put(thread);
+			threadQueue.put(thread);
 			
 			if (threadStartTimestamps.size() == THREAD_POOL_SIZE) {
 				logger.trace("WARNING: Three threads running concurrently.");
@@ -93,6 +141,11 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     	threadStartTimestamps.remove(initiator);
     }
     
+    /**
+     * Loops through the <code>threadStartTimestamps</code> map and determines which thread has been running for the longest time.
+     * 
+     * @return The run-time of the longest running thread.
+     */
     public long getMaxRunTime() {
     	
     	long maxRunTime = 0;
