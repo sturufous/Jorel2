@@ -49,10 +49,11 @@ public final class Jorel2Main extends Jorel2Root {
             ConfigurableEnvironment env = ctx.getEnvironment(); 
                         
         	// Set the active DataSourceConfig to that identified in the command arguments. Assume a single profile argument.
-	        if(args.length == 0) {
-	        	throw new IllegalArgumentException("Database profile name missing from args array.");
+        	String dbProfile = System.getProperty("dbProfile");
+	        if(dbProfile.length() == 0) {
+	        	throw new IllegalArgumentException("Database profile name missing from System.properties.");
 	        } else {
-	        	env.setActiveProfiles(args[0]);
+	        	env.setActiveProfiles(dbProfile);
 	        }
 	        
 	        // Register the configurator, which performs a component scan and other initialization functions

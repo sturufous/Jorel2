@@ -99,7 +99,7 @@ public class QuoteExtractor extends Jorel2Root {
         
     	if(sessionFactory.isEmpty()) {
     		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
-    		System.exit(-1);
+    		System.exit(FATAL_CONDITION);
     	} else {
     		
     		if (verbs == null || titles == null || noiseWords == null || noiseNameWords == null) {

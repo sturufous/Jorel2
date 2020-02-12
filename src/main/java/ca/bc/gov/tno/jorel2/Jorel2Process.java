@@ -1,6 +1,9 @@
 package ca.bc.gov.tno.jorel2;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jmx.export.annotation.ManagedResource;
+import org.springframework.jmx.export.annotation.ManagedOperation;
+import org.springframework.jmx.export.annotation.ManagedAttribute;
 
 /**
  * Indicates the process we're running on (e.g. "jorel", "jorelMini3")
@@ -9,11 +12,22 @@ import org.springframework.beans.factory.annotation.Value;
  * @version 0.0.1
  *
  */
+
+@ManagedResource(
+        objectName="bean:name=testMbean",
+        description="My Managed Bean",
+        log=true,
+        logFile="jmx.log",
+        currencyTimeLimit=15,
+        persistPolicy="OnUpdate",
+        persistPeriod=200,
+        persistLocation="foo",
+        persistName="bar")
 public class Jorel2Process {
 
 	/** The name of the process */
 	@Value("${instanceName}")
-	private String processName;
+	public String processName;
 	
 	Jorel2Process() {
 	}
@@ -23,6 +37,8 @@ public class Jorel2Process {
 	 * 
 	 * @return The name of the current process
 	 */
+	
+	@ManagedAttribute(description="Name of this Jorel instance", currencyTimeLimit=15)
 	public String getProcessName() {
 		
 		return processName;

@@ -18,8 +18,9 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
  * <p>Manages the execution of Jorel2Runnable objects using a three member ArrayBlockingQueue. Initially the array is populated with three threads
  * and their associated runnable objects. This is done <code>PostConstruct</code> so all injected instance variables are guaranteed to be instantiated.
  * The scheduler is associated with the <code>run()</code> method, which is executed using a schedule defined by the <code>cron.expression</code> in
- * the <code>jorel.properties</code> file. At the time of writing this will spin off a new thread every 30 seconds. There is no explicit call from
- * any of the Jorel2 code that starts this proces, Spring handles everything.
+ * the <code>jorel.properties</code> file. Scheduled execution of this method is guaranteed to remain dormant until all PostConstruc methods have completed.
+ * At the time of writing the <code>run()</code> method will spin off a new thread every 30 seconds. There is no explicit call from any of the Jorel2 code 
+ * that starts this process, Spring handles everything.
  * </p>
  * <p>The blocking array insures that there will never be more than three threads executing at the same time. If the array is empty, and the scheduler
  * runs again, it will wait for the <code>notifyComplete()</code> method to push a new thread onto the queue. This happens when a previously executed
@@ -49,14 +50,11 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     @Inject
     private ApplicationContext ctx;
     
-    /** Map used to record the start times of each thread. This is used for logging and the enforcement of MAX_THREAD_RUN_TIME. */
-	private Map<Thread, Instant> threadStartTimestamps = new ConcurrentHashMap<>();
-	
 	/** Queue that lets Jorel2 push threads in one end and pull them out the other. If there are none the scheduler blocks. */
 	ArrayBlockingQueue<Thread> threadQueue = null;
 	
 	/** Used to cycle through the thread names Jorel2Thread-0, -1 and -2. A maximum of three threads can run concurrently. */
-	int threadCounter = 0;
+	int threadCounter = 3;
 	
 	/**
 	 * Adds the initial three threads and their associated runnable objects to the <code>threadQueue</code>. This is done <code>PostConstruct</code>
@@ -70,7 +68,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 			
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
-			thread.setName("Jorel2Thread-" + threadCounter++);
+			thread.setName("Jorel2Thread-" + count + " [" + count + "]");
 			threadQueue.add(thread);
 		}
 	}
@@ -91,7 +89,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 			if (currentThread == null) { // Timeout occurred
     			IllegalStateException e = new IllegalStateException("Waited too long to obtain a new thread from the thread queue.");
     			logger.error("Waited to obtain a thread from the thread queue for more than " + (MAX_THREAD_RUN_TIME/60) + " minutes.", e);
-    			System.exit(-1);
+    			System.exit(FATAL_CONDITION);
     		} else {
     			currentThread.start();
     		   	threadStartTimestamps.put((Thread) currentThread, Instant.now());    			
@@ -120,13 +118,13 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     		if (getMaxRunTime() > MAX_THREAD_RUN_TIME) {
     			IllegalStateException e = new IllegalStateException("Maximum thread run time exceeded.");
     			logger.error("A Jorel 2 processing thread ran for more than " + (MAX_THREAD_RUN_TIME/60) + " minutes.", e);
-    			System.exit(-1);
+    			System.exit(FATAL_CONDITION);
     		}
     		
     		// Create a new runnable and add it to the tail of the thread pool to replace the one that terminated
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
-			thread.setName("Jorel2Thread-" + threadCounter++ % THREAD_POOL_SIZE);
+			thread.setName("Jorel2Thread-" + (threadCounter % THREAD_POOL_SIZE) + " [" + (threadCounter++) + "]");
 			threadQueue.put(thread);
 			
 			if (threadStartTimestamps.size() == THREAD_POOL_SIZE) {
@@ -142,7 +140,8 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     }
     
     /**
-     * Loops through the <code>threadStartTimestamps</code> map and determines which thread has been running for the longest time.
+     * Loops through the <code>threadStartTimestamps</code> map and determines which thread has been running for the longest time. This is used
+     * to determine if any thread has been running for longer than <code>MAX_THREAD_RUN_TIME</code> seconds.
      * 
      * @return The run-time of the longest running thread.
      */

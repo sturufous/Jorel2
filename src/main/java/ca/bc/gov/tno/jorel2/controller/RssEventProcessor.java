@@ -59,6 +59,8 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		Rss rssContent = null;
 		
     	try {
+    		logger.trace(getLogMarker("    ") + "Starting RSS event processing");
+    		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
 	        List<Rss.Channel.Item> newRssItems;
     		
@@ -81,6 +83,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
+		logger.trace(getLogMarker("    ") + "Completing RSS event processing");
     	notifyAll();
     	return Optional.of(rssContent != null ? rssContent.toString() : "No results.");
 	}
@@ -158,7 +161,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    	}
 			}
 			
-			logger.trace("***** Added: " + articleCount + " articles from " + source);
+			logger.trace(getLogMarker("    ") + "Added: " + articleCount + " article(s) from " + source);
 		}
 	}
 	

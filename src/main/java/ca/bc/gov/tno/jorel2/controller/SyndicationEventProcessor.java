@@ -56,6 +56,8 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		SyndFeed feed = null;
 		
     	try {
+    		logger.trace(getLogMarker("    ") + "Starting Syndication event processing");
+    		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
 	        List<SyndEntry> newSyndItems;
     		
@@ -81,6 +83,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
+		logger.trace(getLogMarker("    ") + "Completing Syndication event processing");
     	notifyAll();
     	return Optional.of("empty");
 	}
@@ -124,7 +127,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		    	articleCount++;
 			}
 			
-			logger.trace("***** Added: " + articleCount + " articles from " + source);
+			logger.trace(getLogMarker("    ") + "Added: " + articleCount + " article(s) from " + source);
 		}
 	}
 	

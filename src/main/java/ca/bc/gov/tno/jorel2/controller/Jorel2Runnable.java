@@ -131,9 +131,9 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		LocalDateTime start = LocalDateTime.now();
 		
       	String name = Thread.currentThread().getName();
-      	System.out.println("Starting thread: " + name);
+      	System.out.println("Starting thread:   " + name);
    	   			
-		logger.trace("***** Starting thread: " + name);
+		logger.trace(getLogMarker("") + "Starting thread:   " + name);
 		
 		return start;
 	}
@@ -143,7 +143,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	    long diff = ChronoUnit.SECONDS.between(startTime, stop);		
       	String name = Thread.currentThread().getName();
 
-		logger.trace("***** Completing thread: " + name + ", task took " + diff + " seconds");
+		logger.trace(getLogMarker("") + "Completing thread: " + name + ", task took " + diff + " seconds");
       	System.out.println("Completing thread: " + name);
 	
 		jorelScheduler.notifyThreadComplete(Thread.currentThread());
