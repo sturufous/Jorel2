@@ -32,10 +32,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
  * the thread is written to the log file.
  * </p>
  * <p><code>notifyComplete()</code> also checks all running threads to make sure no thread's run time has exceeded <code>MAX_THREAD_RUN_TIME</code> 
- * seconds. If three threads are running at the same time a warning is written to the log file. This doesn't necessarily indicate pathological
- * behaviour, it just means that the time taken to process a previous Jorel event has exceeded the scheduler period. Currently Jorel2 runs every thirty 
- * seconds and the RSS extraction process (for example) takes around twenty seconds to complete. If three threads are already running, the remaining ten 
- * seconds for each execution will ensure that any threads that have fallen behind will catch up.
+ * seconds. 
  * </p>
  * <p>The blocking function of the threadQueue ensures that the scheduled process waits until one of the three threads completes, thus avoiding the 
  * proliferation of blocked threads.
@@ -126,10 +123,6 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 			Thread thread = new Thread(runnable);
 			thread.setName("Jorel2Thread-" + (threadCounter % THREAD_POOL_SIZE) + " [" + (threadCounter++) + "]");
 			threadQueue.put(thread);
-			
-			if (threadStartTimestamps.size() == THREAD_POOL_SIZE) {
-				logger.trace("WARNING: Three threads running concurrently.");
-			}
 			
 			threadStartTimestamps.remove(initiator);
 		} catch (InterruptedException e) {

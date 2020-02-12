@@ -37,6 +37,8 @@ public class Jorel2Root {
     protected static final int THREAD_POOL_SIZE = 3;
     protected static final int MAX_THREAD_RUN_TIME = 1800000;
     protected static final int FATAL_CONDITION = -1;
+    protected static final String INDENT0 = "";
+    protected static final String INDENT1 = "    ";
     
 	public enum EventType {
 		
@@ -60,14 +62,5 @@ public class Jorel2Root {
 	
 	protected static void skip() {
 		
-	}
-	
-	protected String getLogMarker(String indent) {
-		
-		if (threadStartTimestamps.size() > 1) {
-			return "+++++ " + indent;
-		} else {
-			return "***** " + indent;
-		}
 	}
 }

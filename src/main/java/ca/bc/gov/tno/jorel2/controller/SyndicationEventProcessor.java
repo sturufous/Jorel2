@@ -24,6 +24,7 @@ import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
+import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 @Service
 public class SyndicationEventProcessor extends Jorel2Root implements EventProcessor {
@@ -56,7 +57,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		SyndFeed feed = null;
 		
     	try {
-    		logger.trace(getLogMarker("    ") + "Starting Syndication event processing");
+    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting Syndication event processing" + StringUtil.getThreadNumber());
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
 	        List<SyndEntry> newSyndItems;
@@ -83,7 +84,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
-		logger.trace(getLogMarker("    ") + "Completing Syndication event processing");
+		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing Syndication event processing" + StringUtil.getThreadNumber());
     	notifyAll();
     	return Optional.of("empty");
 	}
@@ -127,7 +128,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		    	articleCount++;
 			}
 			
-			logger.trace(getLogMarker("    ") + "Added: " + articleCount + " article(s) from " + source);
+			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source);
 		}
 	}
 	

@@ -3,6 +3,7 @@ package ca.bc.gov.tno.jorel2.util;
 import com.vdurmont.emoji.EmojiManager;
 import com.vdurmont.emoji.EmojiParser;
 
+import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 
 /**
@@ -12,7 +13,7 @@ import ca.bc.gov.tno.jorel2.jaxb.Rss;
  * @version 0.0.1
  *
  */
-public class StringUtil {
+public class StringUtil extends Jorel2Root {
 	
 	/**
 	 * This method substitutes various html tags and entities with values that display correctly in news item content in Otis.
@@ -236,5 +237,31 @@ public class StringUtil {
 		}
 	
 		return content;
+	}
+	
+	public static String getLogMarker(String indent) {
+		
+		if (threadStartTimestamps.size() == 1) {
+			return "***** " + indent;
+		} 
+		else 
+		if (threadStartTimestamps.size() == 2) {
+			return "+++++ " + indent;
+		}
+		else
+		if (threadStartTimestamps.size() == 3) {
+			return "!!!!! " + indent;
+		}
+		else {
+			return "^^^^^ ";
+		}
+	}
+	
+	public static String getThreadNumber() {
+		
+		String threadName = Thread.currentThread().getName();
+		String number = threadName.substring(13, 14);
+		
+		return " [" + number + "]";
 	}
 }

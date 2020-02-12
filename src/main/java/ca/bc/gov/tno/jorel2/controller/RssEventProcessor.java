@@ -25,6 +25,7 @@ import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemIssuesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
+import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 /**
  * Manages the retrieval and processing of various RSS feeds using JAXB objects in the
@@ -59,7 +60,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		Rss rssContent = null;
 		
     	try {
-    		logger.trace(getLogMarker("    ") + "Starting RSS event processing");
+    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting RSS event processing" + StringUtil.getThreadNumber());
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
 	        List<Rss.Channel.Item> newRssItems;
@@ -83,7 +84,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
-		logger.trace(getLogMarker("    ") + "Completing RSS event processing");
+		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing RSS event processing" + StringUtil.getThreadNumber());
     	notifyAll();
     	return Optional.of(rssContent != null ? rssContent.toString() : "No results.");
 	}
@@ -161,7 +162,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    	}
 			}
 			
-			logger.trace(getLogMarker("    ") + "Added: " + articleCount + " article(s) from " + source);
+			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source);
 		}
 	}
 	

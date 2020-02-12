@@ -20,6 +20,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
+import ca.bc.gov.tno.jorel2.util.StringUtil;
 import ca.bc.gov.tno.jorel2.controller.RssEventProcessor;
 
 /**
@@ -133,7 +134,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
       	String name = Thread.currentThread().getName();
       	System.out.println("Starting thread:   " + name);
    	   			
-		logger.trace(getLogMarker("") + "Starting thread:   " + name);
+		logger.trace(StringUtil.getLogMarker(INDENT0) + "Starting thread:   " + name);
 		
 		return start;
 	}
@@ -143,7 +144,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	    long diff = ChronoUnit.SECONDS.between(startTime, stop);		
       	String name = Thread.currentThread().getName();
 
-		logger.trace(getLogMarker("") + "Completing thread: " + name + ", task took " + diff + " seconds");
+		logger.trace(StringUtil.getLogMarker(INDENT0) + "Completing thread: " + name + ", task took " + diff + " seconds");
       	System.out.println("Completing thread: " + name);
 	
 		jorelScheduler.notifyThreadComplete(Thread.currentThread());
