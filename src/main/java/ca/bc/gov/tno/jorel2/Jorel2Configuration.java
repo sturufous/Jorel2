@@ -5,10 +5,18 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.EnableMBeanExport;
+
 import ca.bc.gov.tno.jorel2.controller.Jorel2Runnable;
 import ca.bc.gov.tno.jorel2.controller.QuoteExtractor;
+import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.controller.FifoThreadQueueScheduler;
 
 /**
@@ -20,6 +28,7 @@ import ca.bc.gov.tno.jorel2.controller.FifoThreadQueueScheduler;
 
 @Configuration
 @EnableScheduling
+@EnableMBeanExport
 @PropertySource(value = "file:properties/jorel.properties")
 @ComponentScan("ca.bc.gov.tno.jorel2")
 public class Jorel2Configuration extends Jorel2Root {
@@ -36,6 +45,12 @@ public class Jorel2Configuration extends Jorel2Root {
 		return new QuoteExtractor();
 	}
 	
+	/**
+	 * Create the scheduler object that maintains control over the lifecycle of Jorel2Runnable objects. This scheduler provides
+	 * the entry point for all Jorel2 execution cycles. There is no explicit method call from anywhere else in the package.
+	 * 
+	 * @return 
+	 */
     @Bean("jorel2Scheduler")
 	@DependsOn({"quoteExtractor"})
     @Scope("singleton")
@@ -52,11 +67,30 @@ public class Jorel2Configuration extends Jorel2Root {
      */
     @Bean("jorel2Runnable")
     @Scope("prototype")
-    @DependsOn({"jorel2Scheduler"})
+    @DependsOn({"jorel2Scheduler", "jaxbContext"})
     public Jorel2Runnable jorel2Thread() {
     	return new Jorel2Runnable();
     }
     
+    /**
+     * 
+     * @return
+     */
+    @Bean("jaxbContext")
+    @Scope("singleton")
+    public Unmarshaller jaxbUnmarshaller() {
+    	Unmarshaller unmarshaller = null;
+    	
+		try {
+			JAXBContext context = JAXBContext.newInstance(Rss.class);
+	    	unmarshaller = context.createUnmarshaller();
+		} catch (JAXBException e) {
+			logger.error("Instantiating the RSS feed unmarshaller.", e);
+		}
+		
+		return unmarshaller;
+    }
+
     /**
      * Jorel2Process object that encapsulates data regarding the current instance of Jorel2. The primary datum is the name of the instance.
      * 

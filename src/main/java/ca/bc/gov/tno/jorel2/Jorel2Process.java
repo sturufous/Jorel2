@@ -14,8 +14,8 @@ import org.springframework.jmx.export.annotation.ManagedAttribute;
  */
 
 @ManagedResource(
-        objectName="bean:name=testMbean",
-        description="My Managed Bean",
+        objectName="Jorel2Instance:name=jorel2Mbean",
+        description="Jorel2 Managed Bean",
         log=true,
         logFile="jmx.log",
         currencyTimeLimit=15,

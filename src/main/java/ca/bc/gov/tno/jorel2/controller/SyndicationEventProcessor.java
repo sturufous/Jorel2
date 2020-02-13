@@ -128,7 +128,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		    	articleCount++;
 			}
 			
-			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source);
+			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source + StringUtil.getThreadNumber());
 		}
 	}
 	

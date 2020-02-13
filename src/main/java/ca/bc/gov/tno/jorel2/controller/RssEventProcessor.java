@@ -46,6 +46,10 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	@Inject
 	QuoteExtractor quoteExtractor;
 	
+	/**   */
+	@Inject
+	Unmarshaller unmarshaller;
+	
 	/**
 	 * Process all eligible RSS event records from the TNO_EVENTS table.  This method is synchronized to prevent 
 	 * two threads from processing the same event type at the same time.
@@ -69,8 +73,6 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
-		    		JAXBContext context = JAXBContext.newInstance(Rss.class);
-		    		Unmarshaller unmarshaller = context.createUnmarshaller();
 		    		rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
 		    		
 		    		newRssItems = getNewRssItems(currentEvent.getSource(), session, rssContent);
@@ -162,7 +164,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    	}
 			}
 			
-			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source);
+			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source + StringUtil.getThreadNumber());
 		}
 	}
 	

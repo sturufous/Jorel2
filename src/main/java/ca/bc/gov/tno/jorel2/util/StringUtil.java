@@ -239,6 +239,13 @@ public class StringUtil extends Jorel2Root {
 		return content;
 	}
 	
+	/**
+	 * Generate a marker "*****", "+++++" or "!!!!!" to prepend to the log file message. This indicates how many threads are running concurrently,
+	 * one, two or three respectively. 
+	 * 
+	 * @param indent The depth the message should be indented following the marker.
+	 * @return The marker followed by the indent.
+	 */
 	public static String getLogMarker(String indent) {
 		
 		if (threadStartTimestamps.size() == 1) {
@@ -257,6 +264,12 @@ public class StringUtil extends Jorel2Root {
 		}
 	}
 	
+	/**
+	 * Generates a thread number to append to a log file message, e.g. " [0]". This identifies which thread performed a particular task,
+	 * such as performing RSS processing or adding articles to the NEWS_ITEMS table...useful if multiple threads are running concurrently.
+	 * 
+	 * @return A string consisting of a space, left square bracket, the thread number and right square bracket.
+	 */
 	public static String getThreadNumber() {
 		
 		String threadName = Thread.currentThread().getName();
