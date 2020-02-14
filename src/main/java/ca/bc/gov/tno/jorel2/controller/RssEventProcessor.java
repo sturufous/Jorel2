@@ -8,8 +8,11 @@ import java.sql.Clob;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import javax.inject.Inject;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
@@ -50,16 +53,19 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	@Inject
 	Unmarshaller unmarshaller;
 	
+	/** Contains a concurrent map of all RSS sources currently being processed. Restricts each source to one thread. */
+	Map<String, String> sourcesBeingProcessed = new ConcurrentHashMap<>();
+	
 	/**
-	 * Process all eligible RSS event records from the TNO_EVENTS table.  This method is synchronized to prevent 
-	 * two threads from processing the same event type at the same time.
+	 * Process all eligible RSS event records from the TNO_EVENTS table.  The goal is that separate threads can process different RSS events. An earlier 
+	 * version of this code added the synchronized modifier
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public synchronized Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(String eventType, Session session) {
     	
 		Rss rssContent = null;
 		
@@ -73,10 +79,22 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
-		    		rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
+	        		String currentSource = currentEvent.getSource();
 		    		
-		    		newRssItems = getNewRssItems(currentEvent.getSource(), session, rssContent);
-		    		insertNewsItems(currentEvent.getSource(), newRssItems, session, rssContent);
+		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
+		    			logger.trace(StringUtil.getLogMarker(INDENT1) + "Two (or more) threads attempting to process the " + currentSource + " feed - skipping." + StringUtil.getThreadNumber());
+		    		} else {
+		    			sourcesBeingProcessed.put(currentSource, "");
+		    			
+		    			// The JAXB unmarshaller is not thread safe, so synchronize unmarshalling
+		    			synchronized(unmarshaller) {
+		    				rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
+		    				unmarshaller.notify();
+		    			}
+			    		newRssItems = getNewRssItems(currentSource, session, rssContent);
+			    		insertNewsItems(currentSource, newRssItems, session, rssContent);
+			    		sourcesBeingProcessed.remove(currentSource);
+		    		}
 	        	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
@@ -87,7 +105,6 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
     	}
     	
 		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing RSS event processing" + StringUtil.getThreadNumber());
-    	notifyAll();
     	return Optional.of(rssContent != null ? rssContent.toString() : "No results.");
 	}
 	

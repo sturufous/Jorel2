@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.inject.Inject;
 
@@ -44,6 +46,9 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	@Inject
 	QuoteExtractor quoteExtractor;
 
+	/** Contains a concurrent map of all RSS sources currently being processed. Restricts each source to one thread. */
+	Map<String, String> sourcesBeingProcessed = new ConcurrentHashMap<>();
+	
 	/**
 	 * Process all eligible non-XML syndication event records from the TNO_EVENTS table. This method is synchronized to prevent 
 	 * two threads from processing the same event type at the same time.
@@ -52,7 +57,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	 * @param session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
-	public synchronized Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(String eventType, Session session) {
 	
 		SyndFeed feed = null;
 		
@@ -67,14 +72,21 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	    			URLConnection feedUrlConnection = new URL(currentEvent.getTitle()).openConnection();
+	    			String currentSource = currentEvent.getSource();
 	    			
 	    			feedUrlConnection.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
 	    			SyndFeedInput input = new SyndFeedInput();
 	    			XmlReader xmlReader = new XmlReader(feedUrlConnection);
 	    			feed = input.build(xmlReader);
 
-		    		newSyndItems = getNewRssItems(currentEvent.getSource(), session, feed);
-		    		insertNewsItems(currentEvent.getSource(), session, newSyndItems);
+		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
+		    			logger.trace(StringUtil.getLogMarker(INDENT1) + "Two threads attempting to process the " + currentSource + " feed - skipping." + StringUtil.getThreadNumber());
+		    		} else {
+		    			sourcesBeingProcessed.put(currentSource, "");
+			    		newSyndItems = getNewRssItems(currentSource, session, feed);
+			    		insertNewsItems(currentSource, session, newSyndItems);
+			    		sourcesBeingProcessed.remove(currentSource);
+		    		}
 		    	} else {
 		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
 	        	}
@@ -85,7 +97,6 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     	}
     	
 		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing Syndication event processing" + StringUtil.getThreadNumber());
-    	notifyAll();
     	return Optional.of("empty");
 	}
 	
