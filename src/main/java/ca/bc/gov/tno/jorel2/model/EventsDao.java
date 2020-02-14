@@ -18,7 +18,7 @@ import javax.persistence.Table;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
 
-import ca.bc.gov.tno.jorel2.Jorel2Process;
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
@@ -315,7 +315,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindEventsForProcessing named query.
 	 */
-	public static List<EventsDao> getEventsForProcessing(Session session) {
+	public static List<EventsDao> getEventsForProcessing(String instance, Session session) {
 
 		// Process the current date using the JDK 1.8 Time API
 		LocalDate now = LocalDate.now();
@@ -325,7 +325,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 		String dateMatch = now.format(formatter);
 		
 		Query<EventsDao> query = session.createNamedQuery("Events_FindEventsForProcessing", EventsDao.class);
-		query.setParameter("process", "jorel");
+		query.setParameter("process", instance);
 		query.setParameter("runDate", dateMatch);
         List<EventsDao> results = query.getResultList();
         
@@ -340,11 +340,11 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
 	 */
-	public static List<Object[]> getEventsByEventType(Jorel2Process process, String eventType, Session session) {
+	public static List<Object[]> getEventsByEventType(Jorel2Instance process, String eventType, Session session) {
 
 		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createNamedQuery("Events_FindEventsByEventType");
-		query.setParameter("process", process.getProcessName());
+		query.setParameter("process", process.getInstanceName());
 		query.setParameter("eventtype", eventType);
         List<Object[]> results = query.getResultList();
         
@@ -360,11 +360,11 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
 	 */
-	public static List<Object[]> getElligibleEventsByEventType(Jorel2Process process, String eventType, Session session) {
+	public static List<Object[]> getElligibleEventsByEventType(Jorel2Instance process, String eventType, Session session) {
 
 		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createNamedQuery("Events_FindElligibleEventsByEventType");
-		query.setParameter("process", process.getProcessName());
+		query.setParameter("process", process.getInstanceName());
 		query.setParameter("eventtype", eventType);
 		query.setParameter("runDate", DateUtil.getDateNow());
         List<Object[]> results = query.getResultList();

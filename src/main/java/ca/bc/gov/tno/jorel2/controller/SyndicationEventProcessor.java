@@ -18,7 +18,7 @@ import com.sun.syndication.feed.synd.SyndFeed;
 import com.sun.syndication.io.SyndFeedInput;
 import com.sun.syndication.io.XmlReader;
 
-import ca.bc.gov.tno.jorel2.Jorel2Process;
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
@@ -38,7 +38,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Process process;
+	Jorel2Instance instance;
 	
 	/** Quote extractor for processing article text  */
 	@Inject
@@ -59,7 +59,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     	try {
     		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting Syndication event processing" + StringUtil.getThreadNumber());
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        List<SyndEntry> newSyndItems;
     		
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
@@ -128,6 +128,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		    	articleCount++;
 			}
 			
+			instance.incrementArticleCount(source, articleCount);
 			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source + StringUtil.getThreadNumber());
 		}
 	}

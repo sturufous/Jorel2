@@ -12,6 +12,7 @@ import javax.inject.Inject;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -31,7 +32,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
  * terminates, and <code>notifyComplete()</code> is called, the start time for the thread is compared with the current time and the run time for
  * the thread is written to the log file.
  * </p>
- * <p><code>notifyComplete()</code> also checks all running threads to make sure no thread's run time has exceeded <code>MAX_THREAD_RUN_TIME</code> 
+ * <p><code>notifyComplete()</code> also checks all running threads to make sure no thread's run time has exceeded <code>maxThreadRuntime</code> 
  * seconds. 
  * </p>
  * <p>The blocking function of the threadQueue ensures that the scheduled process waits until one of the three threads completes, thus avoiding the 
@@ -46,6 +47,9 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     /** Context from which to extract the Jorel2Thread Prototype */
     @Inject
     private ApplicationContext ctx;
+    
+    @Inject
+    private Jorel2Instance instance;
     
 	/** Queue that lets Jorel2 push threads in one end and pull them out the other. If there are none the scheduler blocks. */
 	ArrayBlockingQueue<Thread> threadQueue = null;
@@ -75,17 +79,17 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	 * If no thread is available this method blocks until <code>notifyThreadComplete()</code> pushes a new thred onto the queue.
 	 * 
 	 * Waiting for too long for a new thread indicates that a pathological condition exists, so the thread is retrieved from the queue using 
-	 * <code>ArrayBlockingQueue</code>'s <code>poll(long timeout, TimeUnit unit)</code> method which will timeout after <code>MAX_THREAD_RUN_TIME</code>
+	 * <code>ArrayBlockingQueue</code>'s <code>poll(long timeout, TimeUnit unit)</code> method which will timeout after <code>maxThreadRuntime</code>
 	 * seconds. In this case an error is logged and the VM will shut down.
 	 */
 	@Scheduled(cron = "${cron.expression}")
 	public void run() {
 		try {
-			Thread currentThread = threadQueue.poll(MAX_THREAD_RUN_TIME, TimeUnit.SECONDS);
+			Thread currentThread = threadQueue.poll(instance.getMaxThreadRuntime(), TimeUnit.SECONDS);
 			
 			if (currentThread == null) { // Timeout occurred
     			IllegalStateException e = new IllegalStateException("Waited too long to obtain a new thread from the thread queue.");
-    			logger.error("Waited to obtain a thread from the thread queue for more than " + (MAX_THREAD_RUN_TIME/60) + " minutes.", e);
+    			logger.error("Waited to obtain a thread from the thread queue for more than " + (instance.getMaxThreadRuntime()/60) + " minutes.", e);
     			System.exit(FATAL_CONDITION);
     		} else {
     			currentThread.start();
@@ -102,7 +106,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	 * All other beans used by Jorel2 are singletons. This approach gives Spring control to instantiate all injected instance variables in 
 	 * <code>Jorel2Runnable</code>, of which there are six at this time of writing. 
 	 * 
-	 * This method also monitors all running threads to ensure their run-times do not exceed <code>MAX_THREAD_RUN_TIME</code> seconds. If this
+	 * This method also monitors all running threads to ensure their run-times do not exceed <code>maxThreadRuntime</code> seconds. If this
 	 * condition is violated a message is written to the log and Jorel2 will shut down. A warning is also written to the log if all three threads were
 	 * running when this message was called. This might indicate a problem if it continues to occur.
 	 * 
@@ -112,9 +116,9 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     	
     	try {
     		// If any thread has been running for more than 30 minutes, shut down this Jorel2 process.
-    		if (getMaxRunTime() > MAX_THREAD_RUN_TIME) {
+    		if (getMaxRunTime() > instance.getMaxThreadRuntime()) {
     			IllegalStateException e = new IllegalStateException("Maximum thread run time exceeded.");
-    			logger.error("A Jorel 2 processing thread ran for more than " + (MAX_THREAD_RUN_TIME/60) + " minutes.", e);
+    			logger.error("A Jorel 2 processing thread ran for more than " + (instance.getMaxThreadRuntime()/60) + " minutes.", e);
     			System.exit(FATAL_CONDITION);
     		}
     		
@@ -134,7 +138,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     
     /**
      * Loops through the <code>threadStartTimestamps</code> map and determines which thread has been running for the longest time. This is used
-     * to determine if any thread has been running for longer than <code>MAX_THREAD_RUN_TIME</code> seconds.
+     * to determine if any thread has been running for longer than <code>maxThreadRuntime</code> seconds.
      * 
      * @return The run-time of the longest running thread.
      */

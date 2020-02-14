@@ -35,7 +35,6 @@ public class Jorel2Root {
 	
     protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
     protected static final int THREAD_POOL_SIZE = 3;
-    protected static final int MAX_THREAD_RUN_TIME = 1800000;
     protected static final int FATAL_CONDITION = -1;
     protected static final String INDENT0 = "";
     protected static final String INDENT1 = "    ";
@@ -49,7 +48,7 @@ public class Jorel2Root {
 	
 	public enum RssSource {
 		
-		IPOLITICS, DAILYHIVE, CBC, CPNEWS, BIV, GEORGIASTRAIGHT;
+		IPOLITICS, DAILYHIVE, CBCKAMLOOPS, CBCBCCA, CPNEWS, CBCABORIGINAL, BIV, GEORGIASTRAIGHT;
 	}
 	
 	public enum WordType {
@@ -57,7 +56,7 @@ public class Jorel2Root {
 		VERB, NOISE, TITLE, NOISENAME;
 	}
 	
-    /** Map used to record the start times of each thread. This is used for logging and the enforcement of MAX_THREAD_RUN_TIME. */
+    /** Map used to record the start times of each thread. This is used for logging and the enforcement of the maxThreadRuntime property. */
 	protected static Map<Thread, Instant> threadStartTimestamps = new ConcurrentHashMap<>();
 	
 	protected static void skip() {

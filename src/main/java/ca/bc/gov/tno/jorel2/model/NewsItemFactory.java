@@ -100,13 +100,16 @@ public class NewsItemFactory extends Jorel2Root {
 	public static NewsItemsDao createXmlNewsItem(Rss.Channel.Item item, String source) {
 		
 		String content = "";
+		String summary = "";
 		String title = StringUtil.removeHTML(item.getTitle());
 		
 		// Some feeds store the item content in item.encoded, others in item.description.
 		if (item.getEncoded() == null) {
 			content = StringUtil.removeHTML(item.getDescription());
+			summary = "";
 		} else {
 			content = StringUtil.removeHTML(item.getEncoded());
+			summary = StringUtil.removeHTML(item.getDescription());
 		}
 		
 		content = StringUtil.SubstituteEmojis(content);
@@ -125,6 +128,7 @@ public class NewsItemFactory extends Jorel2Root {
 		newsItem.setString6(item.getCreator());
 		newsItem.setWebpath(item.getLink());
 		newsItem.setText(stringToClob(content));
+		newsItem.setSummary(summary);
 		
 		// Saves converting back from Clob to string
 		newsItem.content = content;

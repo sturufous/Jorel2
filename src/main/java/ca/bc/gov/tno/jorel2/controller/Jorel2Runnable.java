@@ -14,7 +14,7 @@ import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.core.env.Environment;
-import ca.bc.gov.tno.jorel2.Jorel2Process;
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
@@ -50,7 +50,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	private Jorel2Process process;
+	private Jorel2Instance instance;
 	
 	/** Task scheduler used to manage CronTrigger based scheduling */    
 	@Inject
@@ -84,7 +84,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	    	
 	        // Retrieve the events for processing 
 	    	session.beginTransaction();
-	        List<EventsDao> results = EventsDao.getEventsForProcessing(session);
+	        List<EventsDao> results = EventsDao.getEventsForProcessing(instance.getInstanceName(), session);
 	        session.getTransaction().commit();
 	        
 	        getUniqueEventTypes(eventMap, results);
@@ -144,6 +144,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	    long diff = ChronoUnit.SECONDS.between(startTime, stop);		
       	String name = Thread.currentThread().getName();
 
+      	instance.addThreadDuration(Thread.currentThread().getName(), diff);
 		logger.trace(StringUtil.getLogMarker(INDENT0) + "Completing thread: " + name + ", task took " + diff + " seconds");
       	System.out.println("Completing thread: " + name);
 	

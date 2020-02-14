@@ -96,10 +96,10 @@ public class Jorel2Configuration extends Jorel2Root {
      * 
      * @return a new instance of Jorel2Process.
      */
-    @Bean("getProcess")
+    @Bean("getInstance")
     @Scope("singleton")
-    public Jorel2Process getProcess() {
+    public Jorel2Instance getInstance() {
     	
-		return new Jorel2Process();
+		return new Jorel2Instance();
     }
 }

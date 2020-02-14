@@ -2,6 +2,7 @@ package ca.bc.gov.tno.jorel2.util;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -26,7 +27,8 @@ public class DateUtil extends Jorel2Root {
 	 */
 	public static Date getPubTimeAsDate(String pubDate) {
 	
-		String zone = pubDate.substring(26, pubDate.length());
+		int lastSpacePos = pubDate.lastIndexOf(" ");
+		String zone = pubDate.substring(lastSpacePos+1, pubDate.length());
 		String zoneSymbol;
 		
 		if (zone.length() > 3) { // offset format (e.g. +0000 [iPolitics])
@@ -35,7 +37,7 @@ public class DateUtil extends Jorel2Root {
 			zoneSymbol = "z"; // Zone name (e.g. GMT [DailyHive])
 		}
 		
-		String formatPattern = "E, dd LLL yyyy HH:mm:ss " + zoneSymbol;
+		String formatPattern = "E, d LLL yyyy HH:mm:ss " + zoneSymbol;
 		
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(formatPattern);
 		ZoneOffset offset = ZoneOffset.ofHours(-8) ;
@@ -74,5 +76,15 @@ public class DateUtil extends Jorel2Root {
 		String dateMatch = now.format(formatter);
 		
 		return dateMatch;
+	}
+	
+	public static String getTimeNow() {
+		
+		// Process the current date using the JDK 1.8 Time API
+		LocalDateTime now = LocalDateTime.now();
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy, hh:mm:ss");
+		String dateMatch = now.format(formatter);
+		
+		return dateMatch;		
 	}
 }

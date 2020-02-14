@@ -16,7 +16,7 @@ import javax.xml.bind.Unmarshaller;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 
-import ca.bc.gov.tno.jorel2.Jorel2Process;
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
@@ -40,7 +40,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Process process;
+	Jorel2Instance instance;
 	
 	/** Quote extractor for processing article text  */
 	@Inject
@@ -66,7 +66,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
     	try {
     		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting RSS event processing" + StringUtil.getThreadNumber());
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(process, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        List<Rss.Channel.Item> newRssItems;
     		
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
@@ -136,6 +136,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		
 		NewsItemsDao newsItem = null;
 		String enumKey = source.toUpperCase().replaceAll("\\s+","");
+		enumKey = enumKey.replaceAll("\\/+","");
 		RssSource sourceEnum = RssSource.valueOf(enumKey);
 		int articleCount = 0;
 		
@@ -147,6 +148,9 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 					case IPOLITICS -> NewsItemFactory.createXmlNewsItem(item, source);
 					case DAILYHIVE -> NewsItemFactory.createXmlNewsItem(item, source);
 					case BIV -> NewsItemFactory.createXmlNewsItem(item, source);
+					case CBCKAMLOOPS -> NewsItemFactory.createXmlNewsItem(item, source);
+					case CBCBCCA -> NewsItemFactory.createXmlNewsItem(item, source);
+					case CBCABORIGINAL -> NewsItemFactory.createXmlNewsItem(item, source);
 					default -> null;
 		    	};
 						
@@ -164,6 +168,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    	}
 			}
 			
+			instance.incrementArticleCount(source, articleCount);
 			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source + StringUtil.getThreadNumber());
 		}
 	}

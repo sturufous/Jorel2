@@ -124,11 +124,23 @@ public class NewsItemQuotesDao implements java.io.Serializable {
 	public static void saveQuotes(QuoteExtractor quoteExtractor, NewsItemsDao newsItem, Session session) {
 		
 	    while (quoteExtractor.next()) {
+	    	// The name is sometimes problematic. In case it's over 100 characters in length, truncate it.
+	    	String name = quoteExtractor.getName();
+	    	if (name.length() > 100) {
+	    		name = name.substring(1, 99);
+	    	}
+	    	
+	    	// The alias is sometimes problematic. In case it's over 100 characters in length, truncate it.
+	    	String alias = quoteExtractor.getAlias();
+	    	if (alias.length() > 100) {
+	    		alias = alias.substring(1, 99);
+	    	}
+	    	
 	    	NewsItemQuotesDao quote = new NewsItemQuotesDao(
 	    		null,
 	    		newsItem.getRsn(),
-	        	quoteExtractor.getName(), 
-	        	quoteExtractor.getAlias(), 
+	        	name, 
+	        	alias, 
 	        	quoteExtractor.getOffsetLengths(), 
 	        	"",
 	        	quoteExtractor.getUnknownAlias()
