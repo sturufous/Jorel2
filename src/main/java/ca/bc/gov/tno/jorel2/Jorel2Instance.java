@@ -170,9 +170,8 @@ public class Jorel2Instance {
 	@ManagedAttribute(description="Start time of this instance", currencyTimeLimit=15)
 	public String getStartTime() {
 		
-		LocalDateTime now = LocalDateTime.now();
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("E, d LLL yyyy HH:mm:ss");
-		String dateMatch = now.format(formatter);
+		String dateMatch = startTime.format(formatter);
 
 		return dateMatch;
 	}	
@@ -201,7 +200,7 @@ public class Jorel2Instance {
     	LocalDateTime now = LocalDateTime.now();
 	    long diff = ChronoUnit.SECONDS.between(startTime, now);
 	    
-	    instanceRunTime = String.format("%d Days, %d Hours, %02d Minutes, %02d Seconds", diff / 86400, diff / 3600, (diff % 3600) / 60, (diff % 60));
+	    instanceRunTime = String.format("%d Days, %d Hours, %02d Minutes, %02d Seconds", diff / 86400, (diff / 3600) % 24, (diff % 3600) / 60, (diff % 60));
 
 		return instanceRunTime;
 	}	

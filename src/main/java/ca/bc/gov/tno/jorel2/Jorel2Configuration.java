@@ -92,7 +92,7 @@ public class Jorel2Configuration extends Jorel2Root {
     }
 
     /**
-     * Jorel2Process object that encapsulates data regarding the current instance of Jorel2. The primary datum is the name of the instance.
+     * Jorel2Instance object that encapsulates data regarding the current instance of Jorel2. The primary datum is the name of the instance.
      * 
      * @return a new instance of Jorel2Process.
      */
