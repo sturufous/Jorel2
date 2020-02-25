@@ -146,28 +146,34 @@ public class NewsItemFactory extends Jorel2Root {
 	public static NewsItemsDao createCPNewsItem(SyndEntry item, String source) {
 		
 		String content;
-
-		content = UrlUtil.retrieveCPNewsItem(item, source);
-		
-		// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
-		Date itemDate = DateUtil.getDateAtMidnight();
-		Date itemTime = item.getPublishedDate();
-		
-		content = StringUtil.SubstituteEmojis(content);
-
 		NewsItemsDao newsItem = createNewsItemTemplate();
-
-		// Assign content of this SyndEntry to the NewsItemDao object
-		newsItem.setItemDate(itemDate);
-		newsItem.setItemTime(new Date());
-		newsItem.setType(source);
-		newsItem.setSource(source);
-		newsItem.setTitle(item.getTitle());
-		newsItem.setWebpath(item.getLink());
-		newsItem.setText(stringToClob(content));
 		
-		// Saves converting back from Clob to string
-		newsItem.content = content;
+		try {
+			content = UrlUtil.retrieveCPNewsItem(item, source);
+			
+			// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
+			Date itemDate = DateUtil.getDateAtMidnight();
+			Date itemTime = item.getPublishedDate();
+			
+			content = StringUtil.SubstituteEmojis(content);
+	
+	
+			// Assign content of this SyndEntry to the NewsItemDao object
+			newsItem.setItemDate(itemDate);
+			newsItem.setItemTime(new Date());
+			newsItem.setType(source);
+			newsItem.setSource(source);
+			newsItem.setTitle(item.getTitle());
+			newsItem.setWebpath(item.getLink());
+			newsItem.setText(stringToClob(content));
+			
+			// Saves converting back from Clob to string
+			newsItem.content = content;
+		}
+		catch (Exception e) {
+			logger.error("Retrieving individual CP News item: " + item.getUri(), e);
+			newsItem = null;
+		}
 		
 		return newsItem;
 	}

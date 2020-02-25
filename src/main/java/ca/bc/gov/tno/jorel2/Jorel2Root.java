@@ -53,7 +53,7 @@ public class Jorel2Root {
 	
 	public enum WordType {
 		
-		VERB, NOISE, TITLE, NOISENAME;
+		Verb, Noise, Title, NoiseName;
 	}
 	
     /** Map used to record the start times of each thread. This is used for logging and the enforcement of the maxThreadRuntime property. */

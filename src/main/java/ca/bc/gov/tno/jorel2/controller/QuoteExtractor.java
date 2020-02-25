@@ -42,7 +42,7 @@ public class QuoteExtractor extends Jorel2Root {
 	
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	private Jorel2Instance process;
+	private Jorel2Instance instance;
 	
 	/** Configuration object for the active data source. Contains system_name, port etc. */
 	@Inject
@@ -106,10 +106,17 @@ public class QuoteExtractor extends Jorel2Root {
 		        session = sessionFactory.get().openSession();
 		        
 		        logger.trace("Loading data from the WORDS table in QuoteExtractor...");
-				verbs = loadWords(WordsDao.getWords(process, WordType.VERB, session));
-				titles = loadWords(WordsDao.getWords(process, WordType.TITLE, session));
-				noiseWords = loadWords(WordsDao.getWords(process, WordType.NOISE, session));
-				noiseNameWords = loadWords(WordsDao.getWords(process, WordType.NOISENAME, session));
+				verbs = loadWords(WordsDao.getWords(instance, WordType.Verb, session));
+				instance.addWordCountEntry(WordType.Verb.toString(), verbs.size());
+				
+				titles = loadWords(WordsDao.getWords(instance, WordType.Title, session));
+				instance.addWordCountEntry(WordType.Title.toString(), titles.size());
+				
+				noiseWords = loadWords(WordsDao.getWords(instance, WordType.Noise, session));
+				instance.addWordCountEntry(WordType.Noise.toString(), noiseWords.size());
+				
+				noiseNameWords = loadWords(WordsDao.getWords(instance, WordType.NoiseName, session));
+				instance.addWordCountEntry(WordType.NoiseName.toString(), noiseNameWords.size());
     		}
     	}
     }
@@ -577,15 +584,15 @@ public class QuoteExtractor extends Jorel2Root {
 	private void insertWord(String word, WordType type) {
 		if (online) {
 			boolean cont=true;
-			if ((!updateVerbs) && (type == WordType.VERB)) cont=false;
-			if ((!updateNoiseNames) && (type == WordType.NOISENAME)) cont=false;
+			if ((!updateVerbs) && (type == WordType.Verb)) cont=false;
+			if ((!updateNoiseNames) && (type == WordType.NoiseName)) cont=false;
 			if (cont) {
 				try{
 					// Transaction protection handled in calling method
 					WordsDao wordRecord = new WordsDao(null, word, new BigDecimal(type.ordinal()));
 					session.persist(wordRecord);
 					
-					if (type == WordType.VERB) appendResults("verb '"+word+"' added");
+					if (type == WordType.Verb) appendResults("verb '"+word+"' added");
 
 				} catch (Exception err) {;}
 			}
@@ -622,7 +629,7 @@ public class QuoteExtractor extends Jorel2Root {
 				if (!quotedNames.containsKey(noiseName2)) { //not in the quoted names table
 					para = replacement(para, "{name:"+noiseName+"}", noiseName.toLowerCase());
 					noiseNameList.add(noiseName2.toLowerCase());
-					insertWord(noiseName2, WordType.NOISENAME);
+					insertWord(noiseName2, WordType.NoiseName);
 				}
 			}
 		}
@@ -850,7 +857,7 @@ public class QuoteExtractor extends Jorel2Root {
 				if (!wordExists(noiseList, verb)) {
 					alias = matcher.group(2);
 					if (!wordExists(verbList, verb)) {
-						insertWord(verb, WordType.VERB);
+						insertWord(verb, WordType.Verb);
 						verbList.add(verb.toLowerCase());
 					}
 				}
@@ -866,7 +873,7 @@ public class QuoteExtractor extends Jorel2Root {
 				if (!wordExists(noiseList, verb)) {
 					alias = matcher.group(1);
 					if (!wordExists(verbList, verb)) {
-						insertWord(verb, WordType.VERB);
+						insertWord(verb, WordType.Verb);
 						verbList.add(verb.toLowerCase());
 					}
 				}

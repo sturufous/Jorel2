@@ -3,6 +3,7 @@ package ca.bc.gov.tno.jorel2;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
@@ -32,6 +33,7 @@ public class Jorel2Instance {
 	
 	Map<String, Long> threadDurations = new ConcurrentHashMap<>();
 	Map<String, Integer> articleCounts = new ConcurrentHashMap<>();
+	Map<String, Integer> wordCounts = new HashMap<>();
 	LocalDateTime startTime = null;
 
 	/** The name of the current instance */
@@ -61,7 +63,7 @@ public class Jorel2Instance {
 	}
 	
 	/**
-	 * Get the name of the instance this execution is running on.
+	 * Expose the name of the instance this execution is running on.
 	 * 
 	 * @return The name of the current instance
 	 */
@@ -70,6 +72,18 @@ public class Jorel2Instance {
 	public String getInstanceName() {
 		
 		return instanceName;
+	}
+	
+	/**
+	 * Allows the <code>instanceName<code> JMX attribute to be set remotely.
+	 */
+	@ManagedOperation(description="Set the instance name")
+	  @ManagedOperationParameters({
+	    @ManagedOperationParameter(name = "instanceName", description = "The name of the currently executing instance."),
+	})
+	public void setInstanceName(String instanceName) {
+		
+		this.instanceName = instanceName;
 	}
 	
 	/**
@@ -83,7 +97,6 @@ public class Jorel2Instance {
 		
 		threadDurations.put(threadName, Long.valueOf(duration));
 		lastDuration = duration;
-		
 	}
 
 	/**
@@ -219,7 +232,7 @@ public class Jorel2Instance {
 	/**
 	 * Allows the <code>maxThreadRuntime<code> JMX attribute to be set remotely.
 	 */
-	@ManagedOperation(description="Add two numbers")
+	@ManagedOperation(description="Set the thread timeout value")
 	  @ManagedOperationParameters({
 	    @ManagedOperationParameter(name = "maxThreadRuntime", description = "How long a thread can run before the VM exits."),
 	})
@@ -227,4 +240,21 @@ public class Jorel2Instance {
 		
 		this.maxThreadRuntime = maxThreadRuntime;
 	}
+	
+	public void addWordCountEntry(String type, int count) {
+		
+		wordCounts.put(type, Integer.valueOf(count));
+	}
+	
+	/**
+	 * Exposes the <code>wordCounts</code> map as a JMX attribute. This contains a list of word counts, by category, that were added
+	 * by the quote extractor when this instance was initialized. 
+	 * 
+	 * @return The list of sources from which articles have been added, and their respective counts.
+	 */
+	@ManagedAttribute(description="Number of quote extractor words by type", currencyTimeLimit=15)
+	public Map<String, Integer> getWordCounts() {
+		
+		return wordCounts;
+	}	
 }

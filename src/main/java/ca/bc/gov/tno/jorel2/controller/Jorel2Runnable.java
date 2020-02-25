@@ -48,6 +48,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private SyndicationEventProcessor syndicationEventProcessor;
 	
+	/** PageWatcher Event processor service */
+	@Inject
+    private PageWatcherEventProcessor pageWatcherEventProcessor;
+	
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	private Jorel2Instance instance;
@@ -97,6 +101,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        	rssResult = switch (eventEnum) {
 	        		case NEWRSS -> rssEventProcessor.processEvents(eventTypeName, session);
 	        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
+	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }

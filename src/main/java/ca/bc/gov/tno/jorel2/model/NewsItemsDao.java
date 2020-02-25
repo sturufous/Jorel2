@@ -660,11 +660,11 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 		
 		String sqlStmt = "select count(*) from NewsItemsDao ni where ni.source=:source";
 		
-		Query query = session.createQuery(sqlStmt);
+		Query<Long> query = session.createQuery(sqlStmt, Long.class);
 		query.setParameter("source", source);
-        List<?> results = query.getResultList();
+        List<Long> results = query.getResultList();
         
-        return (Long) results.get(0);
+        return results.get(0);
 	}
 	
 	/**
@@ -679,9 +679,9 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 		
 		String sqlStmt = "from NewsItemsDao ni where ni.source=:source and ni.itemDate >= to_date(sysdate-1)";
 
-		Query<?> query = session.createQuery(sqlStmt);
+		Query<NewsItemsDao> query = session.createQuery(sqlStmt, NewsItemsDao.class);
 		query.setParameter("source", source);
-        List results = query.getResultList();
+        List<NewsItemsDao> results = query.getResultList();
         
 		return results;
 	}
