@@ -1,6 +1,8 @@
 package ca.bc.gov.tno.jorel2.controller;
 
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
@@ -16,11 +18,11 @@ import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
-import ca.bc.gov.tno.jorel2.util.JorelAuthenticator;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 /**
- * Monitors a set of web sites for changes. The list of sites is stored in the 
+ * Monitors a set of web sites for changes. The list of sites is stored in the PAGEWATCHERS table.
  * 
  * @author Stuart Morse
  * @version 0.0.1
@@ -46,7 +48,7 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 		Calendar calendar = Calendar.getInstance();
 
     	try {
-    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting RSS event processing" + StringUtil.getThreadNumber());
+    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting PageWatcher event processing" + StringUtil.getThreadNumber());
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        
@@ -58,32 +60,29 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	        	}
 	        }
 	        
-			String freq = "mtwtf--";
-
-			int day=-1;
-			boolean dayOK=true;
-			if (freq == null) freq="";
-			if (freq.length() == 7) {
-				day = calendar.get(Calendar.DAY_OF_WEEK)-2;
-				if (day < 0) day=day+7;
-				String c=freq.substring(day);
-				if (c.startsWith("-")) dayOK=false;
-			}
+			System.out.println("mtwtfss should be true: " + DateUtil.runnableToday("mtwtfss"));
+			System.out.println("m-wtfss should be false: " + DateUtil.runnableToday("m-wtfss"));
     	} 
     	catch (Exception e) {
-    		logger.error("Processing user directory entries.", e);
+    		logger.error("Processing PageWatcher entries.", e);
     	}
     	
+		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing PageWatcher event processing" + StringUtil.getThreadNumber());
     	return Optional.of("complete");
 	}
 	
-	private void sendMail () {
+	/**
+	 * Sends an email message informing the recipient list that the web site in question has been modified since the last
+	 * PageWatcher event was run (currently weekly).
+	 * 
+	 * @param currentEvent The PageWatcher event being processed.
+	 */
+	private void sendMail (EventsDao currentEvent) {
 		Properties props = System.getProperties();
-		JorelAuthenticator auth = new JorelAuthenticator();
 		props.put("mail.host", "192.168.4.10");
 		props.put("mail.smtp.starttls.enable", "true");
 		props.put("mail.smtp.port", 25);
-		javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, auth);
+		javax.mail.Session session = javax.mail.Session.getDefaultInstance(props);
 		session.setDebug(true);
 		
 		InternetAddress[] addresses = new InternetAddress[1];

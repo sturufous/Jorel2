@@ -1,5 +1,6 @@
 package ca.bc.gov.tno.jorel2.util;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -86,5 +87,30 @@ public class DateUtil extends Jorel2Root {
 		String dateMatch = now.format(formatter);
 		
 		return dateMatch;		
+	}
+	
+	/**
+	 * Determines whether an event should be run today based on the frequency string provided. The format of this string is
+	 * "mtwtfss". The string is indexed by the day of the week as retrieved by LocalDate.getDayOfWeek(). This assigns the 
+	 * ordinal value '0' to Monday and '6' to Sunday. If the character at the position corresponding to the current day of
+	 * the week is a dash ('-') this method will return <code>false</code>. False is also returned if the <code>frequency</code>
+	 * parameter is null or if its length is anything other than 7.
+	 * 
+	 * @param frequency String indicating on which days of the week a task should be run.
+	 * @return True if the task should be run today, false otherwise.
+	 */
+	public static boolean runnableToday(String frequency) {
+		
+		boolean runnable = false;
+		
+		if (frequency != null && frequency.length() == 7) {
+			LocalDate dateNow = LocalDate.now();
+			DayOfWeek localDay = dateNow.getDayOfWeek();
+			int intDay = localDay.ordinal();
+			char charDay = frequency.charAt(intDay);
+			runnable = !(charDay == '-');
+		}
+		
+		return runnable;
 	}
 }
