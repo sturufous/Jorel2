@@ -1,6 +1,8 @@
 package ca.bc.gov.tno.jorel2.util;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -112,5 +114,15 @@ public class DateUtil extends Jorel2Root {
 		}
 		
 		return runnable;
+	}
+	
+	public static String unixTimestampToDate(BigDecimal timestamp) {
+		
+		Instant lastModified = new Date(timestamp.longValue()).toInstant();
+		LocalDateTime localTime = LocalDateTime.ofInstant(lastModified, ZoneId.systemDefault());
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy, hh:mm:ss");
+		String dateMatch = localTime.format(formatter);
+		
+		return dateMatch;
 	}
 }

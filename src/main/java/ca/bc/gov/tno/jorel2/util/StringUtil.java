@@ -1,5 +1,12 @@
 package ca.bc.gov.tno.jorel2.util;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.sql.Clob;
+import java.sql.SQLException;
+
+import javax.sql.rowset.serial.SerialException;
+
 import com.vdurmont.emoji.EmojiManager;
 import com.vdurmont.emoji.EmojiParser;
 
@@ -276,5 +283,116 @@ public class StringUtil extends Jorel2Root {
 		String number = threadName.substring(13, 14);
 		
 		return " [" + number + "]";
+	}
+	
+	/**
+	 * Calculates the difference between two web pages as a subroutine of the pagewatcher process.
+	 * 
+	 * @param a Web page 1 content
+	 * @param b Web page 2 content
+	 * @return Summary of the differences between web page 1 and web page 2
+	 */
+    public static String diff(String a, String b) {
+	  
+        int MAX = 10000;
+        String[] x = new String[MAX];   // lines in first string
+        String[] y = new String[MAX];   // lines in second string
+        int M = 0;                      // number of lines of first string
+        int N = 0;                      // number of lines of second string
+        StringBuffer add=new StringBuffer("");
+        StringBuffer del=new StringBuffer("");
+
+        x = a.split("\\s*\n\\s*");
+        y = b.split("\\s*\n\\s*");
+
+        M = x.length;
+        N = y.length;
+
+        int[][] opt = new int[M+1][N+1];
+
+        // compute length of LCS and all subproblems via dynamic programming
+        for (int i = M-1; i >= 0; i--) {
+          for (int j = N-1; j >= 0; j--) {
+            if (x[i].trim().equalsIgnoreCase(y[j].trim()))
+              opt[i][j] = opt[i+1][j+1] + 1;
+            else
+              opt[i][j] = Math.max(opt[i+1][j], opt[i][j+1]);
+          }
+        }
+
+        // recover LCS itself and print out non-matching lines
+        int i = 0, j = 0;
+        while(i < M && j < N) {
+          if (x[i].trim().equalsIgnoreCase(y[j].trim())) {
+            i++;
+            j++;
+          } else if (opt[i+1][j] >= opt[i][j+1]) {
+            del.append("Line removed: " + x[i] + "<br>\n<br>\n");
+            i++;
+          } else {
+            add.append("Line altered: " + y[j] + "<br>\n<br>\n");
+            j++;
+          }
+        }
+
+        // dump out one remainder of one string if the other is exhausted
+        while(i < M || j < N) {
+          if (i == M) {
+            add.append("Line altered: " + y[j] + "<br>\n<br>\n");
+            j++;
+          } else if (j == N) {
+            del.append("Line removed: " + x[i] + "<br>\n<br>\n");
+            i++;
+          }
+        }
+
+        if (add.toString().equals("")) {
+          return del.toString();
+        } else {
+          return add.toString();
+        }
+    }
+    
+	/**
+	 * Converts the article content from a String to the Clob format used by NEWS_ITEMS.TEXT.
+	 * 
+	 * @param content The String representation of the news item content.
+	 * @return Clob version of the content parameter.
+	 */
+	public static Clob stringToClob(String content) {
+		
+		Clob contentClob = null;
+		
+		try {
+			contentClob = new javax.sql.rowset.serial.SerialClob(content.toCharArray());
+		} catch (SQLException e) {
+			logger.error("Translating rss content to clob. Content = " + content, e);
+		} 
+		
+		return contentClob;
+	}
+	
+	/**
+	 * Converts the clob content to a string.
+	 * 
+	 * @param content The Clob to process.
+	 * @return String version of the Clob.
+	 */
+	public static String clobToString(Clob content) {
+
+		StringBuffer buffer = new StringBuffer();
+		
+		try {
+			Reader r = content.getCharacterStream();
+			int j = 0;
+			int ch;
+			while ((ch = r.read()) != -1) {
+			   buffer.append("" + (char) ch);
+			}
+		} catch (IOException | SQLException e) {
+			logger.error("Translating Clob content to String.", e);
+		}
+		
+		return buffer.toString();
 	}
 }

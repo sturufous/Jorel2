@@ -32,59 +32,59 @@ public class NewsItemFactory extends Jorel2Root {
 	private static NewsItemsDao createNewsItemTemplate() {
 		
 		NewsItemsDao newsItem = new NewsItemsDao(
-				null,                   // BigDecimal rsn
-				new Date(),             // Date itemDate
-				"",                     // String source
-				new Date(),             // Date itemTime
-				"",                     // String summary
-				"",                     // String title
-				"Internet",             // String type
-				true,                   // Boolean frontpagestory
-				false,                  // Boolean published
-				false,                  // Boolean archived
-				"",                     // String archivedTo
-				new Date(),             // Date recordCreated
-				new Date(),             // Date recordModified
-				"",                     // String string1
-				"",                     // String string2
-				"",                     // String string3
-				"",                     // String string4
-				"",                     // String string5
-				"",                     // String string6
-				"",                     // String string7
-				"",                     // String string8
-				"",                     // String string9
-				new BigDecimal(0),      // BigDecimal number1
-				new BigDecimal(0),      // BigDecimal number1
-				null,                   // Date date1
-				null,                   // Date date1
-				"",                     // String filename
-				"",                     // String fullfilepath
-				"",                     // String webpath
-				false,                  // Boolean thisjustin
-				null,                   // String importedfrom
-				new BigDecimal(0),      // BigDecimal expireRule
-				false,                  // Boolean commentary
-				stringToClob(""),       // Clob text
-				null,                   // Blob binary
-				"",                     // String contenttype
-				false,                  // Boolean binaryloaded
-				false,                  // Boolean loadbinary
-				false,                  // Boolean externalbinary
-				false,                  // Boolean cbraNonqsm
-				"rss",                  // String postedby
-				false,                  // Boolean onticker
-				false,                  // Boolean waptopstory
-				false,                  // Boolean alert
-				null,                   // BigDecimal autoTone
-				false,                  // Boolean categoriesLocked
-				false,                  // Boolean coreAlert
-				0D,                     // Double commentaryTimeout
-				new BigDecimal(0),      // BigDecimal commentaryExpireTime
-				null,                   // Clob transcript
-				null,                   // String eodCategory
-				null,                   // String eodCategoryGroup
-				null                    // String eodDate
+				null,                        // BigDecimal rsn
+				new Date(),                  // Date itemDate
+				"",                          // String source
+				new Date(),                  // Date itemTime
+				"",                          // String summary
+				"",                          // String title
+				"Internet",                  // String type
+				true,                        // Boolean frontpagestory
+				false,                       // Boolean published
+				false,                       // Boolean archived
+				"",                          // String archivedTo
+				new Date(),                  // Date recordCreated
+				new Date(),                  // Date recordModified
+				"",                          // String string1
+				"",                          // String string2
+				"",                          // String string3
+				"",                          // String string4
+				"",                          // String string5
+				"",                          // String string6
+				"",                          // String string7
+				"",                          // String string8
+				"",                          // String string9
+				new BigDecimal(0),           // BigDecimal number1
+				new BigDecimal(0),           // BigDecimal number1
+				null,                        // Date date1
+				null,                        // Date date1
+				"",                          // String filename
+				"",                          // String fullfilepath
+				"",                          // String webpath
+				false,                       // Boolean thisjustin
+				null,                        // String importedfrom
+				new BigDecimal(0),           // BigDecimal expireRule
+				false,                       // Boolean commentary
+				StringUtil.stringToClob(""), // Clob text
+				null,                        // Blob binary
+				"",                          // String contenttype
+				false,                       // Boolean binaryloaded
+				false,                       // Boolean loadbinary
+				false,                       // Boolean externalbinary
+				false,                       // Boolean cbraNonqsm
+				"rss",                       // String postedby
+				false,                       // Boolean onticker
+				false,                       // Boolean waptopstory
+				false,                       // Boolean alert
+				null,                        // BigDecimal autoTone
+				false,                       // Boolean categoriesLocked
+				false,                       // Boolean coreAlert
+				0D,                          // Double commentaryTimeout
+				new BigDecimal(0),           // BigDecimal commentaryExpireTime
+				null,                        // Clob transcript
+				null,                        // String eodCategory
+				null,                        // String eodCategoryGroup
+				null                         // String eodDate
 			);
 		
 		return newsItem;
@@ -127,7 +127,7 @@ public class NewsItemFactory extends Jorel2Root {
 		newsItem.setTitle(title);
 		newsItem.setString6(item.getCreator());
 		newsItem.setWebpath(item.getLink());
-		newsItem.setText(stringToClob(content));
+		newsItem.setText(StringUtil.stringToClob(content));
 		newsItem.setSummary(summary);
 		
 		// Saves converting back from Clob to string
@@ -157,7 +157,6 @@ public class NewsItemFactory extends Jorel2Root {
 			
 			content = StringUtil.SubstituteEmojis(content);
 	
-	
 			// Assign content of this SyndEntry to the NewsItemDao object
 			newsItem.setItemDate(itemDate);
 			newsItem.setItemTime(new Date());
@@ -165,7 +164,7 @@ public class NewsItemFactory extends Jorel2Root {
 			newsItem.setSource(source);
 			newsItem.setTitle(item.getTitle());
 			newsItem.setWebpath(item.getLink());
-			newsItem.setText(stringToClob(content));
+			newsItem.setText(StringUtil.stringToClob(content));
 			
 			// Saves converting back from Clob to string
 			newsItem.content = content;
@@ -176,27 +175,5 @@ public class NewsItemFactory extends Jorel2Root {
 		}
 		
 		return newsItem;
-	}
-
-	/**
-	 * Converts the article content from a String to the Clob format used by NEWS_ITEMS.TEXT.
-	 * 
-	 * @param content The String representation of the news item content.
-	 * @return Clob version of the content parameter.
-	 */
-	private static Clob stringToClob(String content) {
-		
-		Clob contentClob = null;
-		
-		try {
-			contentClob = new javax.sql.rowset.serial.SerialClob(content.toCharArray());
-		} catch (SerialException e) {
-			logger.error("Translating rss content to clob. Content = " + content, e);
-		} catch (SQLException e) {
-			logger.error("Translating rss content to clob. Content = " + content, e);
-			e.printStackTrace();
-		}
-		
-		return contentClob;
 	}
 }

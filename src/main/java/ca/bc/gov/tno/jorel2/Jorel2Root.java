@@ -21,6 +21,8 @@ import org.hibernate.annotations.NamedQueries;
 	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype and e.lastFtpRun <> :runDate"),
 	@NamedQuery(name = "Quotes_FindWordsByType", 
 	query = "from WordsDao w where w.type=:type"),
+	@NamedQuery(name = "Pagewatchers_FindActivePageWatchers", 
+	query = "from PagewatchersDao p where p.active=2"),
 })
 /**
  * Maintains a global repository of variable and annotation definitions that are available throughout the system.

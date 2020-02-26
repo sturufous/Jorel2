@@ -71,6 +71,7 @@ public class UrlUtil extends Jorel2Root {
 			}
 			
 			in.close();
+			urlConnection.disconnect();
 		} catch (IOException e) {
 			logger.error("Error retrieving page at: {}", url, e);
 		}
