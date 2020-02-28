@@ -22,7 +22,7 @@ import org.hibernate.annotations.NamedQueries;
 	@NamedQuery(name = "Quotes_FindWordsByType", 
 	query = "from WordsDao w where w.type=:type"),
 	@NamedQuery(name = "Pagewatchers_FindActivePageWatchers", 
-	query = "from PagewatchersDao p where p.active=2"),
+	query = "from PagewatchersDao p where p.active=1"),
 })
 /**
  * Maintains a global repository of variable and annotation definitions that are available throughout the system.
@@ -56,6 +56,10 @@ public class Jorel2Root {
 	public enum WordType {
 		
 		Verb, Noise, Title, NoiseName;
+	}
+	
+	public enum ChangedStatus {
+		CHANGED, UNCHANGED;
 	}
 	
     /** Map used to record the start times of each thread. This is used for logging and the enforcement of the maxThreadRuntime property. */

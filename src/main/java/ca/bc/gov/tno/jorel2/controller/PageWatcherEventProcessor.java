@@ -1,15 +1,14 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.io.BufferedReader;
 import java.math.BigDecimal;
-import java.net.HttpURLConnection;
 import java.sql.Clob;
-import java.util.Calendar;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import javax.inject.Inject;
+import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Transport;
@@ -49,22 +48,27 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	
 	public Optional<String> processEvents(String eventType, Session session) {
 		
-		Calendar calendar = Calendar.getInstance();
-
     	try {
     		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting PageWatcher event processing" + StringUtil.getThreadNumber());
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        
-	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
+	        // Because the getElligibleEventsByEventType method executes a join query it returns an array containing EventsDao and EventTypesDao objects
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        		boolean runToday = DateUtil.runnableToday(currentEvent.getFrequency());
 	        		
 	        		if (runToday) {
-	        			processPageWatchers(currentEvent, session);
+	        			processPageWatchers(session);
 	        		}
+	        		
+	        		// Update the lastFtpRun to today's date to prevent pageWatchers from running again until tomorrow.
+	        		String currentDate = DateUtil.getDateNow();
+	        		currentEvent.setLastFtpRun(currentDate);
+	        		session.beginTransaction();
+	        		session.persist(currentEvent);
+	        		session.getTransaction().commit();
 	        	}
 	        }
     	} 
@@ -76,51 +80,37 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
     	return Optional.of("complete");
 	}
 	
-	// Process the Pagewatcher event
-	private void processPageWatchers(EventsDao currentEvent, Session session) {
+	/**
+	 * Retrieves all active pagewatcher records and sends an email message if the page being watched has changed since the last run.
+	 *  
+	 * @param session The current Hibernate persistence context.
+	 */
+	@SuppressWarnings("preview")
+	private void processPageWatchers(Session session) {
 
 		try {
-			HttpURLConnection http = null;
-			BufferedReader read = null;
-			
 	        List<PagewatchersDao> results = PagewatchersDao.getActivePageWatchers(instance, session);
 			session.beginTransaction();
 	        
 	        for (PagewatchersDao watcher : results) {
-				String url = watcher.getUrl();
-				String name = watcher.getName();
 				Clob clobContent = watcher.getPageContent();
-				String pageContent = "";
-	        	boolean sendEmail = false;
+				String pageContent = (clobContent != null) ? StringUtil.clobToString(clobContent) : "";
+				String pageContent2 = UrlUtil.retrievePageContent(watcher.getUrl());
+				String changes = StringUtil.diff(pageContent, pageContent2);
 				
-	        	pageContent = (clobContent != null) ? StringUtil.clobToString(clobContent) : "";
+				ChangedStatus changed = (pageContent2.equals(pageContent) || changes == "") ? ChangedStatus.UNCHANGED : ChangedStatus.CHANGED;
+				
+	        	watcher = switch (changed) {
+        			case UNCHANGED -> getUnchangedWatcher(watcher);
+        			case CHANGED -> getChangedWatcher(watcher, changes, pageContent2);
+        			default -> null;
+	        	};
 
-				String pageContent2 = "";
-				StringBuffer contents = new StringBuffer();
-				String changes = "";
-				pageContent2 = UrlUtil.retrievePageContent(url);
-	        
-				if (pageContent2.equals(pageContent)) {
-					// content did not change, update last checked date
-					watcher.setPageResultCode(BigDecimal.valueOf(100));
-					watcher.setLastCheck(new Date());
-				} else {
-					changes = StringUtil.diff(pageContent, pageContent2);
-					if (changes.equals("")) {
-						// no reported changes
-						watcher.setPageResultCode(BigDecimal.valueOf(200));
-						watcher.setLastCheck(new Date());
-					} else {
-						// content changed - update record and send emails
-						watcher.setPageLastModified(BigDecimal.valueOf(new Date().getTime()));
-						watcher.setPageResultCode(BigDecimal.valueOf(300));
-						watcher.setPageContent(StringUtil.stringToClob(pageContent2));
-						watcher.setDateModified(new Date());
-						//sendMail(watcher, changes);
-						logger.trace(StringUtil.getLogMarker(INDENT1) + "ProcessPageWatchers: " + name + " changed");
-					}
-				}
-				session.persist(watcher);
+	        	if (watcher != null) {
+	        		session.persist(watcher);
+	        	} else {
+	        		logger.error("Cannot determine if watched page changed.", new IllegalStateException("Changed status is null."));
+	        	}
 	        }
 	        
 			session.getTransaction().commit();
@@ -128,53 +118,118 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 			logger.error("PagewatcherEvent", err);
 		}
 	}
-
 	
+	/**
+	 * Sets the HTTP result code and the last check date for this watcher.
+	 * 
+	 * @param watcher The watcher record being processed
+	 * @return The updated watcher
+	 */
+	private PagewatchersDao getUnchangedWatcher (PagewatchersDao watcher) {
+		
+		watcher.setPageResultCode(BigDecimal.valueOf(200));
+		watcher.setLastCheck(new Date());
+		
+		return watcher;
+	}
+
+	/**
+	 * Sets the lastModified, resultCode, pageContent and dateModified for this watcher record. Also notifies the watcher's recipient
+	 * list, by email, that a change has occurred and writes a log message. 
+	 * 
+	 * @param watcher The watcher record being processed
+	 * @return The updated watcher
+	 */
+	private PagewatchersDao getChangedWatcher (PagewatchersDao watcher, String changes, String pageContent2) {
+		
+		watcher.setPageLastModified(BigDecimal.valueOf(new Date().getTime()));
+		watcher.setPageResultCode(BigDecimal.valueOf(200));
+		watcher.setPageContent(StringUtil.stringToClob(pageContent2));
+		watcher.setDateModified(new Date());
+		watcher.setLastCheck(new Date());
+		sendMail(watcher, changes);
+		logger.trace(StringUtil.getLogMarker(INDENT1) + "ProcessPageWatchers: " + watcher.getName() + " changed");
+		
+		return watcher;
+	}
+
 	/**
 	 * Sends an email message informing the recipient list that the web site in question has been modified since the last
 	 * PageWatcher event was run (currently weekly).
 	 * 
-	 * @param currentEvent The PageWatcher event being processed.
+	 * @param watcher The PageWatcher event being processed.
+	 * @param changes A description of the changes made to the page being watched.
 	 */
 	private void sendMail (PagewatchersDao watcher, String changes) {
 	
-		Properties props = System.getProperties();
-		props.put("mail.host", "192.168.4.10");
-		props.put("mail.smtp.starttls.enable", "true");
-		props.put("mail.smtp.port", 25);
+		javax.mail.Session session = getEmailSession();
+		String subject = "TNO Page Watcher: " + watcher.getName();
+		String message = formatEmailMessage(watcher, changes);
+		InternetAddress[] typeMarker = new InternetAddress[1];
+		
+		try {
+			String toWhome = watcher.getEmailRecipients();
+					
+			if (toWhome == null) {
+				logger.error("Attempting to send pagewatcher email.", new IllegalStateException("The email recipient list for " + watcher.getName() + " is null."));
+			} else {
+				ArrayList<InternetAddress> addresses = new ArrayList<>();
+				String[] emailRecipients = toWhome.split(",");
+				
+				for (String emailAddress : emailRecipients) {
+					addresses.add(new InternetAddress(emailAddress));
+				}
+				
+				MimeMessage msg = new MimeMessage(session);
+				msg.setFrom(new InternetAddress(instance.getMailFromAddress()));
+				msg.setRecipients(Message.RecipientType.TO, addresses.toArray(typeMarker));
+				msg.setSubject(subject);
+				msg.setText(message);
+				msg.setHeader("Content-Type", "text/html");// charset=\"UTF-8\"");
+	
+				Transport.send(msg); 
+			}
+		} catch (MessagingException e) {
+			logger.error("Attempting to send pagewatcher email.", e);
+		}
+	}
+	
+	/**
+	 * Returns an email session for use in creating a Mime message.
+	 * @return The session instantiated with host name and port.
+	 */
+	private javax.mail.Session getEmailSession() {
+		
+		Properties props = new Properties();
+		props.put("mail.host", instance.getMailHostAddress());
+		props.put("mail.smtp.port", instance.getMailPortNumber());
 		javax.mail.Session session = javax.mail.Session.getDefaultInstance(props);
-		session.setDebug(true);
+		session.setDebug(false);
+
+		return session;
+	}
+	
+	/**
+	 * Creates a formatted email message notifying the recipient(s) that a change has occurred on the web site being watched.
+	 * 
+	 * @param watcher The pagewatcher record being processed
+	 * @param changes The differences between the current page and the one saved on the previous run
+	 * @return
+	 */
+	private String formatEmailMessage(PagewatchersDao watcher, String changes) {
+		
+		String name = watcher.getName();
 		BigDecimal lastModified = watcher.getPageLastModified();
 		String url = watcher.getUrl();
 		
-		//String email_recipients = pw.getEmail_Recipients(); //get recipients from pagewatchers table
-		String name = watcher.getName();
-		String email_recipients = "stuart.morse@quartech.com";
-		String subject = "TNO Page Watcher: " + name;
 		String message = "The web page <a href=\"" + url + "\">" + name + "</a> has been modified.<br>\n<br>\n";
 		message += "Name: " + name + "<br>\n";
 		message += "Address: <a href=\"" + watcher.getUrl() + "\">" + watcher.getUrl() + "</a><br>\n";
 		message += "Last Modified: " + DateUtil.unixTimestampToDate(lastModified) + "<br>\n<br>\n";
-
 		message += "Summary of changes:<br>\n";
 		message += "-------------------<br>\n";
-
 		message += changes + "<br>\n<br>\n";
-		
-		try {
-			InternetAddress[] addresses = new InternetAddress[1];
-			addresses[0] = new InternetAddress("stuart.morse@quartech.com");
-			MimeMessage msg = new MimeMessage(session);
-			msg.setFrom(new InternetAddress("u2ubesant@gmail.com"));
-			msg.setRecipient(Message.RecipientType.TO, addresses[0]);
-			msg.setSubject(subject);
-			msg.setText(message);
-			msg.setHeader("Content-Type", "text/html");// charset=\"UTF-8\"");
 
-			Transport.send(msg, addresses, "u2ubesant@gmail.com", "");
-		} catch (MessagingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		return message;
 	}
 }

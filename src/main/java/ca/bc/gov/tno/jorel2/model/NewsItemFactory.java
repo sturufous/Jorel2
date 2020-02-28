@@ -1,5 +1,6 @@
 package ca.bc.gov.tno.jorel2.model;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Clob;
 import java.sql.SQLException;
@@ -169,7 +170,7 @@ public class NewsItemFactory extends Jorel2Root {
 			// Saves converting back from Clob to string
 			newsItem.content = content;
 		}
-		catch (Exception e) {
+		catch (IOException e) {
 			logger.error("Retrieving individual CP News item: " + item.getUri(), e);
 			newsItem = null;
 		}

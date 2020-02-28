@@ -44,6 +44,18 @@ public class Jorel2Instance {
 	@Value("${maxThreadRuntime}")
 	public String maxThreadRuntimeString;
 	
+	/** The from address of any Jorel2 emails */
+	@Value("${mail.from}")
+	public String mailFromAddress;
+	
+	/** The host address of the smtp server used for sending emails */
+	@Value("${mail.host}")
+	public String mailHostAddress;
+	
+	/** The port of the smtp server used for sending emails */
+	@Value("${mail.portNumber}")
+	public String mailPortNumber;
+	
 	/** Integer version of maxThreadRuntimeString which is exposed as a JMX managed operation */
 	private int maxThreadRuntime = 0;
 	
@@ -256,5 +268,38 @@ public class Jorel2Instance {
 	public Map<String, Integer> getWordCounts() {
 		
 		return wordCounts;
-	}	
+	}
+	
+	/**
+	 * Exposes the eMail from address as a JMX attribute.
+	 * 
+	 * @return The eMail from address.
+	 */
+	@ManagedAttribute(description="From address for use when sending Jorel2 emails", currencyTimeLimit=15)
+	public String getMailFromAddress() {
+		
+		return mailFromAddress;
+	}
+	
+	/**
+	 * Exposes the eMail host address as a JMX attribute.
+	 * 
+	 * @return The eMail host address.
+	 */
+	@ManagedAttribute(description="Host address for use when sending Jorel2 emails", currencyTimeLimit=15)
+	public String getMailHostAddress() {
+		
+		return mailHostAddress;
+	}
+	
+	/**
+	 * Exposes the eMail port number as a JMX attribute.
+	 * 
+	 * @return The eMail port number.
+	 */
+	@ManagedAttribute(description="Number of quote extractor words by type", currencyTimeLimit=15)
+	public String getMailPortNumber() {
+		
+		return mailPortNumber;
+	}
 }
