@@ -151,26 +151,28 @@ public class NewsItemFactory extends Jorel2Root {
 		
 		try {
 			content = UrlUtil.retrieveCPNewsItem(item, source);
+			if (content != null) {
 			
-			// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
-			Date itemDate = DateUtil.getDateAtMidnight();
-			Date itemTime = item.getPublishedDate();
-			
-			content = StringUtil.SubstituteEmojis(content);
-	
-			// Assign content of this SyndEntry to the NewsItemDao object
-			newsItem.setItemDate(itemDate);
-			newsItem.setItemTime(new Date());
-			newsItem.setType(source);
-			newsItem.setSource(source);
-			newsItem.setTitle(item.getTitle());
-			newsItem.setWebpath(item.getLink());
-			newsItem.setText(StringUtil.stringToClob(content));
-			
-			// Saves converting back from Clob to string
-			newsItem.content = content;
+				// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
+				Date itemDate = DateUtil.getDateAtMidnight();
+				Date itemTime = item.getPublishedDate();
+				
+				content = StringUtil.SubstituteEmojis(content);
+		
+				// Assign content of this SyndEntry to the NewsItemDao object
+				newsItem.setItemDate(itemDate);
+				newsItem.setItemTime(new Date());
+				newsItem.setType(source);
+				newsItem.setSource(source);
+				newsItem.setTitle(item.getTitle());
+				newsItem.setWebpath(item.getLink());
+				newsItem.setText(StringUtil.stringToClob(content));
+				
+				// Saves converting back from Clob to string
+				newsItem.content = content;
+			}
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			logger.error("Retrieving individual CP News item: " + item.getUri(), e);
 			newsItem = null;
 		}

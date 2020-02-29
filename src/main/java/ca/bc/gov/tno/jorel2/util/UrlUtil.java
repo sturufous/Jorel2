@@ -29,7 +29,7 @@ public class UrlUtil extends Jorel2Root {
 	 * @param source The source of the current news feed (e.g. 'CP News')
 	 * @return The complete article text retrieved from the item's link.
 	 */
-	public static String retrieveCPNewsItem(SyndEntry item, String source) throws IOException {
+	public static String retrieveCPNewsItem(SyndEntry item, String source) {
 		
 		String currentUrl = item.getLink();
 		String articlePage = new String("");
@@ -38,7 +38,7 @@ public class UrlUtil extends Jorel2Root {
 		
 		articlePage = retrievePageContent(currentUrl);
 
-		if (articlePage.length() > 0) {
+		if (articlePage != null && articlePage.length() > 0) {
 			content = StringUtil.getArticle(articlePage);
 		} else {
 			content = "No Content";
@@ -54,23 +54,28 @@ public class UrlUtil extends Jorel2Root {
 	 * @param url The url from which content should be retrieved.
 	 * @return The page content.
 	 */
-	public static String retrievePageContent(String url) throws IOException {
+	public static String retrievePageContent(String url) {
 		
 		String inputLine;
 		String articlePage = new String("");
 
 		// Get the article content one line at a time
-		HttpURLConnection urlConnection = (HttpURLConnection) new URL(url).openConnection();
-		urlConnection.setUseCaches(false);
-		urlConnection.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
-		BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+		try {
+			HttpURLConnection urlConnection = (HttpURLConnection) new URL(url).openConnection();
+			urlConnection.setUseCaches(false);
+			urlConnection.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
+			BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 			
-		while ((inputLine = in.readLine()) != null) {
-			articlePage += inputLine + " ";
+			while ((inputLine = in.readLine()) != null) {
+				articlePage += inputLine + " ";
+			}
+			
+			in.close();
+			urlConnection.disconnect();
+		} catch (IOException e) {
+			logger.error("Error retrieving page at: {}", url, e);
+			articlePage = null;
 		}
-			
-		in.close();
-		urlConnection.disconnect();
 
 		return articlePage;
 	}

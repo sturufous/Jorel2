@@ -286,6 +286,56 @@ public class StringUtil extends Jorel2Root {
 	}
 	
 	/**
+	 * Truncate the page content received by a pagewatcher to the section between the start and end strings and
+	 * process html tags.
+	 * 
+	 * @param s The page content
+	 * @param start Ignore page content before this string
+	 * @param end Ignore page content after this string
+	 * @return The processed string
+	 */
+	public static String fix(String s, String start, String end) {
+
+	    int p;
+
+	    // if start tag is set, trim to the first occurence of it
+	    if (start!=null) {
+	      if (!start.equals("")) {
+	        p = s.indexOf(start);
+	        if (p >= 0) {
+	          s = s.substring(p + start.length());
+	        }
+	      }
+	    }
+
+	    // if end tag is set, go to the last occurence of it
+	    if (end!=null) {
+	      if (!end.equals("")) {
+	        p = s.lastIndexOf(end);
+	        if (p >= 0) {
+	          s = s.substring(0, p);
+	        }
+	      }
+	    }
+
+	    s = s.replaceAll("(?i)\\<p\\>","\n");              // replace <p> tags with new lines
+	    s = s.replaceAll("(?i)\\<br\\>","\n");             // replace <br> tags with new lines
+	    s = s.replaceAll("(?i)\\<div[\\S\\s]*?\\>","\n");  // replace <div> tags with new lines
+	    s = s.replaceAll("(?i)\\<td[\\S\\s]*?\\>","\n");   // replace <td> tags with new lines
+	    s = s.replace('\r','\n');
+	    s = s.replaceAll("[^\\p{ASCII}]", "");             // remove non-Ascii text
+
+	    s = s.replaceAll("(?i)\\<script[\\S\\s]*?\\<\\/script\\>","");  // strip anything between script tags
+	    s = s.replaceAll("\\<[\\S\\s]*?\\>","");          // strip html tags
+
+	    s = s.replaceAll("[ \t]+"," ");                   // replace multiple spaces with one space
+	    s = s.replaceAll("\n[ \t]","\n");                 // replace new line+space with new line
+	    s = s.replaceAll("\n+","\n");                     // replace multiple new lines with one new line
+
+	    return s;
+	}
+	
+	/**
 	 * Calculates the difference between two web pages as a subroutine of the pagewatcher process.
 	 * 
 	 * @param a Web page 1 content

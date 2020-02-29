@@ -1,5 +1,6 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Clob;
 import java.util.ArrayList;
@@ -96,21 +97,25 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 				Clob clobContent = watcher.getPageContent();
 				String pageContent = (clobContent != null) ? StringUtil.clobToString(clobContent) : "";
 				String pageContent2 = UrlUtil.retrievePageContent(watcher.getUrl());
-				String changes = StringUtil.diff(pageContent, pageContent2);
 				
-				ChangedStatus changed = (pageContent2.equals(pageContent) || changes == "") ? ChangedStatus.UNCHANGED : ChangedStatus.CHANGED;
-				
-	        	watcher = switch (changed) {
-        			case UNCHANGED -> getUnchangedWatcher(watcher);
-        			case CHANGED -> getChangedWatcher(watcher, changes, pageContent2);
-        			default -> null;
-	        	};
-
-	        	if (watcher != null) {
-	        		session.persist(watcher);
-	        	} else {
-	        		logger.error("Cannot determine if watched page changed.", new IllegalStateException("Changed status is null."));
-	        	}
+				if (pageContent2 != null) {
+					pageContent2 = StringUtil.fix(pageContent2, watcher.getStartString(), watcher.getEndString());
+					String changes = StringUtil.diff(pageContent, pageContent2);
+					
+					ChangedStatus changed = (pageContent2.equals(pageContent) || changes == "") ? ChangedStatus.UNCHANGED : ChangedStatus.CHANGED;
+					
+		        	watcher = switch (changed) {
+	        			case UNCHANGED -> getUnchangedWatcher(watcher);
+	        			case CHANGED -> getChangedWatcher(watcher, changes, pageContent2);
+	        			default -> null;
+		        	};
+	
+		        	if (watcher != null) {
+		        		session.persist(watcher);
+		        	} else {
+		        		logger.error("Cannot determine if watched page changed.", new IllegalStateException("Changed status is null."));
+		        	}
+				}
 	        }
 	        
 			session.getTransaction().commit();
