@@ -11,6 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jmx.export.annotation.ManagedResource;
+
+import ca.bc.gov.tno.jorel2.Jorel2Root.ConnectionStatus;
+
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedOperationParameter;
 import org.springframework.jmx.export.annotation.ManagedOperationParameters;
@@ -61,6 +64,9 @@ public class Jorel2Instance {
 	
 	/** Allows charting of individual run times in VisualVM */
 	private long lastDuration = 0;
+	
+	/** Allows charting of individual run times in VisualVM */
+	private ConnectionStatus connectionStatus = ConnectionStatus.OFFLINE;
 	
 	/**
 	 * Construct this object and set the startTime to the time now.
@@ -301,5 +307,25 @@ public class Jorel2Instance {
 	public String getMailPortNumber() {
 		
 		return mailPortNumber;
+	}
+	
+	/**
+	 * Exposes the online status as a JMX attribute.
+	 * 
+	 * @return The eMail port number.
+	 */
+	@ManagedAttribute(description="Connection status - ONLINE or OFFLINE", currencyTimeLimit=15)
+	public ConnectionStatus getConnectionStatus() {
+		
+		return connectionStatus;
+	}
+	
+	/**
+	 * Allows the online status for this Jorel2 instance to be set based on Hibernate behaviour.
+	 * @param status
+	 */
+	public void setConnectionStatus(ConnectionStatus status) {
+		
+		this.connectionStatus = status;
 	}
 }

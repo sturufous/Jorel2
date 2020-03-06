@@ -17,6 +17,8 @@ import javax.inject.Inject;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
 import org.hibernate.Session;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Service;
 
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
@@ -41,6 +43,10 @@ import ca.bc.gov.tno.jorel2.util.StringUtil;
 @Service
 public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 
+    /** Context from which to extract the Jorel2Thread Prototype */
+    @Inject
+    private AnnotationConfigApplicationContext ctx;
+    
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	Jorel2Instance instance;
@@ -74,7 +80,8 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        List<Rss.Channel.Item> newRssItems;
-    		
+	        quoteExtractor.init();
+	        
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
@@ -84,19 +91,25 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
 		    			logger.trace(StringUtil.getLogMarker(INDENT1) + "Two (or more) threads attempting to process the " + currentSource + " feed - skipping." + StringUtil.getThreadNumber());
 		    		} else {
-		    			sourcesBeingProcessed.put(currentSource, "");
-		    			
-		    			// The JAXB unmarshaller is not thread safe, so synchronize unmarshalling
-		    			synchronized(unmarshaller) {
-		    				rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
-		    				unmarshaller.notify();
+		    			try {
+			    			sourcesBeingProcessed.put(currentSource, "");
+			    			
+			    			// The JAXB unmarshaller is not thread safe, so synchronize unmarshalling
+			    			synchronized(unmarshaller) {
+			    				rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
+			    				unmarshaller.notify();
+			    			}
+				    		newRssItems = getNewRssItems(currentSource, session, rssContent);
+				    		insertNewsItems(currentSource, newRssItems, session, rssContent);
+				    		sourcesBeingProcessed.remove(currentSource);
 		    			}
-			    		newRssItems = getNewRssItems(currentSource, session, rssContent);
-			    		insertNewsItems(currentSource, newRssItems, session, rssContent);
-			    		sourcesBeingProcessed.remove(currentSource);
+		    			catch (Exception e) {
+				    		sourcesBeingProcessed.remove(currentSource);
+		    				logger.error("Processing Syndication feed for: " + currentSource, e);
+		    			}
 		    		}
 	        	} else {
-		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
+		    		logger.error("Looping through Syndication events.", new IllegalArgumentException("Wrong data type in query results, expecting EventsDao."));    		
 	        	}
 	        } 
     	} 

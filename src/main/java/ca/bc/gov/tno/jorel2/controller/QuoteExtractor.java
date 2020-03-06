@@ -14,6 +14,8 @@ import java.util.regex.Pattern;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.stereotype.Component;
@@ -63,6 +65,9 @@ public class QuoteExtractor extends Jorel2Root {
 	/** Hibernate persistence context for all quote related activities */
 	Session session;
 	
+	/** Indicates whether this QuoteExtractor instance has been initialized */
+	boolean initialized = false;
+	
 	/** This, and all other instance variables, are inherited from the Aktiv package where they were largely uncommented */
 	static final char para = (char)10;
 	int counter;
@@ -89,10 +94,9 @@ public class QuoteExtractor extends Jorel2Root {
 
 	/**
 	 * Loads the contents of the WORDS table, by type, into java.util.Set variables that are used to categorize words in the news item text.
-	 * The loading of this data is a pre-requisite to booting up the FifoThreadPoolScheduler.
+	 * This object is initialized by the SyndicationEventProcessor or the RssEventProcessor upon their first execution.
 	 */
 	
-	@PostConstruct
     public void init() {
     	
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
@@ -101,22 +105,30 @@ public class QuoteExtractor extends Jorel2Root {
     		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
     		System.exit(FATAL_CONDITION);
     	} else {
-    		
-    		if (verbs == null || titles == null || noiseWords == null || noiseNameWords == null) {
-		        session = sessionFactory.get().openSession();
-		        
-		        logger.trace("Loading data from the WORDS table in QuoteExtractor...");
-				verbs = loadWords(WordsDao.getWords(instance, WordType.Verb, session));
-				instance.addWordCountEntry(WordType.Verb.toString(), verbs.size());
-				
-				titles = loadWords(WordsDao.getWords(instance, WordType.Title, session));
-				instance.addWordCountEntry(WordType.Title.toString(), titles.size());
-				
-				noiseWords = loadWords(WordsDao.getWords(instance, WordType.Noise, session));
-				instance.addWordCountEntry(WordType.Noise.toString(), noiseWords.size());
-				
-				noiseNameWords = loadWords(WordsDao.getWords(instance, WordType.NoiseName, session));
-				instance.addWordCountEntry(WordType.NoiseName.toString(), noiseNameWords.size());
+    		if (!initialized) {
+	    		try { 		
+		    		if (verbs == null || titles == null || noiseWords == null || noiseNameWords == null) {
+				        session = sessionFactory.get().openSession();
+				        
+				        logger.trace("Loading data from the WORDS table in QuoteExtractor...");
+						verbs = loadWords(WordsDao.getWords(instance, WordType.Verb, session));
+						instance.addWordCountEntry(WordType.Verb.toString(), verbs.size());
+						
+						titles = loadWords(WordsDao.getWords(instance, WordType.Title, session));
+						instance.addWordCountEntry(WordType.Title.toString(), titles.size());
+						
+						noiseWords = loadWords(WordsDao.getWords(instance, WordType.Noise, session));
+						instance.addWordCountEntry(WordType.Noise.toString(), noiseWords.size());
+						
+						noiseNameWords = loadWords(WordsDao.getWords(instance, WordType.NoiseName, session));
+						instance.addWordCountEntry(WordType.NoiseName.toString(), noiseNameWords.size());
+						initialized = true;
+		    		}
+	    		}
+	    		catch (HibernateException e) {
+	        		logger.error("Reading WordsDao for QuoteExtractor.", e);
+	        		System.exit(FATAL_CONDITION);
+	    		}
     		}
     	}
     }

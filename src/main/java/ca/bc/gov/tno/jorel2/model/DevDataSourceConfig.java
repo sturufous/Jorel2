@@ -4,7 +4,9 @@ import java.util.Optional;
 import java.util.Properties;
 
 import javax.annotation.PreDestroy;
+import javax.inject.Inject;
 
+import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
@@ -13,6 +15,10 @@ import org.hibernate.service.ServiceRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
+
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2Root.ConnectionStatus;
+
 import org.hibernate.cfg.Configuration;
 
 /**
@@ -52,8 +58,12 @@ final class DevDataSourceConfig extends DataSourceConfig {
 	@Value("${dev.dbDialect}")	
 	private String dialect;
 	
-	private static StandardServiceRegistry registry = null;
-	private static SessionFactory sessionFactory = null;
+	/** Process we're running as (e.g. "jorel", "jorelMini3") */
+	@Inject
+	private Jorel2Instance instance;
+	
+	/** Cached SessionFactory used to create a new session for each Jorel2Runnable thread */
+	private Optional<SessionFactory> sessionFactoryOptional = Optional.empty();
 	
 	/**
 	 * This method initializes the Hibernate framework for use throughout the execution of this Jorel2 invocation. It creates a properties object
@@ -67,39 +77,44 @@ final class DevDataSourceConfig extends DataSourceConfig {
 		
 		Configuration config = new Configuration();
 		
-		if (sessionFactory == null)
-		try {
-			logger.debug("Getting development Hibernate session factory.");
-						
-			Properties settings = new Properties();
-	        settings.put(Environment.DRIVER, "oracle.jdbc.OracleDriver");
-	        settings.put(Environment.URL, "jdbc:oracle:thin:@" + systemName + ":" + port + ":" + sid);
-	        settings.put(Environment.USER, userId);
-	        settings.put(Environment.PASS, userPw);
-	        settings.put(Environment.DIALECT, dialect);
-	        //settings.put(Environment.SHOW_SQL, "true");
-	        
-	        config.setProperties(settings);
-	        
-	        // Register all Hibernate classes used in Jorel2
-	        config.addAnnotatedClass(PreferencesDao.class);
-	        config.addAnnotatedClass(EventsDao.class);
-	        config.addAnnotatedClass(EventTypesDao.class);
-	        config.addAnnotatedClass(NewsItemsDao.class);
-	        config.addAnnotatedClass(IssuesDao.class);
-	        config.addAnnotatedClass(NewsItemIssuesDao.class);
-	        config.addAnnotatedClass(WordsDao.class);
-	        config.addAnnotatedClass(NewsItemQuotesDao.class);
-	        config.addAnnotatedClass(PagewatchersDao.class);
-	        
-	        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
-	        
-	        sessionFactory = config.buildSessionFactory(serviceRegistry);
-	     } catch (Exception e) {
-	    	 logger.error(e);
-	     }
-	
-        return Optional.of(sessionFactory);
+		if (sessionFactoryOptional.isEmpty()) {
+			try {
+				logger.debug("Getting development Hibernate session factory.");
+							
+				Properties settings = new Properties();
+		        settings.put(Environment.DRIVER, "oracle.jdbc.OracleDriver");
+		        settings.put(Environment.URL, "jdbc:oracle:thin:@" + systemName + ":" + port + ":" + sid);
+		        settings.put(Environment.USER, userId);
+		        settings.put(Environment.PASS, userPw);
+		        settings.put(Environment.DIALECT, dialect);
+		        settings.put("checkoutTimeout", CONNECTION_TIMEOUT);
+		        //settings.put(Environment.SHOW_SQL, "true");
+		        
+		        config.setProperties(settings);
+		        
+		        // Register all Hibernate classes used in Jorel2
+		        config.addAnnotatedClass(PreferencesDao.class);
+		        config.addAnnotatedClass(EventsDao.class);
+		        config.addAnnotatedClass(EventTypesDao.class);
+		        config.addAnnotatedClass(NewsItemsDao.class);
+		        config.addAnnotatedClass(IssuesDao.class);
+		        config.addAnnotatedClass(NewsItemIssuesDao.class);
+		        config.addAnnotatedClass(WordsDao.class);
+		        config.addAnnotatedClass(NewsItemQuotesDao.class);
+		        config.addAnnotatedClass(PagewatchersDao.class);
+		        
+		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
+		        
+		        SessionFactory sessionFactory = config.buildSessionFactory(serviceRegistry);
+		        sessionFactoryOptional = Optional.of(sessionFactory);
+		        instance.setConnectionStatus(ConnectionStatus.ONLINE);
+		     } catch (HibernateException  e) {
+		    	 logger.error("Getting the development Hibernate session factory. Going offline.", e);
+		    	 instance.setConnectionStatus(ConnectionStatus.OFFLINE);
+		     }
+		}
+		
+        return sessionFactoryOptional;
 	}
 	
 	/**
@@ -108,7 +123,7 @@ final class DevDataSourceConfig extends DataSourceConfig {
 	@PreDestroy
 	private void shutDown() {
 		
-		sessionFactory.close();
+		sessionFactoryOptional.get().close();
 	}
 	
 	/** 

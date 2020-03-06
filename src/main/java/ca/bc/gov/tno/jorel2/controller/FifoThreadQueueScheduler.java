@@ -82,7 +82,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	 * <code>ArrayBlockingQueue</code>'s <code>poll(long timeout, TimeUnit unit)</code> method which will timeout after <code>maxThreadRuntime</code>
 	 * seconds. In this case an error is logged and the VM will shut down.
 	 */
-	@Scheduled(fixedDelay = 3000000) //cron = "${cron.expression}")
+	@Scheduled(fixedDelay = 30000) //cron = "${cron.expression}")
 	public void run() {
 		try {
 			Thread currentThread = threadQueue.poll(instance.getMaxThreadRuntime(), TimeUnit.SECONDS);

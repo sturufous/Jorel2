@@ -52,7 +52,6 @@ public class Jorel2Configuration extends Jorel2Root {
 	 * @return 
 	 */
     @Bean("jorel2Scheduler")
-	@DependsOn({"quoteExtractor"})
     @Scope("singleton")
     public FifoThreadQueueScheduler jorel2Scheduler() {
     	
@@ -67,7 +66,7 @@ public class Jorel2Configuration extends Jorel2Root {
      */
     @Bean("jorel2Runnable")
     @Scope("prototype")
-    @DependsOn({"jorel2Scheduler", "jaxbContext"})
+    @DependsOn({"jorel2Scheduler", "jaxbContext", "jorel2Instance", "quoteExtractor"})
     public Jorel2Runnable jorel2Thread() {
     	return new Jorel2Runnable();
     }
@@ -96,7 +95,7 @@ public class Jorel2Configuration extends Jorel2Root {
      * 
      * @return a new instance of Jorel2Process.
      */
-    @Bean("getInstance")
+    @Bean("jorel2Instance")
     @Scope("singleton")
     public Jorel2Instance getInstance() {
     	

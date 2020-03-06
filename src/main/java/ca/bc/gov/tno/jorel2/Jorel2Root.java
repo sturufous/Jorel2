@@ -40,6 +40,7 @@ public class Jorel2Root {
     protected static final int FATAL_CONDITION = -1;
     protected static final String INDENT0 = "";
     protected static final String INDENT1 = "    ";
+    protected static final int CONNECTION_TIMEOUT = 3000;
     
 	public enum EventType {
 		
@@ -60,6 +61,10 @@ public class Jorel2Root {
 	
 	public enum ChangedStatus {
 		CHANGED, UNCHANGED;
+	}
+	
+	public enum ConnectionStatus {
+		ONLINE, OFFLINE;
 	}
 	
     /** Map used to record the start times of each thread. This is used for logging and the enforcement of the maxThreadRuntime property. */

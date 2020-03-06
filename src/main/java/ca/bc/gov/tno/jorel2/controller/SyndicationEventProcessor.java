@@ -66,6 +66,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        List<SyndEntry> newSyndItems;
+	        quoteExtractor.init();
     		
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
 	        for (Object[] entityPair : results) {
@@ -82,13 +83,19 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
 		    			logger.trace(StringUtil.getLogMarker(INDENT1) + "Two threads attempting to process the " + currentSource + " feed - skipping." + StringUtil.getThreadNumber());
 		    		} else {
-		    			sourcesBeingProcessed.put(currentSource, "");
-			    		newSyndItems = getNewRssItems(currentSource, session, feed);
-			    		insertNewsItems(currentSource, session, newSyndItems);
-			    		sourcesBeingProcessed.remove(currentSource);
+		    			try {
+			    			sourcesBeingProcessed.put(currentSource, "");
+				    		newSyndItems = getNewRssItems(currentSource, session, feed);
+				    		insertNewsItems(currentSource, session, newSyndItems);
+				    		sourcesBeingProcessed.remove(currentSource);
+		    			}
+		    			catch (Exception e) {
+				    		sourcesBeingProcessed.remove(currentSource);
+		    				logger.error("Processing Syndication feed for: " + currentSource, e);
+		    			}
 		    		}
 		    	} else {
-		    		throw new IllegalArgumentException("Wrong data type in query results, expecting EventsDao.");    		
+		    		logger.error("Looping through Syndication events.", new IllegalArgumentException("Wrong data type in query results, expecting EventsDao."));    		
 	        	}
 	        } 
     	} 

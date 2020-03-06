@@ -40,7 +40,7 @@ public class NewsItemFactory extends Jorel2Root {
 				"",                          // String summary
 				"",                          // String title
 				"Internet",                  // String type
-				true,                        // Boolean frontpagestory
+				false,                       // Boolean frontpagestory
 				false,                       // Boolean published
 				false,                       // Boolean archived
 				"",                          // String archivedTo

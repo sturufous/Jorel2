@@ -1,6 +1,5 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Clob;
 import java.util.ArrayList;
@@ -9,7 +8,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import javax.inject.Inject;
-import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Transport;

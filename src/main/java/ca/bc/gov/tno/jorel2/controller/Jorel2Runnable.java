@@ -1,5 +1,8 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -11,8 +14,12 @@ import java.util.Optional;
 import javax.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.SharedSessionContract;
+import org.hibernate.exception.JDBCConnectionException;
+import org.hibernate.jdbc.Work;
 import org.springframework.core.env.Environment;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
@@ -21,7 +28,7 @@ import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
-import ca.bc.gov.tno.jorel2.controller.RssEventProcessor;
+//import ca.bc.gov.tno.jorel2.controller.RssEventProcessor;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.
@@ -52,6 +59,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private PageWatcherEventProcessor pageWatcherEventProcessor;
 	
+	/** PageWatcher Event processor service */
+	@Inject
+    private ShellCommandEventProcessor shellCommandEventProcessor;
+	
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	private Jorel2Instance instance;
@@ -74,18 +85,38 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@SuppressWarnings("preview")
 	@Override
 	public void run() {
-		Optional<String> rssResult;
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
     	LocalDateTime startTime = null;
 				
 		startTime = logThreadStartup();
 		
-    	if(sessionFactory.isEmpty()) {
-    		logger.error("Getting TNO session factory.", new IllegalStateException("No session factory provided."));
+    	if(instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
+    		if (!sessionFactory.isEmpty()) {
+    			Session session = sessionFactory.get().openSession();
+    			if (isConnectionLive(session)) {
+    		        instance.setConnectionStatus(ConnectionStatus.ONLINE);        				
+        			logger.trace("Connection to TNO database is back online.");
+    			} else {
+    				System.out.println("Connection to TNO database is still offline");
+    			}
+    		} else {
+    			logger.trace("Connection to TNO database is still offline");
+    		}
     	} else {
-	        Session session = sessionFactory.get().openSession();
-	        Map<EventType, String> eventMap = new HashMap<>();
-	    	
+    		processOnlineEvents(sessionFactory.get());
+    	}
+    	
+    	logThreadCompletion(startTime);
+	}
+	
+	@SuppressWarnings("preview")
+	private void processOnlineEvents(SessionFactory sessionFactory) {
+		
+        Map<EventType, String> eventMap = new HashMap<>();
+        Session session = sessionFactory.openSession();
+		Optional<String> eventResult;
+        
+		try {
 	        // Retrieve the events for processing 
 	    	session.beginTransaction();
 	        List<EventsDao> results = EventsDao.getEventsForProcessing(instance.getInstanceName(), session);
@@ -98,18 +129,21 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        	EventType eventEnum = eventEntry.getKey();
 	        	String eventTypeName = eventEntry.getValue();
 	        	
-	        	rssResult = switch (eventEnum) {
+	        	eventResult = switch (eventEnum) {
 	        		case NEWRSS -> rssEventProcessor.processEvents(eventTypeName, session);
 	        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
 	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(eventTypeName, session);
+	        		case SHELLCOMMAND -> shellCommandEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }
-	        
-	        session.close();
-    	}
-    	
-    	logThreadCompletion(startTime);
+		}
+		catch (HibernateException e)
+	    	logger.trace("In main event processing loop. Going offline.", e);
+	    	instance.setConnectionStatus(ConnectionStatus.OFFLINE);
+	    }
+        
+        session.close();
 	}
 	
 	/**
@@ -154,5 +188,37 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
       	System.out.println("Completing thread: " + name);
 	
 		jorelScheduler.notifyThreadComplete(Thread.currentThread());
+	}
+	
+	/**
+	 * Determines whether there is a live connection between Jorel2 and the TNO database. As the session object represents a relationship between 
+	 * the running application and the Hibernate framework, it is always seen as connected. Session.isOpen() and Session.isConnected() will return
+	 * true regardless of the connected status of the underlying java.sql.connection object. This method retrieves the connection itself using
+	 * Session's doWork().execute() method. Once retrieved, the connection is tested using connection.isValid(3000). This statement will timeout 
+	 * after 3 seconds if the connection is inactive and the timeout exception is caught, indicating that this method should return <code>false</code>.
+	 * 
+	 * @param session The current Hibernate presistence context.
+	 * @return true if the connection referenced by <code>session</code> is an active connection.
+	 */
+	private boolean isConnectionLive(Session session) {
+		
+		boolean result = false;
+		
+		try {
+			session.doWork((Work) new Work() {
+	
+				public void execute(Connection connection) throws SQLException {
+					
+					connection.isValid(CONNECTION_TIMEOUT);
+				}
+			});
+			
+			result = true;
+		}
+		catch (HibernateException e) {
+			result = false;
+		}
+		
+		return result;
 	}
 }
