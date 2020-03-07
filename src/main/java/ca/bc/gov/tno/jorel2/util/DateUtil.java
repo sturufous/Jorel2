@@ -9,7 +9,9 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.StringTokenizer;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
@@ -124,5 +126,57 @@ public class DateUtil extends Jorel2Root {
 		String dateMatch = localTime.format(formatter);
 		
 		return dateMatch;
+	}
+	
+	// TODO Convert this to use java.time
+	// Creates a calendar object from a time string
+	public static Calendar createTime(String time, String frequency) {
+		if (time == null) time="00:00:00";
+		if (frequency == null) frequency="-------";
+
+		// if an improper frequency given, then assume all days
+		if (frequency.length() != 7) frequency = "mtwtfss";
+
+		int startHour=0;
+		int startMinute=0;
+		int startSecond=0;
+		try {
+			StringTokenizer st1 = new StringTokenizer( time, ":" );
+			String hour=st1.nextToken();
+			startHour = Integer.parseInt(hour);
+			String minute=st1.nextToken();
+			startMinute = Integer.parseInt(minute);
+			if (st1.hasMoreTokens()) {
+				String second=st1.nextToken();
+				startSecond = Integer.parseInt(second);
+			} else {
+				startSecond = 0;
+			}
+		} catch (Exception err) {
+	    	logger.trace(StringUtil.getLogMarker(INDENT1) + "Error parsing time ["+time+"] ", err);
+			startHour = 0; startMinute = 0; startSecond = 0;
+		}
+
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(new java.util.Date());
+		cal.set(Calendar.HOUR_OF_DAY, startHour);
+		cal.set(Calendar.MINUTE, startMinute);
+		cal.set(Calendar.SECOND, startSecond);
+		cal.set(Calendar.MILLISECOND, 0);
+
+		// if all dashes, then no days scheduled
+		if (frequency.equals("-------")) {
+			cal.add(Calendar.YEAR, 1); // add a year
+		} else {
+			int daysToAdd = 0;
+			int testday = (7 + cal.get(Calendar.DAY_OF_WEEK) - 2) % 7;
+			while (frequency.substring(testday, testday+1).equals("-")) {
+				testday = (testday + 1) % 7;
+				daysToAdd++;
+			}
+			cal.add(Calendar.DAY_OF_MONTH, daysToAdd);
+		}
+
+		return cal;
 	}
 }

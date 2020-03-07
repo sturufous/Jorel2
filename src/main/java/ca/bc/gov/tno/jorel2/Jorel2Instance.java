@@ -65,7 +65,7 @@ public class Jorel2Instance {
 	/** Allows charting of individual run times in VisualVM */
 	private long lastDuration = 0;
 	
-	/** Allows charting of individual run times in VisualVM */
+	/** Indicates whether this instance currently has access to a network connection */
 	private ConnectionStatus connectionStatus = ConnectionStatus.OFFLINE;
 	
 	/**

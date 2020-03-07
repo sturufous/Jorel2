@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import javax.inject.Inject;
+import javax.persistence.PersistenceException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.HibernateException;
@@ -79,8 +81,9 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	List<String> tasksUpperCase = new ArrayList<>();
     
 	/**
-	 * Perform some initial setup tasks and then enter a loop that repeatedly gets events to process and calls their
-	 * respective handlers.
+	 * Handles the processing of online and offline events depending on the status of the network connection. If the network is OFFLINE, threads 
+	 * running this method will check the validity of the java.sql.Connection object underlying the session, and if valid the status will be 
+	 * returned to ONLINE. If the network connection remains in an OFFLINE state, events that can be run offline will be processed.
 	 */
 	@SuppressWarnings("preview")
 	@Override
@@ -90,25 +93,35 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 				
 		startTime = logThreadStartup();
 		
-    	if(instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
+    	if(instance.getConnectionStatus() == ConnectionStatus.ONLINE) {
+    		processOnlineEvents(sessionFactory.get());
+    	} else 
+    	if (instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
     		if (!sessionFactory.isEmpty()) {
     			Session session = sessionFactory.get().openSession();
     			if (isConnectionLive(session)) {
     		        instance.setConnectionStatus(ConnectionStatus.ONLINE);        				
-        			logger.trace("Connection to TNO database is back online.");
+        			logger.trace(StringUtil.getLogMarker(INDENT1) + "Connection to TNO database is back online.");
+        			processOnlineEvents(sessionFactory.get());
     			} else {
-    				System.out.println("Connection to TNO database is still offline");
+    				logger.trace(StringUtil.getLogMarker(INDENT1) + "Connection to TNO database is still offline.");
+    				processOfflineEvents();
     			}
     		} else {
-    			logger.trace("Connection to TNO database is still offline");
+    			// Unlikely to happen as c3p0 always returns a session factory
+    			logger.trace(StringUtil.getLogMarker(INDENT1) + "Connection to TNO database is still offline");
+    			processOfflineEvents();
     		}
-    	} else {
-    		processOnlineEvents(sessionFactory.get());
     	}
     	
     	logThreadCompletion(startTime);
 	}
 	
+	/**
+	 * Retrieves all eligible event records from the EVENTS table and dispatches them to their respective event processors.
+	 * 
+	 * @param sessionFactory Current Hibernate persistence context.
+	 */
 	@SuppressWarnings("preview")
 	private void processOnlineEvents(SessionFactory sessionFactory) {
 		
@@ -117,10 +130,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		Optional<String> eventResult;
         
 		try {
-	        // Retrieve the events for processing 
-	    	session.beginTransaction();
 	        List<EventsDao> results = EventsDao.getEventsForProcessing(instance.getInstanceName(), session);
-	        session.getTransaction().commit();
 	        
 	        getUniqueEventTypes(eventMap, results);
 	        
@@ -138,12 +148,20 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        	};
 	        }
 		}
-		catch (HibernateException e)
-	    	logger.trace("In main event processing loop. Going offline.", e);
+		catch (PersistenceException e) {
+	    	logger.trace(StringUtil.getLogMarker(INDENT1) + "In main event processing loop. Going offline.", e);
 	    	instance.setConnectionStatus(ConnectionStatus.OFFLINE);
 	    }
         
         session.close();
+	}
+	
+	/**
+	 * Processes all events that support offline processing. At present this includes ShellCommand and Capture events.
+	 */
+	private void processOfflineEvents() {
+		
+		shellCommandEventProcessor.shellCommandEventOffline();
 	}
 	
 	/**
@@ -166,6 +184,12 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
         } 
 	}
 	
+	/**
+	 * Create an entry in the log file recording the start of a new thread's execution. Return the start time of the thread for storage
+	 * in the <code>threadStartTimestamps</code> hash.
+	 * 
+	 * @return The start time of this thread.
+	 */
 	public LocalDateTime logThreadStartup() {
 		// Get the start time
 		LocalDateTime start = LocalDateTime.now();
@@ -178,6 +202,12 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		return start;
 	}
 	
+	/**
+	 * Create an entry in the log file recording the completion of a thread's execution. Calculate the duration of the thread's execution
+	 * by comparing the current time with the startTime parameter.
+	 * 
+	 * @param startTime The time when this thread commenced execution.
+	 */
 	private void logThreadCompletion(LocalDateTime startTime) {
     	LocalDateTime stop = LocalDateTime.now();
 	    long diff = ChronoUnit.SECONDS.between(startTime, stop);		
