@@ -62,7 +62,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 		SyndFeed feed = null;
 		
     	try {
-    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting Syndication event processing" + StringUtil.getThreadNumber());
+    		decoratedTrace(INDENT1, "Starting Syndication event processing");
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        List<SyndEntry> newSyndItems;
@@ -81,7 +81,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	    			feed = input.build(xmlReader);
 
 		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
-		    			logger.trace(StringUtil.getLogMarker(INDENT1) + "Two threads attempting to process the " + currentSource + " feed - skipping." + StringUtil.getThreadNumber());
+		    			decoratedTrace(INDENT1, "Two threads attempting to process the " + currentSource + " feed - skipping.");
 		    		} else {
 		    			try {
 			    			sourcesBeingProcessed.put(currentSource, "");
@@ -103,7 +103,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
-		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing Syndication event processing" + StringUtil.getThreadNumber());
+    	decoratedTrace(INDENT1, "Completing Syndication event processing");
     	return Optional.of("empty");
 	}
 	
@@ -118,18 +118,12 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	private void insertNewsItems(String source, Session session, List<SyndEntry> newsItems) {
 		
 		NewsItemsDao newsItem = null;
-		String enumKey = source.toUpperCase().replaceAll("\\s+","");
 		int articleCount = 0;
 
-		RssSource sourceEnum = RssSource.valueOf(enumKey);
-		
 		if (!newsItems.isEmpty()) {
 			
 			for (SyndEntry item : newsItems) {
-		    	newsItem = switch (sourceEnum) {
-					case CPNEWS -> NewsItemFactory.createCPNewsItem(item, source);
-					default -> null;
-		    	};
+		    	newsItem = NewsItemFactory.createCPNewsItem(item, source);
 						
 		    	// Persist the news item and perform post-processing				
 		    	if (newsItem != null) {
@@ -147,7 +141,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 			}
 			
 			instance.incrementArticleCount(source, articleCount);
-			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source + StringUtil.getThreadNumber());
+			decoratedTrace(INDENT1, "Added: " + articleCount + " article(s) from " + source);
 		}
 	}
 	

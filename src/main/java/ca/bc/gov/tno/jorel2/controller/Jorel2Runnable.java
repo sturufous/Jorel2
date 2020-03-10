@@ -103,15 +103,15 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     		if (!sessionFactory.isEmpty()) {
     			if (isConnectionLive(session)) {
     		        instance.setConnectionStatus(ConnectionStatus.ONLINE);        				
-        			logger.trace(StringUtil.getLogMarker(INDENT1) + "Connection to TNO database is back online.");
+        			decoratedTrace(INDENT1, "Connection to TNO database is back online.");
         			postProcessOfflineEvents(session);
     			} else {
-    				logger.trace(StringUtil.getLogMarker(INDENT1) + "Connection to TNO database is still offline.");
+    				decoratedTrace(INDENT1, "Connection to TNO database is still offline.");
     				processOfflineEvents();
     			}
     		} else {
     			// Unlikely to happen as c3p0 always returns a session factory
-    			logger.trace(StringUtil.getLogMarker(INDENT1) + "Connection to TNO database is still offline");
+    			decoratedTrace(INDENT1, "Connection to TNO database is still offline");
     			processOfflineEvents();
     		}
     	}
@@ -144,6 +144,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        	
 	        	eventResult = switch (eventEnum) {
 	        		case NEWRSS -> rssEventProcessor.processEvents(eventTypeName, session);
+	        		case RSS -> rssEventProcessor.processEvents(eventTypeName, session);
 	        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
 	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(eventTypeName, session);
 	        		case SHELLCOMMAND -> shellCommandEventProcessor.processEvents(eventTypeName, session);
@@ -152,7 +153,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        }
 		}
 		catch (PersistenceException e) {
-	    	logger.trace(StringUtil.getLogMarker(INDENT1) + "In main event processing loop. Going offline.", e);
+	    	logger.error("In main event processing loop. Going offline.", e);
 	    	instance.setConnectionStatus(ConnectionStatus.OFFLINE);
 	    }
         
@@ -210,7 +211,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
       	String name = Thread.currentThread().getName();
       	System.out.println("Starting thread:   " + name);
    	   			
-		logger.trace(StringUtil.getLogMarker(INDENT0) + "Starting thread:   " + name);
+		logger.trace("Starting thread:   " + name);
 		
 		return start;
 	}
@@ -227,7 +228,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
       	String name = Thread.currentThread().getName();
 
       	instance.addThreadDuration(Thread.currentThread().getName(), diff);
-		logger.trace(StringUtil.getLogMarker(INDENT0) + "Completing thread: " + name + ", task took " + diff + " seconds");
+		logger.trace("Completing thread: " + name + ", task took " + diff + " seconds");
       	System.out.println("Completing thread: " + name);
 	
 		jorelScheduler.notifyThreadComplete(Thread.currentThread());

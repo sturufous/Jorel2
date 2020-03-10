@@ -48,7 +48,7 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	public Optional<String> processEvents(String eventType, Session session) {
 		
     	try {
-    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting PageWatcher event processing" + StringUtil.getThreadNumber());
+    		decoratedTrace(INDENT1, "Starting PageWatcher event processing");
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        
@@ -75,7 +75,7 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
     		logger.error("Processing PageWatcher entries.", e);
     	}
     	
-		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing PageWatcher event processing" + StringUtil.getThreadNumber());
+		decoratedTrace(INDENT1, "Completing PageWatcher event processing");
     	return Optional.of("complete");
 	}
 	
@@ -151,7 +151,7 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 		watcher.setDateModified(new Date());
 		watcher.setLastCheck(new Date());
 		sendMail(watcher, changes);
-		logger.trace(StringUtil.getLogMarker(INDENT1) + "ProcessPageWatchers: " + watcher.getName() + " changed");
+		decoratedTrace(INDENT1, "ProcessPageWatchers: " + watcher.getName() + " changed");
 		
 		return watcher;
 	}

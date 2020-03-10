@@ -40,7 +40,7 @@ public class DirectoryEventProcessor extends Jorel2Root implements EventProcesso
 	public Optional<String> processEvents(String eventType, Session session) {
     	
     	try {
-    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting RSS event processing" + StringUtil.getThreadNumber());
+    		decoratedTrace(INDENT1, "Starting RSS event processing");
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
     	} 

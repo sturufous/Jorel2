@@ -70,10 +70,10 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		
     	try {
     		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
-        		logger.trace(StringUtil.getLogMarker(INDENT1) + "ShellCommand event processing already active. Skipping." + StringUtil.getThreadNumber());    			
+    			decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping.");    			
     		} else {
     			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
-	    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting ShellCommand event processing" + StringUtil.getThreadNumber());
+    			decoratedTrace(INDENT1, "Starting ShellCommand event processing");
 	    		
 		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 		        
@@ -91,10 +91,10 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
     	}
     	catch (Exception e) {
     		instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
-    		logger.error(StringUtil.getLogMarker(INDENT1) + "Processing shell command entries.", e);
+    		logger.error("Processing shell command entries.", e);
     	}
     	
-		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing ShellCommand event processing" + StringUtil.getThreadNumber());
+    	decoratedTrace(INDENT1, "Completing ShellCommand event processing");
     	return Optional.of("complete");
 	}
 	
@@ -134,10 +134,10 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	 */
 	public void shellCommandEventOffline() {
 
-		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting offline ShellCommand event processing" + StringUtil.getThreadNumber());
+		decoratedTrace(INDENT1, "Starting offline ShellCommand event processing");
 		
 		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
-    		logger.trace(StringUtil.getLogMarker(INDENT1) + "ShellCommand event processing already active. Skipping." + StringUtil.getThreadNumber()); 
+			decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping."); 
 		} else {
 			try {
     			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
@@ -173,11 +173,11 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 			}
 			catch (Exception e) {
     			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
-	    		logger.trace(StringUtil.getLogMarker(INDENT1) + "While processing offline shell command.", e); 				
+	    		logger.error("While processing offline shell command.", e); 				
 			}
 		}
 		
-		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing offline ShellCommand event processing" + StringUtil.getThreadNumber());
+		decoratedTrace(INDENT1, "Completing offline ShellCommand event processing");
 	}
 		
 	/**
@@ -215,7 +215,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 
 		try {
 			if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
-	    		logger.trace(StringUtil.getLogMarker(INDENT1) + "ShellCommand event processing already active. Skipping." + StringUtil.getThreadNumber()); 
+				decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping."); 
 			} else {
 				instance.addExclusiveEvent(EventType.SHELLCOMMAND);
 				
@@ -225,20 +225,16 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 						ArrayDeque<String> adq = new ArrayDeque<>();
 						loadOffline(offlineFile, adq);
 		
-						if (adq.size() > 0) {
-							ShellCommand shell = new ShellCommand(adq);
-			
-							logger.trace("Update shell event, set lastFtpRun='" + shell.lastFtpRun + "' for rsn=" + shell.rsn);
-			
-							// update event
-							EventsDao shellEvt = EventsDao.getEventByRsn(shell.rsn, session).get(0);
-							shellEvt.setLastFtpRun(shell.lastFtpRun);
-							session.getTransaction().begin();
-							session.persist(shellEvt);
-							session.getTransaction().commit();
-						} else {
-							logger.error(StringUtil.getLogMarker(INDENT1) + "ShellCommand: offline command file is empty.");
-						}
+						ShellCommand shell = new ShellCommand(adq);
+		
+						decoratedTrace(INDENT1, "Update shell event, set lastFtpRun='" + shell.lastFtpRun + "' for rsn=" + shell.rsn);
+		
+						// update event
+						EventsDao shellEvt = EventsDao.getEventByRsn(shell.rsn, session).get(0);
+						shellEvt.setLastFtpRun(shell.lastFtpRun);
+						session.getTransaction().begin();
+						session.persist(shellEvt);
+						session.getTransaction().commit();
 					}
 				}
 				
@@ -247,7 +243,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		}
 		catch (Exception e) {
 			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
-    		logger.trace(StringUtil.getLogMarker(INDENT1) + "While post-processing shell command after network reconnect.", e); 							
+    		logger.error("While post-processing shell command after network reconnect.", e); 							
 		}
 	}
 	
@@ -298,7 +294,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 				lastFtpRun = (String) queue.removeFirst();
 			} 
 			catch (Exception ex) { 
-				logger.error("Error reading offline shell command data"); 
+				decoratedError(INDENT1, "Error reading offline shell command data.", ex); 
 			}
 		}
 
@@ -356,7 +352,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 						Process p = Runtime.getRuntime().exec(cmda);
 						System.out.println("Filler.");
 					} catch (Exception e) {
-						logger.error(StringUtil.getLogMarker(INDENT1) + "Exception launching command '" + cmd + "'", e);
+						logger.error("Exception launching command '" + cmd + "'", e);
 					}
 
 					this.lastFtpRun = now + " ";
@@ -364,10 +360,12 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 					if (session != null) {
 						//Update this record to reflect that it has run
 						shellEvent.setLastFtpRun(this.lastFtpRun);
+						session.beginTransaction();
 						session.persist(shellEvent);
+						session.getTransaction().commit();
 					}
 
-					logger.trace(StringUtil.getLogMarker(INDENT1) + "Shell command executed '" + cmd + "'");
+					decoratedTrace(INDENT1, "Shell command executed '" + cmd + "'");
 				}
 			}
 		}

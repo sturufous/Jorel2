@@ -10,6 +10,9 @@ import javax.persistence.MappedSuperclass;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.annotations.NamedQuery;
+
+import ca.bc.gov.tno.jorel2.util.StringUtil;
+
 import org.hibernate.annotations.NamedQueries;
 
 @NamedQueries({
@@ -51,11 +54,6 @@ public class Jorel2Root {
 		PAGEWATCHER, RSS, NEWRSS, CLEANLOCALBINARYROOT, CAPTURE, SHELLCOMMAND, AUTORUN, BUZZSUMMARY, SYNDICATION
 	}
 	
-	public enum RssSource {
-		
-		IPOLITICS, DAILYHIVE, CBCKAMLOOPS, CBCBCCA, CPNEWS, CBCABORIGINAL, BIV, GEORGIASTRAIGHT, CBCINDIGNEWS, CBCBCNEWS;
-	}
-	
 	public enum WordType {
 		
 		Verb, Noise, Title, NoiseName;
@@ -74,5 +72,17 @@ public class Jorel2Root {
 	
 	protected static void skip() {
 		
+	}
+	
+	protected void decoratedError(String indent, String message, Exception e) {
+		
+		String decoratedMsg = StringUtil.getLogMarker(indent) + message;
+		logger.error(decoratedMsg, e);
+	}
+	
+	protected void decoratedTrace(String indent, String message) {
+		
+		String decoratedMsg = StringUtil.getLogMarker(indent) + message + StringUtil.getThreadNumber();
+		logger.trace(decoratedMsg);
 	}
 }

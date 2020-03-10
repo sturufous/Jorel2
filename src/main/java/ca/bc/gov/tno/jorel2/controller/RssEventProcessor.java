@@ -89,7 +89,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	        		String currentSource = currentEvent.getSource();
 		    		
 		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
-		    			logger.trace(StringUtil.getLogMarker(INDENT1) + "Two (or more) threads attempting to process the " + currentSource + " feed - skipping." + StringUtil.getThreadNumber());
+		    			decoratedTrace(INDENT1, "Two (or more) threads attempting to process the " + currentSource + " feed - skipping.");
 		    		} else {
 		    			try {
 			    			sourcesBeingProcessed.put(currentSource, "");
@@ -117,7 +117,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
     		logger.error("Retrieving or storing RSS feed.", e);
     	}
     	
-		logger.trace(StringUtil.getLogMarker(INDENT1) + "Completing RSS event processing" + StringUtil.getThreadNumber());
+		decoratedTrace(INDENT1, "Completing RSS event processing");
     	return Optional.of(rssContent != null ? rssContent.toString() : "No results.");
 	}
 	
@@ -165,26 +165,13 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	private void insertNewsItems(String source, List<Rss.Channel.Item> newsItems, Session session, Rss rss) {
 		
 		NewsItemsDao newsItem = null;
-		String enumKey = source.toUpperCase().replaceAll("\\s+","");
-		enumKey = enumKey.replaceAll("\\/+","");
-		RssSource sourceEnum = RssSource.valueOf(enumKey);
 		int articleCount = 0;
 		
 		if (!newsItems.isEmpty()) {
 			
 			// While most feeds are handled in a generic manner, allow for custom handling with a createXXXNewsItem() method if needed.
 			for (Rss.Channel.Item item : newsItems) {
-		    	newsItem = switch (sourceEnum) {
-					case IPOLITICS -> NewsItemFactory.createXmlNewsItem(item, source);
-					case DAILYHIVE -> NewsItemFactory.createXmlNewsItem(item, source);
-					case BIV -> NewsItemFactory.createXmlNewsItem(item, source);
-					case CBCKAMLOOPS -> NewsItemFactory.createXmlNewsItem(item, source);
-					case CBCBCCA -> NewsItemFactory.createXmlNewsItem(item, source);
-					case CBCABORIGINAL -> NewsItemFactory.createXmlNewsItem(item, source);
-					case CBCINDIGNEWS -> NewsItemFactory.createXmlNewsItem(item, source);
-					case CBCBCNEWS -> NewsItemFactory.createXmlNewsItem(item, source);
-					default -> null;
-		    	};
+		    	newsItem = NewsItemFactory.createXmlNewsItem(item, source);
 						
 		    	// Persist the news item and perform post-processing				
 		    	if (newsItem != null) {
@@ -201,7 +188,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 			}
 			
 			instance.incrementArticleCount(source, articleCount);
-			logger.trace(StringUtil.getLogMarker(INDENT1) + "Added: " + articleCount + " article(s) from " + source + StringUtil.getThreadNumber());
+			decoratedTrace(INDENT1, "Added: " + articleCount + " article(s) from " + source);
 		}
 	}
 	

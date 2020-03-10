@@ -110,7 +110,7 @@ public class QuoteExtractor extends Jorel2Root {
 		    		if (verbs == null || titles == null || noiseWords == null || noiseNameWords == null) {
 				        session = sessionFactory.get().openSession();
 				        
-				        logger.trace("Loading data from the WORDS table in QuoteExtractor...");
+				        decoratedTrace(INDENT1, "Loading data from the WORDS table in QuoteExtractor...");
 						verbs = loadWords(WordsDao.getWords(instance, WordType.Verb, session));
 						instance.addWordCountEntry(WordType.Verb.toString(), verbs.size());
 						
