@@ -371,6 +371,23 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
         
         return results;
 	}
+	
+	/**
+	 * Retrieves the EventsDao object corresponding to the key stored in the rsn parameter.
+	 *  
+	 * @param rsn2 The key of the record to read.
+	 * @param session The current Hibernate persistence context
+	 * @return The EventsDao object corresponding to the key stored in the rsn parameter.
+	 */
+	public static List<EventsDao> getEventByRsn(BigDecimal rsn, Session session) {
+		
+		Query<EventsDao> query = session.createNamedQuery("Events_GetEventByRsn", EventsDao.class);
+		query.setParameter("rsn", rsn);
+		
+        List<EventsDao> results = query.getResultList();
+        
+		return results;
+	}
 		
 	public static int getRecordCountBySource(String source) {
 		

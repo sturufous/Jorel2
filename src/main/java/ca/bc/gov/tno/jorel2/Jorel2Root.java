@@ -19,6 +19,8 @@ import org.hibernate.annotations.NamedQueries;
 	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype"),
 	@NamedQuery(name = "Events_FindElligibleEventsByEventType", 
 	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype and e.lastFtpRun <> :runDate"),
+	@NamedQuery(name = "Events_GetEventByRsn", 
+	query = "from EventsDao e where e.rsn = :rsn"),
 	@NamedQuery(name = "Quotes_FindWordsByType", 
 	query = "from WordsDao w where w.type=:type"),
 	@NamedQuery(name = "Pagewatchers_FindActivePageWatchers", 
@@ -51,7 +53,7 @@ public class Jorel2Root {
 	
 	public enum RssSource {
 		
-		IPOLITICS, DAILYHIVE, CBCKAMLOOPS, CBCBCCA, CPNEWS, CBCABORIGINAL, BIV, GEORGIASTRAIGHT;
+		IPOLITICS, DAILYHIVE, CBCKAMLOOPS, CBCBCCA, CPNEWS, CBCABORIGINAL, BIV, GEORGIASTRAIGHT, CBCINDIGNEWS, CBCBCNEWS;
 	}
 	
 	public enum WordType {

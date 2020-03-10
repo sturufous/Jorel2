@@ -59,7 +59,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	}
 	
 	/**
-	 * Process all eligible ShellCommand events.
+	 * Process all eligible ShellCommand events from the EVENTS table.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
@@ -69,20 +69,28 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	public Optional<String> processEvents(String eventType, Session session) {
 		
     	try {
-    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting ShellCommand event processing" + StringUtil.getThreadNumber());
-    		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
-	        
-	        // Because the getElligibleEventsByEventType method executes a join query it returns an array containing EventsDao and EventTypesDao objects
-	        for (Object[] entityPair : results) {
-	        	if (entityPair[0] instanceof EventsDao) {
-	        		EventsDao currentEvent = (EventsDao) entityPair[0];
-	        		
-	        		shellCommandEventOnline(currentEvent, session);
-	        	}
-	        }
-    	} 
+    		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
+        		logger.trace(StringUtil.getLogMarker(INDENT1) + "ShellCommand event processing already active. Skipping." + StringUtil.getThreadNumber());    			
+    		} else {
+    			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
+	    		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting ShellCommand event processing" + StringUtil.getThreadNumber());
+	    		
+		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+		        
+		        // Because the getElligibleEventsByEventType method executes a join query it returns an array containing EventsDao and EventTypesDao objects
+		        for (Object[] entityPair : results) {
+		        	if (entityPair[0] instanceof EventsDao) {
+		        		EventsDao currentEvent = (EventsDao) entityPair[0];
+		        		
+		        		shellCommandEventOnline(currentEvent, session);
+		        	}
+		        }
+		        
+		        instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+	    	} 
+    	}
     	catch (Exception e) {
+    		instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
     		logger.error(StringUtil.getLogMarker(INDENT1) + "Processing shell command entries.", e);
     	}
     	
@@ -103,7 +111,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		PrintWriter offlineWriter = null;
 		if (offlineDir!=null) {
 			try {
-				offlineWriter = new PrintWriter(offlineDir.getPath()+System.getProperty("file.separator")+"shellcmd_"+shell.event_name+".txt");
+				offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator")+"shellcmd_" + shell.event_name + ".txt");
 			} catch (Exception ex) {
 				offlineWriter = null;
 			}
@@ -128,32 +136,44 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 
 		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting offline ShellCommand event processing" + StringUtil.getThreadNumber());
 		
-		for(File offlineFile : offlineDir.listFiles()) {
-
-			if (offlineFile.getName().startsWith("shellcmd_")) {
-
-				ArrayDeque adq = new ArrayDeque();
-				loadOffline(offlineFile, adq);
-
-				ShellCommand shell = new ShellCommand(adq);
-
-				PrintWriter offlineWriter = null;
-				if (offlineDir!=null) {
-					try {
-						offlineWriter = new PrintWriter(offlineDir.getPath()+System.getProperty("file.separator")+"shellcmd_"+shell.event_name+".txt");
-					} catch (Exception ex) {
-						offlineWriter = null;
+		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
+    		logger.trace(StringUtil.getLogMarker(INDENT1) + "ShellCommand event processing already active. Skipping." + StringUtil.getThreadNumber()); 
+		} else {
+			try {
+    			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
+				for(File offlineFile : offlineDir.listFiles()) {
+					
+					if (offlineFile.getName().startsWith("shellcmd_")) {
+		
+						ArrayDeque<String> adq = new ArrayDeque<>();
+						loadOffline(offlineFile, adq);
+		
+						ShellCommand shell = new ShellCommand(adq);
+		
+						PrintWriter offlineWriter = null;
+						if (offlineDir!=null) {
+							try {
+								offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator") + "shellcmd_"+shell.event_name + ".txt");
+							} catch (Exception ex) {
+								offlineWriter = null;
+							}
+						}
+		
+						shell.doCommand(null, null); // do the command (if it is time)
+						shell.writeOffline(offlineWriter); // write to the offline cache
+		
+						if (offlineWriter!=null) {
+							try {
+								offlineWriter.close();
+							} catch (Exception ex) { ; }
+						}
 					}
 				}
-
-				shell.doCommand(null, null); // do the command (if it is time)
-				shell.writeOffline(offlineWriter); // write to the offline cache
-
-				if (offlineWriter!=null) {
-					try {
-						offlineWriter.close();
-					} catch (Exception ex) { ; }
-				}
+    			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+			}
+			catch (Exception e) {
+    			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+	    		logger.trace(StringUtil.getLogMarker(INDENT1) + "While processing offline shell command.", e); 				
 			}
 		}
 		
@@ -163,10 +183,10 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	/**
 	 * Loads the lines of text contained in the offLine file into the Queue variable for storage in a ShellCommand object.
 	 * 
-	 * @param offlineFile The full file path of the file, in the offline directory, that contains the command.
+	 * @param offlineFile A java.io.File object identifying the file, in the offline directory, that contains the command.
 	 * @param adq The queue into which the lines are loaded.
 	 */
-	private void loadOffline(File offlineFile, ArrayDeque adq) {
+	private void loadOffline(File offlineFile, ArrayDeque<String> adq) {
 		try {
 			// load a file into a queue of strings
 			BufferedReader br = new BufferedReader(new FileReader(offlineFile));
@@ -191,26 +211,43 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	 * 
 	 * @param session The current Hibernate persistence context.
 	 */
-	private void shellCommandEventUpdate(Session session) {
+	public void shellCommandEventUpdate(Session session) {
 
-		EventsDao shellEvt = new EventsDao();
-
-		for(File offlineFile: offlineDir.listFiles()) {
-			if (offlineFile.getName().startsWith("shellcmd_")) {
-
-				ArrayDeque adq = new ArrayDeque();
-				loadOffline(offlineFile, adq);
-
-				ShellCommand shell = new ShellCommand(adq);
-
-				logger.trace("Update shell event, set lastFtpRun='" + shell.lastFtpRun + "' for rsn=" + shell.rsn);
-
-				// update event
-				shellEvt.setLastFtpRun(shell.lastFtpRun);
-				session.getTransaction().begin();
-				session.persist(shellEvt);
-				session.getTransaction().commit();
+		try {
+			if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
+	    		logger.trace(StringUtil.getLogMarker(INDENT1) + "ShellCommand event processing already active. Skipping." + StringUtil.getThreadNumber()); 
+			} else {
+				instance.addExclusiveEvent(EventType.SHELLCOMMAND);
+				
+				for(File offlineFile: offlineDir.listFiles()) {
+					if (offlineFile.getName().startsWith("shellcmd_")) {
+		
+						ArrayDeque<String> adq = new ArrayDeque<>();
+						loadOffline(offlineFile, adq);
+		
+						if (adq.size() > 0) {
+							ShellCommand shell = new ShellCommand(adq);
+			
+							logger.trace("Update shell event, set lastFtpRun='" + shell.lastFtpRun + "' for rsn=" + shell.rsn);
+			
+							// update event
+							EventsDao shellEvt = EventsDao.getEventByRsn(shell.rsn, session).get(0);
+							shellEvt.setLastFtpRun(shell.lastFtpRun);
+							session.getTransaction().begin();
+							session.persist(shellEvt);
+							session.getTransaction().commit();
+						} else {
+							logger.error(StringUtil.getLogMarker(INDENT1) + "ShellCommand: offline command file is empty.");
+						}
+					}
+				}
+				
+				instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
 			}
+		}
+		catch (Exception e) {
+			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+    		logger.trace(StringUtil.getLogMarker(INDENT1) + "While post-processing shell command after network reconnect.", e); 							
 		}
 	}
 	
@@ -249,7 +286,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		 * Create an offline ShellCommand object using commands stored in the queue parameter.
 		 * @param queue Queue containing the command to execute locally.
 		 */
-		private ShellCommand(ArrayDeque queue) {
+		private ShellCommand(ArrayDeque<String> queue) {
 			
 			try {
 				String rsnStr = (String) queue.removeFirst();
@@ -293,7 +330,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 			
 			String now = DateUtil.getDateNow();
 			
-			// add space because we want to check this event (to write to offline cache) even if it has run already
+			// Add space because we want to check this event (to write to offline cache) even if it has run already
 			if ((!this.lastFtpRun.equals(now)) && (!this.lastFtpRun.equals(now + " "))) { 
 				String cmd = this.cmd;
 
@@ -302,10 +339,10 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 
 				long startMS = startCal.getTime().getTime(); // system milliseconds at which this should start
 				long nowMS = (new java.util.Date()).getTime(); // current system milliseconds
-				long seconds = 100; //(startMS - nowMS) / 1000;
+				long seconds = (startMS - nowMS) / 1000;
 
 				// Is it time to start this event?
-				if ( seconds < 120 ) // less than two minutes until start time
+				if ( seconds < 120 ) // Less than two minutes until start time
 				{
 					if (seconds > 0) cmd = "sleep " + seconds+"; " + cmd;
 
@@ -316,7 +353,8 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 					};
 
 					try {
-						Process p=Runtime.getRuntime().exec(cmda);
+						Process p = Runtime.getRuntime().exec(cmda);
+						System.out.println("Filler.");
 					} catch (Exception e) {
 						logger.error(StringUtil.getLogMarker(INDENT1) + "Exception launching command '" + cmd + "'", e);
 					}
@@ -329,7 +367,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 						session.persist(shellEvent);
 					}
 
-					logger.trace("Shell command executed '" + cmd + "'");
+					logger.trace(StringUtil.getLogMarker(INDENT1) + "Shell command executed '" + cmd + "'");
 				}
 			}
 		}

@@ -181,6 +181,8 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 					case CBCKAMLOOPS -> NewsItemFactory.createXmlNewsItem(item, source);
 					case CBCBCCA -> NewsItemFactory.createXmlNewsItem(item, source);
 					case CBCABORIGINAL -> NewsItemFactory.createXmlNewsItem(item, source);
+					case CBCINDIGNEWS -> NewsItemFactory.createXmlNewsItem(item, source);
+					case CBCBCNEWS -> NewsItemFactory.createXmlNewsItem(item, source);
 					default -> null;
 		    	};
 						

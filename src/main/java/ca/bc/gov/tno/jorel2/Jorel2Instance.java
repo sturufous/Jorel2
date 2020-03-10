@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jmx.export.annotation.ManagedResource;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root.ConnectionStatus;
+import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
 
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedOperationParameter;
@@ -67,6 +68,9 @@ public class Jorel2Instance {
 	
 	/** Indicates whether this instance currently has access to a network connection */
 	private ConnectionStatus connectionStatus = ConnectionStatus.OFFLINE;
+	
+	/** Central location for event types that are not thread safe. Ensures mutual exclusion. */
+	private ConcurrentHashMap<EventType, String> activeEvents = new ConcurrentHashMap<>();
 	
 	/**
 	 * Construct this object and set the startTime to the time now.
@@ -315,6 +319,16 @@ public class Jorel2Instance {
 	 * @return The eMail port number.
 	 */
 	@ManagedAttribute(description="Connection status - ONLINE or OFFLINE", currencyTimeLimit=15)
+	public String getConnectionStatusStr() {
+		
+		return connectionStatus.toString();
+	}
+	
+	/**
+	 * Exposes the online status.
+	 * 
+	 * @return The eMail port number.
+	 */
 	public ConnectionStatus getConnectionStatus() {
 		
 		return connectionStatus;
@@ -327,5 +341,28 @@ public class Jorel2Instance {
 	public void setConnectionStatus(ConnectionStatus status) {
 		
 		this.connectionStatus = status;
+	}
+	
+	public void addExclusiveEvent(EventType eventType) {
+		
+		activeEvents.put(eventType, "");
+	}
+	
+	public void removeExclusiveEvent(EventType eventType) {
+		
+		activeEvents.remove(eventType);
+	}
+	
+	public boolean isExclusiveEventActive(EventType eventType) {
+		
+		boolean result = false;
+		
+		if (activeEvents.containsKey(eventType)) {
+			result = true;
+		} else {
+			result = false;
+		}
+		
+		return result;
 	}
 }

@@ -2,6 +2,8 @@ package ca.bc.gov.tno.jorel2.controller;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -89,20 +91,20 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Override
 	public void run() {
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
+    	Session session = sessionFactory.get().openSession();
     	LocalDateTime startTime = null;
 				
 		startTime = logThreadStartup();
 		
     	if(instance.getConnectionStatus() == ConnectionStatus.ONLINE) {
-    		processOnlineEvents(sessionFactory.get());
-    	} else 
-    	if (instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
+    		processOnlineEvents(session);
+    	} 
+    	else if (instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
     		if (!sessionFactory.isEmpty()) {
-    			Session session = sessionFactory.get().openSession();
     			if (isConnectionLive(session)) {
     		        instance.setConnectionStatus(ConnectionStatus.ONLINE);        				
         			logger.trace(StringUtil.getLogMarker(INDENT1) + "Connection to TNO database is back online.");
-        			processOnlineEvents(sessionFactory.get());
+        			postProcessOfflineEvents(session);
     			} else {
     				logger.trace(StringUtil.getLogMarker(INDENT1) + "Connection to TNO database is still offline.");
     				processOfflineEvents();
@@ -118,15 +120,16 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	}
 	
 	/**
-	 * Retrieves all eligible event records from the EVENTS table and dispatches them to their respective event processors.
+	 * Retrieves all eligible event records from the EVENTS table and dispatches them to their respective event processors. If a persistence exception
+	 * is thrown during the execution of this method the connection status of this instance is set to OFFLINE. The <code>run()</code> method will 
+	 * return the connection status to ONLINE 
 	 * 
 	 * @param sessionFactory Current Hibernate persistence context.
 	 */
 	@SuppressWarnings("preview")
-	private void processOnlineEvents(SessionFactory sessionFactory) {
+	private void processOnlineEvents(Session session) {
 		
         Map<EventType, String> eventMap = new HashMap<>();
-        Session session = sessionFactory.openSession();
 		Optional<String> eventResult;
         
 		try {
@@ -162,6 +165,16 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	private void processOfflineEvents() {
 		
 		shellCommandEventProcessor.shellCommandEventOffline();
+	}
+	
+	/**
+	 * Performs updates to the database to record information about tasks that were executed while Jorel2 was offline.
+	 * 
+	 * @param session The current Hibernate persistence context.
+	 */
+	private void postProcessOfflineEvents(Session session) {
+		
+		shellCommandEventProcessor.shellCommandEventUpdate(session);
 	}
 	
 	/**
@@ -224,8 +237,8 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	 * Determines whether there is a live connection between Jorel2 and the TNO database. As the session object represents a relationship between 
 	 * the running application and the Hibernate framework, it is always seen as connected. Session.isOpen() and Session.isConnected() will return
 	 * true regardless of the connected status of the underlying java.sql.connection object. This method retrieves the connection itself using
-	 * Session's doWork().execute() method. Once retrieved, the connection is tested using connection.isValid(3000). This statement will timeout 
-	 * after 3 seconds if the connection is inactive and the timeout exception is caught, indicating that this method should return <code>false</code>.
+	 * Session's doWork() method. Once retrieved, the connection is tested by running a select query. This statement will throw a HibernateException,
+	 * if the connection is disconnected, indicating that this method should return <code>false</code>.
 	 * 
 	 * @param session The current Hibernate presistence context.
 	 * @return true if the connection referenced by <code>session</code> is an active connection.
@@ -233,16 +246,13 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	private boolean isConnectionLive(Session session) {
 		
 		boolean result = false;
+		final String query = "select * from dual";
 		
 		try {
-			session.doWork((Work) new Work() {
-	
-				public void execute(Connection connection) throws SQLException {
-					
-					connection.isValid(CONNECTION_TIMEOUT);
-				}
+			session.doWork(connection -> {
+				PreparedStatement stmt = connection.prepareStatement(query);
+				ResultSet rs = stmt.executeQuery(query);
 			});
-			
 			result = true;
 		}
 		catch (HibernateException e) {

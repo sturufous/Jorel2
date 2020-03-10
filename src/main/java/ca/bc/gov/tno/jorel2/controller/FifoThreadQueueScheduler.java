@@ -137,7 +137,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     }
     
     /**
-     * Loops through the <code>threadStartTimestamps</code> map and determines which thread has been running for the longest time. This is used
+     * Loops through the <code>threadStartTimestamps</code> map and determines which thread has been running for the longest time. This info is used
      * to determine if any thread has been running for longer than <code>maxThreadRuntime</code> seconds.
      * 
      * @return The run-time of the longest running thread.
