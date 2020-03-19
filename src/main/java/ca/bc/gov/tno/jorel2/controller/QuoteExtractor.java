@@ -97,7 +97,7 @@ public class QuoteExtractor extends Jorel2Root {
 	 * This object is initialized by the SyndicationEventProcessor or the RssEventProcessor upon their first execution.
 	 */
 	
-    public void init() {
+    public synchronized void init() {
     	
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
         

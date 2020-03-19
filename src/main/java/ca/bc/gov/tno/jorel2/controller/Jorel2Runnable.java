@@ -63,9 +63,13 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private PageWatcherEventProcessor pageWatcherEventProcessor;
 	
-	/** PageWatcher Event processor service */
+	/** Shell Command Event processor service */
 	@Inject
     private ShellCommandEventProcessor shellCommandEventProcessor;
+	
+	/** Duration Event processor service */
+	@Inject
+    private DurationEventProcessor durationEventProcessor;
 	
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
@@ -87,7 +91,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	 * running this method will check the validity of the java.sql.Connection object underlying the session, and if valid the status will be 
 	 * returned to ONLINE. If the network connection remains in an OFFLINE state, events that can be run offline will be processed.
 	 */
-	@SuppressWarnings("preview")
 	@Override
 	public void run() {
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
@@ -148,6 +151,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
 	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(eventTypeName, session);
 	        		case SHELLCOMMAND -> shellCommandEventProcessor.processEvents(eventTypeName, session);
+	        		case DURATION -> durationEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }

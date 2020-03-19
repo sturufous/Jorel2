@@ -51,21 +51,22 @@ public class StringUtil extends Jorel2Root {
 		in = in.replaceAll("\\</ul\\>", "[/ul]");
 		in = in.replaceAll("\\<li\\>", "[li]");
 		in = in.replaceAll("\\</li\\>", "[/li]");
-		//text = text.replace('â€œ', '"');
-		//text = text.replace('â€�', '"');
-		//text = text.replace('â€˜', '\'');
-		//text = text.replace('â€™', '\'');
 		
-		// get rid of anything between <>
+		// get rid of anything between <> except images
 		p = in.indexOf("<");
 		while (p >= 0) {
-			p2 = in.indexOf(">", p);
-			if (p2 >= 0) {
-				in = in.substring(0, p) + in.substring(p2 + 1);
-				p = in.indexOf("<");
-			}
-			else {
-				p = -1;
+			if (in.indexOf("img") != p+1 ) {
+				p2 = in.indexOf(">", p);
+				if (p2 >= 0) {
+					in = in.substring(0, p) + in.substring(p2 + 1);
+					p = in.indexOf("<", p);
+				}
+				else {
+					p = -1;
+				}
+			} else {
+				p = in.indexOf("<", p + 1);
+				//p2 = in.indexOf(");
 			}
 		}
 

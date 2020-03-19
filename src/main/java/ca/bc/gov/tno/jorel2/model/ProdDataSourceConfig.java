@@ -1,24 +1,28 @@
 package ca.bc.gov.tno.jorel2.model;
 
 import java.util.Optional;
-
+import java.util.Properties;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
+import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
-import org.hibernate.boot.registry.StandardServiceRegistry;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.cfg.Environment;
+import org.hibernate.service.ServiceRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import org.hibernate.cfg.Configuration;
 
 /**
- * Production configuration for Hibernate data access. The instantiation of this class is managed automatically by Spring's <code>profiles</code>
+ * Development configuration for Hibernate data access. The instantiation of this class is managed automatically by Spring's <code>profiles</code>
  * feature. On invocation, Jorel2 obtains the data-source profile name from the command line and sets this as the active profile. If the profile
- * name matches the one in the @Profile annotation below ('prod') an object of this class will be created and added to the Spring context.
+ * name matches the one in the @Profile annotation below ('dev') an object of this class will be created and added to the Spring context.
  * 
  * @author Stuart Morse
  * @version 0.0.1
  */
-
 
 @Component
 @Profile("prod")
@@ -48,8 +52,12 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 	@Value("${prod.dbDialect}")	
 	private String dialect;
 	
-	private static StandardServiceRegistry registry = null;
-	private static SessionFactory sessionFactory = null;
+	/** Process we're running as (e.g. "jorel", "jorelMini3") */
+	@Inject
+	private Jorel2Instance instance;
+	
+	/** Cached SessionFactory used to create a new session for each Jorel2Runnable thread */
+	private Optional<SessionFactory> sessionFactoryOptional = Optional.empty();
 	
 	/**
 	 * This method initializes the Hibernate framework for use throughout the execution of this Jorel2 invocation. It creates a properties object
@@ -59,14 +67,64 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 	 * 
 	 * @return An Optional object which either contains a SessionFactory or is Empty().
 	 */
-	
 	public Optional<SessionFactory> getSessionFactory() {
 		
-		logger.trace("Getting production Hibernate session factory.");
+		Configuration config = new Configuration();
 		
-		return Optional.empty();
+		if (sessionFactoryOptional.isEmpty()) {
+			try {
+				logger.debug("Getting development Hibernate session factory.");
+							
+				Properties settings = new Properties();
+		        settings.put(Environment.DRIVER, "oracle.jdbc.OracleDriver");
+		        settings.put(Environment.URL, "jdbc:oracle:thin:@" + systemName + ":" + port + ":" + sid);
+		        settings.put(Environment.USER, userId);
+		        settings.put(Environment.PASS, userPw);
+		        settings.put(Environment.DIALECT, dialect);
+		        settings.put("checkoutTimeout", CONNECTION_TIMEOUT);
+		        //settings.put(Environment.SHOW_SQL, "true");
+		        
+		        config.setProperties(settings);
+		        
+		        // Register all Hibernate classes used in Jorel2
+		        config.addAnnotatedClass(PreferencesDao.class);
+		        config.addAnnotatedClass(EventsDao.class);
+		        config.addAnnotatedClass(EventTypesDao.class);
+		        config.addAnnotatedClass(NewsItemsDao.class);
+		        config.addAnnotatedClass(IssuesDao.class);
+		        config.addAnnotatedClass(NewsItemIssuesDao.class);
+		        config.addAnnotatedClass(WordsDao.class);
+		        config.addAnnotatedClass(NewsItemQuotesDao.class);
+		        config.addAnnotatedClass(PagewatchersDao.class);
+		        config.addAnnotatedClass(FileQueueDao.class);
+		        
+		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
+		        
+		        SessionFactory sessionFactory = config.buildSessionFactory(serviceRegistry);
+		        sessionFactoryOptional = Optional.of(sessionFactory);
+		        instance.setConnectionStatus(ConnectionStatus.ONLINE);
+		     } catch (HibernateException  e) {
+		    	 logger.error("Getting the development Hibernate session factory. Going offline.", e);
+		    	 instance.setConnectionStatus(ConnectionStatus.OFFLINE);
+		     }
+		}
+		
+        return sessionFactoryOptional;
 	}
-
+	
+	/**
+	 * Ensure a clean shutdown of the level 2 cache.
+	 */
+	@PreDestroy
+	private void shutDown() {
+		
+		sessionFactoryOptional.get().close();
+	}
+	
+	/** 
+	 * Provides access to the name of the system that this configuration is communicating with 
+	 * @return The system name.
+	 */
 	public String getSystemName() {
 		
 		return systemName;
