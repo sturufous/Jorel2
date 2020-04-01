@@ -67,6 +67,20 @@ public class DateUtil extends Jorel2Root {
 	}
 	
 	/**
+	 * Otis expects the time portion of the NEWS_ITEMS.ITEM_DATE to be '00:00:00', otherwise the article will not be displayed. This 
+	 * method ensures that this is the case.
+	 * 
+	 * @return Today's date with a time portion of '00:00:00'.
+	 */
+	public static Date getDateAtMidnightByDate(Date itemTime) {
+		
+		LocalDate itemLocalDate = itemTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+		Date itemDate = Date.from(itemLocalDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+		
+		return itemDate;
+	}
+	
+	/**
 	 * Formats a date for use in comparisons (or instantiations) of dates in standard TNO format.
 	 * 
 	 * @return The current date in "Feb 5 2020" format.
@@ -126,6 +140,15 @@ public class DateUtil extends Jorel2Root {
 		String dateMatch = localTime.format(formatter);
 		
 		return dateMatch;
+	}
+	
+	public static Date getDateMinusDays(Date sourceDate, long days) {
+		
+		LocalDateTime dateTime = LocalDateTime.ofInstant(sourceDate.toInstant(), ZoneId.systemDefault());
+		dateTime = dateTime.minusDays(days);
+		Date itemTime = Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
+		
+		return itemTime;
 	}
 	
 	// TODO Convert this to use java.time

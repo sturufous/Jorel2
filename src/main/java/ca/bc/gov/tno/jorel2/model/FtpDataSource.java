@@ -1,4 +1,4 @@
-package ca.bc.gov.tno.jorel2.util;
+package ca.bc.gov.tno.jorel2.model;
 
 import java.io.*;
 import java.util.Vector;
@@ -6,17 +6,35 @@ import java.util.Vector;
 // FTP
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
+import org.springframework.beans.factory.annotation.Value;
 
 // SFTP
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 
-public class FtpUtil {
-	String              host;
-	String              username;
-	String              password;
-	boolean             secure;
+public class FtpDataSource {
+	
+	/** The name of the FTP server to connect to, e.g., alfredo.tno.gov.bc.ca */
+	@Value("${ftp.host}")
+	String host;
+	
+	/** The user name to use when connecting to the FTP server */
+	@Value("${ftp.userName}")
+	String userName;
+	
+	/** The password to use when connecting to the FTP server */
+	@Value("${ftp.password}")
+	String password;
+	
+	/** Indicates whether this FTP connection should be secure or not */
+	@Value("${ftp.secure")
+	String secureFlag;
+	
+	/** Indicates whether this FTP connection is active or passive */
+	@Value("${ftp.type")
+	String type;
+	
 	String              ftpError;
 	
 	// FTP
@@ -25,25 +43,24 @@ public class FtpUtil {
 	// SFTP
 	ChannelSftp channel;
 	Session session;
+	boolean secure;
 
-	public FtpUtil(String h, String u, String pw, boolean s) {
-		host=h;
-		username=u;
-		password=pw;
-		secure=s;
+	public FtpDataSource() {
 	}
 
 	public boolean connect() {
+		
+		secure = secureFlag.contentEquals("yes");
 		if (secure) {
 			JSch jsch=new JSch();
 
 			try {
 				// create session
-				session=jsch.getSession(username, host, 22);
+				session=jsch.getSession(userName, host, 22);
 				session.setPassword(password);
 
 				// configure : do not do strict host checking
-				java.util.Hashtable<String,String> config=new java.util.Hashtable<String,String>();
+				java.util.Hashtable<String,String> config = new java.util.Hashtable<>();
 				config.put("StrictHostKeyChecking", "no");
 				session.setConfig(config);
 
@@ -60,11 +77,11 @@ public class FtpUtil {
 				ftp = new FTPClient();
 				ftp.connect(host);
 				int reply = ftp.getReplyCode();
-				if (! FTPReply.isPositiveCompletion(reply) ) {
+				if (!FTPReply.isPositiveCompletion(reply) ) {
 					setError("jorelFTP.connect(): Cannot connect to FTP server");
 					return false;
 				} else {
-					if (! ftp.login(username,password) ) {
+					if (! ftp.login(userName, password) ) {
 						setError("jorelFTP.connect(): Cannot connect to FTP server");
 						return false;
 					}
@@ -78,6 +95,7 @@ public class FtpUtil {
 	}
 
 	public boolean upload(String localPath, String remotePath) {
+		
 		if (secure) {
 			try {
 				channel.put(localPath, remotePath, ChannelSftp.OVERWRITE);

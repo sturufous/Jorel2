@@ -116,8 +116,8 @@ public class NewsItemFactory extends Jorel2Root {
 		content = StringUtil.SubstituteEmojis(content);
 		
 		// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
-		Date itemDate = DateUtil.getDateAtMidnight();
 		Date itemTime = DateUtil.getPubTimeAsDate(item.getPubDate());
+		Date itemDate = DateUtil.getDateAtMidnightByDate(itemTime);
 
 		NewsItemsDao newsItem = createNewsItemTemplate();
 				
@@ -154,8 +154,8 @@ public class NewsItemFactory extends Jorel2Root {
 			if (content != null) {
 			
 				// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
-				Date itemDate = DateUtil.getDateAtMidnight();
 				Date itemTime = item.getPublishedDate();
+				Date itemDate = DateUtil.getDateAtMidnightByDate(new Date());
 				
 				content = StringUtil.SubstituteEmojis(content);
 		

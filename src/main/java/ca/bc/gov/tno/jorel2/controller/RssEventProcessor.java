@@ -6,6 +6,7 @@ import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemIssuesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 /**
@@ -142,7 +144,12 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		
 		// Create a list of items in the current feed that are not yet in the NEWS_ITEMS table
 		for (Rss.Channel.Item rssItem : rss.getChannel().getItem()) {
-			if (existingNewsItems.contains(rssItem.getLink())) {
+			Date pubDate = DateUtil.getPubTimeAsDate(rssItem.getPubDate());
+			Date filterDate = DateUtil.getDateMinusDays(new Date(), 2L);
+			int comparator = pubDate.compareTo(filterDate);
+			
+			// Ignore any items already in the database, or published more than two days ago
+			if (existingNewsItems.contains(rssItem.getLink()) || comparator <= 0) {
 				skip();
 			} else {
 				newRssItems.add(rssItem);
