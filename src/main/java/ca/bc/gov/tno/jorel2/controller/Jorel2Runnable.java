@@ -71,6 +71,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private DurationEventProcessor durationEventProcessor;
 	
+	/** CleanBinaryRoot Event processor service */
+	@Inject
+    private CleanBinaryRootEventProcessor cleanBinaryRootEventProcessor;
+	
 	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	private Jorel2Instance instance;
@@ -152,6 +156,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(eventTypeName, session);
 	        		case SHELLCOMMAND -> shellCommandEventProcessor.processEvents(eventTypeName, session);
 	        		case DURATION -> durationEventProcessor.processEvents(eventTypeName, session);
+	        		case CLEANBINARYROOT -> cleanBinaryRootEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }

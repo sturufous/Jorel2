@@ -73,7 +73,7 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 		
 		if (sessionFactoryOptional.isEmpty()) {
 			try {
-				logger.debug("Getting development Hibernate session factory.");
+				logger.debug("Getting production Hibernate session factory.");
 							
 				Properties settings = new Properties();
 		        settings.put(Environment.DRIVER, "oracle.jdbc.OracleDriver");
@@ -97,6 +97,7 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 		        config.addAnnotatedClass(NewsItemQuotesDao.class);
 		        config.addAnnotatedClass(PagewatchersDao.class);
 		        config.addAnnotatedClass(FileQueueDao.class);
+		        config.addAnnotatedClass(NewsItemImagesDao.class);
 		        
 		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 		        

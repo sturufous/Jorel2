@@ -1,0 +1,215 @@
+package ca.bc.gov.tno.jorel2.controller;
+
+
+import java.io.File;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import javax.inject.Inject;
+import org.hibernate.Session;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2Root;
+import ca.bc.gov.tno.jorel2.model.EventsDao;
+import ca.bc.gov.tno.jorel2.model.NewsItemImagesDao;
+import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
+
+/**
+ * Manages the retrieval and processing of various RSS feeds using JAXB objects in the
+ * ca.bc.gov.tno.jorel2.jaxb package and its sub-packages.
+ * 
+ * @author Stuart Morse
+ * @version 0.0.1
+ */
+
+@Service
+public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventProcessor {
+
+	/** Process we're running as (e.g. "jorel", "jorelMini3") */
+	@Inject
+	Jorel2Instance instance;
+	
+	/** The password used in connecting to the database */
+	@Value("${binaryRoot}")
+	private String startDirectory;
+	
+	/** The password used in connecting to the database */
+	@Value("${wwwBinaryRoot}")
+	private String wwwBinaryRoot;
+	
+	/**
+	 * Process all eligible CleanBinaryRootEventProcessor event records from the EVENTS table. 
+	 * 
+	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
+	 * @param session The current Hibernate persistence context
+	 * @return Optional object containing the results of the action taken.
+	 */
+	
+	public Optional<String> processEvents(String eventType, Session session) {
+    	
+    	try {
+    		decoratedTrace(INDENT1, "Starting CleanBinaryRoot event processing");
+    		
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        
+	        // Because the getElligibleEventsByEventType method executes a join query it returns an array containing EventsDao and EventTypesDao objects
+	        for (Object[] entityPair : results) {
+	        	if (entityPair[0] instanceof EventsDao) {
+	        		EventsDao currentEvent = (EventsDao) entityPair[0];
+	        		
+	        		// Update the lastFtpRun to today's date to prevent CleanBinaryRoot event from running again until tomorrow.
+	        		//String currentDate = DateUtil.getDateNow();
+	        		//currentEvent.setLastFtpRun(currentDate);
+	        		//session.beginTransaction();
+	        		//session.persist(currentEvent);
+	        		//session.getTransaction().commit();
+	        		
+	        		cleanBinaryRootEvent(currentEvent, session);
+	        	}
+	        }
+    	} 
+    	catch (Exception e) {
+    		logger.error("Processing CleanBinaryRoot entries.", e);
+    	}
+    	
+		decoratedTrace(INDENT1, "Completed CleanBinaryRoot event processing");
+
+    	
+    	return Optional.of("complete");
+	}
+	
+	private void cleanBinaryRootEvent(EventsDao currentEvent, Session session) {
+		String currentDate = DateUtil.getDateNow();
+		
+		String lastRun = currentEvent.getLastFtpRun();
+		String startTimeStr = currentEvent.getStartTime();
+		if (startTimeStr == null) startTimeStr="00:00:00";
+
+		if (lastRun != null && !lastRun.equals(currentDate)) {    // Do not execute again today
+			LocalDateTime now = LocalDateTime.now();
+			
+			if (startTimeStr.length() == 8 && startTimeStr.indexOf(":") > 0) {
+				String startHoursMinutes = startTimeStr.substring(0, 5);
+				String nowHoursMinutes = String.format("%02d:%02d", now.getHour(), now.getMinute());
+
+				if (nowHoursMinutes.equals(startHoursMinutes)) {
+	
+					int numOfDays = 1;
+					String numOfDaysString = currentEvent.getSource();
+					try { numOfDays=Integer.parseInt(numOfDaysString); } catch (Exception err) { numOfDays=1; }
+	
+					String subDirectory = currentEvent.getFileName();
+					String justLogit = currentEvent.getTitle();
+	
+					for (int ii = 1; ii <= numOfDays; ii++) {
+						String itemMonthString = String.format("%02d", now.getMonth().getValue());
+						String itemDayString = String.format("%02d", now.getDayOfMonth());
+						String itemYearString = String.format("%04d", now.getYear());
+						
+						String sub = subDirectory.replaceAll("#y#",itemYearString);
+						sub = sub.replaceAll("#m#",itemMonthString);
+						sub = sub.replaceAll("#d#",itemDayString);
+	
+						String path = startDirectory + "/" + sub;
+			    		decoratedTrace(INDENT2, "Begin clean binary directory: " + path);
+	
+						recurseBinaryRoot(path, justLogit, session);
+			    		
+			    		decoratedTrace(INDENT2, "Finish clean binary root directory");
+						now = now.minusDays(1L);
+	
+					}
+				}
+			} else {
+				IllegalArgumentException e = new IllegalArgumentException("Processing cleanBinaryRoot event.");
+				decoratedError(INDENT1, "Error in format of StartTime for CleanBinaryRoot event.", e);
+			}
+		}
+	}
+	
+	private void recurseBinaryRoot(String filePath, String justLogit, Session session) {
+
+		File file = new File(filePath);
+
+		if (file.exists()) {
+
+			if (file.isDirectory()) { // directory - recurse into it
+
+				String fileList[] = file.list();
+				for (int i=0; i < fileList.length; i++) {
+					recurseBinaryRoot(filePath + "/" + fileList[i], justLogit, session);
+				}
+			} else {  // file - make sure it is valid
+
+				String shortname = file.getName();
+				int p = shortname.indexOf(".");
+				if (p != -1) {
+					shortname = shortname.substring(0,p);
+				}
+
+				// images - should be a news_item_images record
+				if (file.getName().endsWith(".jpg")) {
+
+					String avpath = filePath;
+					if (avpath.startsWith(startDirectory)) {
+						avpath = wwwBinaryRoot + avpath.substring(startDirectory.length());
+					}
+					
+					if (avpath.endsWith(file.getName())) {
+						avpath = avpath.substring(0, avpath.length() - file.getName().length());
+					}
+
+					String notThumbFileName = file.getName();
+					if (notThumbFileName.endsWith("-thumb.jpg")) {
+						notThumbFileName = notThumbFileName.substring(0, notThumbFileName.length() - 10)+".jpg";
+					}
+
+					try {
+						List<NewsItemImagesDao> results = NewsItemImagesDao.getImageRecordsByFileName(notThumbFileName, avpath, session);
+						
+						if (results.size() == 0) {
+							if (justLogit.equalsIgnoreCase("deleteit")) {
+								if (!file.delete()) {
+									IOException e = new IOException("Attempting to clean up file.");
+									decoratedError(INDENT2, "Deleting file " + file.getName(), e);
+								}
+							}
+						}
+					} catch (Exception ex) {
+						decoratedError(INDENT1, "Reading from NEWS_ITEM_IMAGES.", ex);
+					}
+
+				// not image - filename should be RSN
+				} else {
+					long fileRsn = 0;
+					try {
+						fileRsn = Long.parseLong(shortname);
+					} catch (NumberFormatException ex) {
+						decoratedError(INDENT2, "Parsing NEWS_ITEM RSN: " + file.getName(), ex);
+						fileRsn = 0;
+					}
+
+					if (fileRsn > 0) {
+						try {
+							List<NewsItemsDao> results = NewsItemsDao.getItemByRsn(fileRsn, session);
+							if (results.size() == 0) {  // no record in the database with this RSN --> invalid file
+								if (justLogit.equalsIgnoreCase("deleteit")) {
+									if (!file.delete()) {
+										IOException e = new IOException("Attempting to clean up file.");
+										decoratedError(INDENT2, "Deleting file " + file.getName(), e);
+									}
+								}
+							}
+						} catch (Exception ex) {
+							decoratedError(INDENT1, "Reading from NEWS_ITEMS.", ex);
+						}
+					}
+				} 
+			}
+		} 
+	}
+}

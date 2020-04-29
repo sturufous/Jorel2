@@ -45,6 +45,7 @@ public class Jorel2Root {
     protected static final int FATAL_CONDITION = -1;
     protected static final String INDENT0 = "";
     protected static final String INDENT1 = "    ";
+    protected static final String INDENT2 = "        ";
     protected static final int CONNECTION_TIMEOUT = 3000;
     
 	public enum EventType {

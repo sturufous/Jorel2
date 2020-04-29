@@ -685,4 +685,23 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
         
 		return results;
 	}
+	
+	/**
+	 * Get the news item record matching the RSN. 
+	 * 
+	 * @param rsn The rsn for the record to match.
+	 * @param session The current Hibernate persistence context
+	 * @return A list containing the single matching record, or empty if no match.
+	 */
+	public static List<NewsItemsDao> getItemByRsn(long rsn, Session session) {
+		
+		BigDecimal rsnDecimal = BigDecimal.valueOf(rsn);
+		String sqlStmt = "from NewsItemsDao ni where ni.rsn =:rsn";
+
+		Query<NewsItemsDao> query = session.createQuery(sqlStmt, NewsItemsDao.class);
+		query.setParameter("rsn", rsnDecimal);
+        List<NewsItemsDao> results = query.getResultList();
+        
+		return results;
+	}
 }

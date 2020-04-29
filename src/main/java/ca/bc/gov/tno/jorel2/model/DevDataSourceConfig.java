@@ -103,6 +103,7 @@ final class DevDataSourceConfig extends DataSourceConfig {
 		        config.addAnnotatedClass(NewsItemQuotesDao.class);
 		        config.addAnnotatedClass(PagewatchersDao.class);
 		        config.addAnnotatedClass(FileQueueDao.class);
+		        config.addAnnotatedClass(NewsItemImagesDao.class);
 		        
 		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 		        
