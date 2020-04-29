@@ -677,7 +677,7 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	 */
 	public static List<NewsItemsDao> getItemsAddedSinceYesterday(String source, Session session) {
 		
-		String sqlStmt = "from NewsItemsDao ni where ni.source=:source and ni.itemDate >= to_date(sysdate-1)";
+		String sqlStmt = "from NewsItemsDao ni where ni.source=:source and ni.itemDate >= to_date(sysdate-2)";
 
 		Query<NewsItemsDao> query = session.createQuery(sqlStmt, NewsItemsDao.class);
 		query.setParameter("source", source);

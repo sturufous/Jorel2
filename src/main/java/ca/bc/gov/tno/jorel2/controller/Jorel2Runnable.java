@@ -71,7 +71,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private DurationEventProcessor durationEventProcessor;
 	
-	/** Process we're running as (e.g. "jorel", "jorelMini3") */
+	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	private Jorel2Instance instance;
 	

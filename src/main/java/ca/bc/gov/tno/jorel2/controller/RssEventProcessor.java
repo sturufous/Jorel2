@@ -88,7 +88,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
-	        		String currentSource = currentEvent.getName();
+	        		String currentSource = currentEvent.getSource();
 		    		
 		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
 		    			decoratedTrace(INDENT1, "Two (or more) threads attempting to process the " + currentSource + " feed - skipping.");
@@ -107,7 +107,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    			}
 		    			catch (Exception e) {
 				    		sourcesBeingProcessed.remove(currentSource);
-		    				logger.error("Processing Syndication feed for: " + currentSource, e);
+		    				logger.error("Processing RSS feed for: " + currentSource, e);
 		    			}
 		    		}
 	        	} else {

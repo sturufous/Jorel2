@@ -155,7 +155,10 @@ public class NewsItemFactory extends Jorel2Root {
 			
 				// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
 				Date itemTime = item.getPublishedDate();
-				Date itemDate = DateUtil.getDateAtMidnightByDate(new Date());
+				if (itemTime == null) {
+					itemTime = new Date();
+				}
+				Date itemDate = DateUtil.getDateAtMidnightByDate(itemTime);
 				
 				content = StringUtil.SubstituteEmojis(content);
 		
