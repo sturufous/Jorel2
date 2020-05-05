@@ -98,6 +98,8 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 		        config.addAnnotatedClass(PagewatchersDao.class);
 		        config.addAnnotatedClass(FileQueueDao.class);
 		        config.addAnnotatedClass(NewsItemImagesDao.class);
+		        config.addAnnotatedClass(PreferencesDao.class);
+		        config.addAnnotatedClass(FilesImportedDao.class);
 		        
 		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 		        

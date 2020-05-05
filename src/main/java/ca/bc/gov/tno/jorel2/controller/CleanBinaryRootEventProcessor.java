@@ -62,11 +62,11 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        		
 	        		// Update the lastFtpRun to today's date to prevent CleanBinaryRoot event from running again until tomorrow.
-	        		//String currentDate = DateUtil.getDateNow();
-	        		//currentEvent.setLastFtpRun(currentDate);
-	        		//session.beginTransaction();
-	        		//session.persist(currentEvent);
-	        		//session.getTransaction().commit();
+	        		String currentDate = DateUtil.getDateNow();
+	        		currentEvent.setLastFtpRun(currentDate);
+	        		session.beginTransaction();
+	        		session.persist(currentEvent);
+	        		session.getTransaction().commit();
 	        		
 	        		cleanBinaryRootEvent(currentEvent, session);
 	        	}
@@ -81,6 +81,15 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
     	
     	return Optional.of("complete");
 	}
+	
+	/**
+	 * Calculate a list of yyyy/mm/dd directories in the <code>binaryRoot</code> directory and begin recursing through each one looking for files to delete.
+	 * Files will be retained if they are images and have a corresponding record in NEWS_ITEM_IMAGES, or if the file name identifies an existing RSN 
+	 * in the NEWS_ITEMS table. The number of consecutive days to process is stored in the <code>source</code> field of the current event.
+	 * 
+	 * @param currentEvent The current EVENTS record for being processed
+	 * @param session The current Hibernate persistence context
+	 */
 	
 	private void cleanBinaryRootEvent(EventsDao currentEvent, Session session) {
 		String currentDate = DateUtil.getDateNow();
@@ -130,6 +139,15 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 			}
 		}
 	}
+	
+	/**
+	 * Recurse through the directory passed from <code>cleanBinaryRootEvent</code> deleting images with no corresponding record in NEWS_ITEM_IMAGES
+	 * and other files with an RSN file name that has no corresponding record in NEWS_ITEMS.
+	 * 
+	 * @param filePath The file path of the directory/file being processed at the current level of recursion.
+	 * @param justLogit The action to take if a file is found to be invalid.
+	 * @param session The current Hibernate persistence context.
+	 */
 	
 	private void recurseBinaryRoot(String filePath, String justLogit, Session session) {
 

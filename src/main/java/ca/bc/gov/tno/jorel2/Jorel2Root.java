@@ -28,6 +28,8 @@ import org.hibernate.annotations.NamedQueries;
 	query = "from WordsDao w where w.type=:type"),
 	@NamedQuery(name = "Pagewatchers_FindActivePageWatchers", 
 	query = "from PagewatchersDao p where p.active=1"),
+	@NamedQuery(name = "Preferences_GetPreferencesByRsn", 
+	query = "from PreferencesDao p where p.rsn = :rsn"),
 })
 /**
  * Maintains a global repository of variable and annotation definitions that are available throughout the system.

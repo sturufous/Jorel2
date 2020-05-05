@@ -75,6 +75,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private CleanBinaryRootEventProcessor cleanBinaryRootEventProcessor;
 	
+	/** CleanBinaryRoot Event processor service */
+	@Inject
+    private MonitorEventProcessor monitorEventProcessor;
+	
 	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	private Jorel2Instance instance;
@@ -100,6 +104,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
     	Session session = sessionFactory.get().openSession();
     	LocalDateTime startTime = null;
+    	instance.loadPreferences(session);
 				
 		startTime = logThreadStartup();
 		
@@ -157,6 +162,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case SHELLCOMMAND -> shellCommandEventProcessor.processEvents(eventTypeName, session);
 	        		case DURATION -> durationEventProcessor.processEvents(eventTypeName, session);
 	        		case CLEANBINARYROOT -> cleanBinaryRootEventProcessor.processEvents(eventTypeName, session);
+	        		case MONITOR -> monitorEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }

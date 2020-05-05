@@ -1,19 +1,25 @@
 package ca.bc.gov.tno.jorel2;
 
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.PostConstruct;
+
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jmx.export.annotation.ManagedResource;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root.ConnectionStatus;
 import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
+import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedOperationParameter;
@@ -33,7 +39,7 @@ import org.springframework.jmx.export.annotation.ManagedAttribute;
         description="Jorel2 Managed Bean",
         currencyTimeLimit=15)
 
-public class Jorel2Instance {
+public class Jorel2Instance extends Jorel2Root {
 	
 	Map<String, Long> threadDurations = new ConcurrentHashMap<>();
 	Map<String, Integer> articleCounts = new ConcurrentHashMap<>();
@@ -71,6 +77,8 @@ public class Jorel2Instance {
 	
 	/** Central location for event types that are not thread safe. Ensures mutual exclusion. */
 	private ConcurrentHashMap<EventType, String> activeEvents = new ConcurrentHashMap<>();
+	
+	private PreferencesDao preferences = null;
 	
 	/**
 	 * Construct this object and set the startTime to the time now.
@@ -364,5 +372,21 @@ public class Jorel2Instance {
 		}
 		
 		return result;
+	}
+	
+	public void loadPreferences(Session session) {
+		
+		List<PreferencesDao> preferenceList = PreferencesDao.getPreferencesByRsn(BigDecimal.valueOf(0L), session);
+		
+		if (preferenceList.size() > 0) {
+			preferences = preferenceList.get(0);
+		} else {
+			decoratedError(INDENT0, "Reading preferences from database.", new IOException("Unable to retried preferences from TNO database."));
+		}
+	}
+	
+	public PreferencesDao getPreferences() {
+		
+		return preferences;
 	}
 }
