@@ -64,7 +64,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	        		//session.persist(currentEvent);
 	        		//session.getTransaction().commit();
 	        		
-	        		monitorEvent(currentEvent, session);
+	        		monitorEvent(currentEvent, System.getProperty("file.separator"), session);
 	        	}
 	        }
     	} 
@@ -76,199 +76,63 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
     	return Optional.of("complete");
 	}
 	
-	private void monitorEvent(EventsDao currentEvent, Session session) {
+	private void monitorEvent(EventsDao currentEvent, String fileSep, Session session) {
 
 		//setCountFilesImported(0);
 
-		//String userDir = System.getProperty("user.dir");
-		String fileSep = System.getProperty("file.separator");
-		String startTimeStr = currentEvent.getStartTime();
-		if (startTimeStr == null) startTimeStr = "00:00:00";
-
+		String startTimeStr = currentEvent.getStartTime() == null ? "00:00:00" : currentEvent.getStartTime();
 		LocalDateTime now = LocalDateTime.now();
-		if (startTimeStr.length() == 8 && startTimeStr.indexOf(":") > 0) {
-			String startHoursMinutes = startTimeStr.substring(0, 5);
-			String nowHoursMinutes = "02:30"; // String.format("%02d:%02d", now.getHour(), now.getMinute());
+		String startHoursMinutes = startTimeStr.substring(0, 5);
+		String nowHoursMinutes = "02:30"; // String.format("%02d:%02d", now.getHour(), now.getMinute());
+		
+		String dirName = currentEvent.getFileName();
+		File dir = new File(dirName);
+		
+		if (nowHoursMinutes.equals(startHoursMinutes) && dir.isDirectory()) {
+			String definitionName = currentEvent.getDefinitionName();
+			boolean triggerImport = currentEvent.getTriggerImport();
 
-			if (nowHoursMinutes.equals(startHoursMinutes)) {
+			// Block sync and other monitor events
+			//frame.indexBlockSet();
 
-				// Block sync and other monitor events
-				//frame.indexBlockSet();
+			try {
+				// Monitors the directory
+				// frame.addJLog("Monitor Scan directory '"+dirName+"' ["+startHour+":"+startMinute+"] at "+
+				// calendar.get(Calendar.HOUR_OF_DAY)+":"+calendar.get(Calendar.MINUTE));
 
-				try {
+				int importFileHours = Integer.valueOf(importFileHoursStr);
+				//int sc=getCountFilesImported(); // start count of number of files imported
 
-					// Monitors the directory
-					String dirName = currentEvent.getFileName();
-					String definitionName = currentEvent.getDefinitionName();
-					boolean triggerImport = currentEvent.getTriggerImport();
-					String charEncoding = currentEvent.getTitle();
-					// frame.addJLog("Monitor Scan directory '"+dirName+"' ["+startHour+":"+startMinute+"] at "+
-					// calendar.get(Calendar.HOUR_OF_DAY)+":"+calendar.get(Calendar.MINUTE));
+				List<String> fileList = new ArrayList<>(Arrays.asList(dir.list()));
+				
+				for (String currentFile : fileList) {
+					String fileForImport = "";
+					fileForImport = dirName.endsWith(fileSep) ? dirName + currentFile : dirName + fileSep + currentFile;
+					File f = new File(fileForImport);
 
-					NewsItemQuotesDao quotes = null;
-					FilesImportedDao filesImported = null;
+					if (fileIsImportFile(f, importFileHours, fileForImport)) {
+						boolean moveFile = false;
 
-					File dir = new File(dirName);
-					if (dir.isDirectory()) {							
-						boolean importedOne=true;
-						int importFileHours = Integer.valueOf(importFileHoursStr);
-						while (importedOne) {
-							//int sc=getCountFilesImported(); // start count of number of files imported
+						moveFile = manageImportProcess(currentFile, fileForImport, definitionName, f, session);
 
-							List<String> fileList = new ArrayList<>(Arrays.asList(dir.list()));
-							
-							for (String currentFile : fileList) {
-								String file4Import = "";
-								if (!dirName.endsWith(fileSep))
-									file4Import = dirName + fileSep + currentFile;
-								else
-									file4Import = dirName + currentFile;
-
-								File f = new File(file4Import);
-
-								boolean fileOK=true;
-
-								if (fileIsValid(f, importFileHours, file4Import)) {
-
-									// Make sure the file is completely downloaded
-									long size = 0;
-									long oldSize = 0;
-									int count = 0;
-									int wait = 1000;
-									boolean moveFile = false;
-									String moveFilePrefix = "";
-									PreferencesDao preferences = instance.getPreferences();
-
-									// Move this file into the database or just move it around the file system
-									// THIS LOOKS SUSPICIOUSLY LIKE IT'S NEVER USED
-									boolean storeITinOracle=false;
-									if ((size/1024) < preferences.getMinBinarySize().longValue()) storeITinOracle=true;
-									//if (System.getProperty("java.version").startsWith("1.1")) storeITinOracle=false;
-
-									// Make sure this file has not already been imported
-									List<FilesImportedDao> imported = FilesImportedDao.getFilesImportedByFileName(currentFile, session);
-									boolean ok = imported.size() == 0;
-									
-									
-									if (ok) {
-
-										boolean notSameSize=true;
-										while (notSameSize) {
-											size = f.length();
-											if (oldSize == size) {
-												count++; wait=1000;
-												if (count >= 5) notSameSize=false;
-											} else {
-												oldSize=size; count=0; wait=1000*5;
-											}
-											// Wait a second
-											if (notSameSize) {
-												try { Thread.sleep(wait); } catch (InterruptedException e) { if(false) System.out.println("Thread was interrupted: " + e); }
-											}
-										} // while (notSameSize)
-
-										// Zip file
-										if (currentFile.toLowerCase().endsWith(".zip")){
-
-											if (definitionName.equalsIgnoreCase("infomart")) {
-												// Infomart image zip file
-												moveFile = infomartImages(currentFile, file4Import);
-											} else {
-												moveFile = true;
-
-											}
-
-											// Jpg file
-										} else	if (currentFile.toLowerCase().endsWith(".jpg")) {
-
-											if (definitionName.equalsIgnoreCase("Globe and Mail")) {
-												// Globe image file
-												moveFile = gandmImage(currentFile, file4Import);
-											}
-
-											// Not a zip or jpg file. Process as normal.
-
-											// PDF file
-										} else	if (currentFile.toLowerCase().endsWith(".pdf")) {
-
-											if (definitionName.equalsIgnoreCase("Vancouver 24 hrs")) {
-												// Globe image file
-												moveFile = van24Image(currentFile, file4Import);
-												//moveFile = true;
-											}
-
-											// Not a zip or jpg file. Process as normal.
-										} else {
-
-											moveFile = true;
-
-											// globe and mail fudge to add CDATA tags
-											if (definitionName.equalsIgnoreCase("Globe and Mail XML")) {
-												String content = "";
-												try {
-													FileReader reader = new FileReader(f);
-													char[] chars = new char[(int) f.length()];
-													reader.read(chars);
-													content = new String(chars);
-													reader.close();
-												} catch (Exception e) { ; }
-												if (content.indexOf("<![CDATA[")<0) {
-													content = content.replace("<body.content>", "<body.content><![CDATA[");
-													content = content.replace("</body.content>", "]]></body.content>");
-													BufferedWriter writer = null;
-													try {
-														writer = new BufferedWriter(new FileWriter(f));
-														writer.write(content);
-														writer.close();
-													} catch (Exception e) { ; }
-												}
-												moveFile = false; // don't move the G&M files
-											}
-
-											//setImportingNow(true);
-											//doImport importFile = new doImport(frame, this, dirName, s[i], storeITinOracle, definitionName, charEncoding, triggerImport, quotes, moveFile );
-											//importFile.start();
-											moveFile = false; // the doimport procedure will have moved this file
-
-											//do the import single file style for now
-											//while (isImportingNow()) {
-											//	try { Thread.sleep(1000*10); }
-											//	catch (InterruptedException e) { if(false) System.out.println("Thread was interrupted: " + e); }
-											//}
-
-										}
-
-									} else {
-										if (!definitionName.equalsIgnoreCase("Globe and Mail XML")) {
-											//frame.addJLog(eventLog("DailyFunctions.monitorEvent(): File already processed "+s[i]), true);
-											moveFile = true;
-											moveFilePrefix = "fap_";
-										}
-									}
-
-									// Move this file elsewhere
-									if(moveFile)
-									{
-										//movePaperFile(f, fileSep, moveFilePrefix);
-									}
-								} // if (fileOk)
-							} // for (int i=0; i<s.length; i++)
-
-							// Any files imported??
-							//int ec=getCountFilesImported();   // end count of files imported
-							//if (sc == ec) importedOne=false; else importedOne=true;
-						} // while (importedOne)
-
-					} //if (dir.isDirectory())
-					} catch (Exception ex) { 
-						//frame.addJLog(eventLog("doImport.run(): unknown error: "+ex.getMessage()));
+						// Move this file elsewhere
+						if(moveFile)
+						{
+							//movePaperFile(f, fileSep, moveFilePrefix);
+						}
 					}
-	
-				// Remove block
-				//frame.indexBlockRemove();
-	
-			} // if ((startHour == 0) | ...
+				}
 
+				// Any files imported??
+				//int ec=getCountFilesImported();   // end count of files imported
+				//if (sc == ec) importedOne=false; else importedOne=true;
+			} catch (Exception ex) { 
+				//frame.addJLog(eventLog("doImport.run(): unknown error: "+ex.getMessage()));
+			}
+
+			// Remove block
+			//frame.indexBlockRemove();
+	
 			//Update this record to reflect that it has run and can now be run again
 			currentEvent.setLastFtpRun("idle");
 			session.beginTransaction();
@@ -287,24 +151,47 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 	}
 	
-	private boolean  infomartImages(String one, String two) {
+	@SuppressWarnings("preview")
+	private boolean manageImportProcess(String currentFile, String fileForImport, String definitionName, File f, Session session) {
+		// Make sure the file is completely downloaded
+		boolean moveFile = false;
+		String moveFilePrefix = "";
+		PreferencesDao preferences = instance.getPreferences();
+
+		// Move this file into the database or just move it around the file system
+		// THIS LOOKS SUSPICIOUSLY LIKE IT'S NEVER USED
+		boolean storeITinOracle=false;
+		//if ((size/1024) < preferences.getMinBinarySize().longValue()) storeITinOracle=true;
+		//if (System.getProperty("java.version").startsWith("1.1")) storeITinOracle=false;
+
+		// Make sure this file has not already been imported
+		List<FilesImportedDao> imported = FilesImportedDao.getFilesImportedByFileName(currentFile, session);
+		boolean notAlreadyImported = imported.size() == 0;
 		
-		return true;
-	}
-	
-	private boolean  gandmImage(String one, String two) {
+		if (notAlreadyImported) {
+			verifyDownloadCompletion(f);
+			String suffix = currentFile.substring(currentFile.toLowerCase().lastIndexOf('.') + 1);
+			
+			moveFile = switch(suffix) {
+				case "zip" -> frontPageFromZip(currentFile, fileForImport, definitionName);
+				case "jpg" -> frontPageFromJpg(currentFile, fileForImport, definitionName);
+				case "pdf" -> frontPageFromPdf(currentFile, fileForImport, definitionName);
+				default -> processNewsItem(currentFile, fileForImport, definitionName, f);
+			};
+		} else {
+			if (!definitionName.equalsIgnoreCase("Globe and Mail XML")) {
+				//frame.addJLog(eventLog("DailyFunctions.monitorEvent(): File already processed "+s[i]), true);
+				moveFile = true;
+				moveFilePrefix = "fap_";
+			}
+		}
 		
-		return true;
-	}
-	
-	private boolean  van24Image(String one, String two) {
-		
-		return true;
+		return moveFile;
 	}
 	
 	/**
-	 * Determines the validity of the import file based on several criteria. If the file fails any of the tests 
-	 * this method returns true.
+	 * Determines the validity of the import file based on several criteria. If the file fails any of the tests this method returns false. 
+	 * Criteria include whether the file exists, if it is too old to import, if it's hidden or is a directory.
 	 * 
 	 * @param f Abstract representation of the file name representing the file in question.
 	 * @param importFileHours Length of time since this file was last modified.
@@ -312,7 +199,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Whether this file should be skipped.
 	 */
 	
-	private boolean fileIsValid(File f, int importFileHours, String currentFile) {
+	private boolean fileIsImportFile(File f, int importFileHours, String currentFile) {
 		
 		boolean isValid = true;
 		
@@ -346,5 +233,155 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 		
 		return isValid;
+	}
+	
+	/**
+	 * Verifies that the size of the file identified by the single parameter <code>f</code> has not changed in size for at least ten seconds.
+	 * If this condition is met, assume that the file is not currently being downloaded.
+	 * 
+	 * @param f An abstract representation of the file to monitor.
+	 */
+	
+	private void verifyDownloadCompletion(File f) {
+		
+		long size = 0;
+		long oldSize = 0;
+		int count = 0;
+		int wait = 0;
+		boolean notSameSize=true;
+		
+		while (notSameSize) {
+			size = f.length();
+			if (oldSize == size) {
+				count++; wait=1000;
+				if (count >= 5) notSameSize=false;
+			} else {
+				oldSize=size; count=0; wait=1000*5;
+			}
+			// Wait a second
+			if (notSameSize) {
+				try { Thread.sleep(wait); } catch (InterruptedException e) { if(false) System.out.println("Thread was interrupted: " + e); }
+			}
+		} // while (notSameSize)
+	}
+	
+	/**
+	 * Manages the extraction of front page images from Zip files. Currently this format is used exclusively by Infomart.
+	 * 
+	 * @param currentFile File name of zip file to import.
+	 * @param fileForImport Full path of zip file to import.
+	 * @param definitionName Definition name from EVENTS record.
+	 * @return Whether this file should be moved.
+	 */
+	
+	private boolean frontPageFromZip(String currentFile, String fileForImport, String definitionName) {
+		
+		if (definitionName.equalsIgnoreCase("infomart")) {
+			// Infomart image zip file
+			return infomartImages(currentFile, fileForImport);
+		} else {
+			return true;
+		}
+	}
+	
+	 /** Manages the extraction of front page images from Jpg files. Currently this format is used exclusively by Globe and Mail.
+	 * 
+	 * @param currentFile File name of jpg file to import.
+	 * @param fileForImport Full path of jpg file to import.
+	 * @param definitionName Definition name from EVENTS record.
+	 * @return Whether this file should be moved.
+	 */
+	
+	private boolean frontPageFromJpg(String currentFile, String fileForImport, String definitionName) {
+		
+		if (definitionName.equalsIgnoreCase("Globe and Mail")) {
+			// Globe image file
+			return gandmImage(currentFile, fileForImport);
+		} else {
+			return true;
+		}
+	}
+
+	 /** Manages the extraction of front page images from Pdf files. Currently this format is used exclusively by Vancouver 24 hrs.
+	 * 
+	 * @param currentFile File name of pdf file to import.
+	 * @param fileForImport Full path of pdf file to import.
+	 * @param definitionName Definition name from EVENTS record.
+	 * @return Whether this file should be moved.
+	 */
+	
+	private boolean frontPageFromPdf(String currentFile, String fileForImport, String definitionName) {
+		
+		if (definitionName.equalsIgnoreCase("Vancouver 24 hrs")) {
+			// Globe image file
+			return van24Image(currentFile, fileForImport);
+			//moveFile = true;
+		} else {
+			return true;
+		}
+	}
+	
+	/**
+	 * Handles the import of all file types other than front page images.
+	 * 
+	 * @param currentFile File name of pdf file to import.
+	 * @param fileForImport Full path of pdf file to import.
+	 * @param definitionName Definition name from EVENTS record.
+	 * @param f Abstract representation of the file to be processed.
+	 * @return Whether this file should be moved.
+	 */
+	private boolean processNewsItem(String currentFile, String fileForImport, String definitionName, File f) {
+
+		// globe and mail fudge to add CDATA tags
+		if (definitionName.equalsIgnoreCase("Globe and Mail XML")) {
+			String content = "";
+			try {
+				FileReader reader = new FileReader(f);
+				char[] chars = new char[(int) f.length()];
+				reader.read(chars);
+				content = new String(chars);
+				reader.close();
+			} catch (Exception e) { ; }
+			if (content.indexOf("<![CDATA[")<0) {
+				content = content.replace("<body.content>", "<body.content><![CDATA[");
+				content = content.replace("</body.content>", "]]></body.content>");
+				BufferedWriter writer = null;
+				try {
+					writer = new BufferedWriter(new FileWriter(f));
+					writer.write(content);
+					writer.close();
+				} catch (Exception e) { ; }
+			}
+			//moveFile = false; // don't move the G&M files
+		}
+
+		//setImportingNow(true);
+		//doImport importFile = new doImport(frame, this, dirName, s[i], storeITinOracle, definitionName, charEncoding, triggerImport, quotes, moveFile );
+		//importFile.start();
+		//moveFile = false; // the doimport procedure will have moved this file
+
+		//do the import single file style for now
+		//while (isImportingNow()) {
+		//	try { Thread.sleep(1000*10); }
+		//	catch (InterruptedException e) { if(false) System.out.println("Thread was interrupted: " + e); }
+		//}
+		
+		return false;
+
+	}
+	
+	private boolean infomartImages(String one, String two) {
+		
+		return true;
+	}
+	
+	private boolean gandmImage(String one, String two) {
+		
+		return true;
+	}
+	
+	private boolean van24Image(String one, String two) {
+		
+		return true;
 	}
 }
