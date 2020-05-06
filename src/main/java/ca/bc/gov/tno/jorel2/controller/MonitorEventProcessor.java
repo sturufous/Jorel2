@@ -33,7 +33,11 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	private Jorel2Instance instance;
+	
+	/** Process we're running as (e.g. "jorel", "jorelMini3") */
+	@Inject
+	private FrontPageImageHandler imageHandler;
 	
 	/** Maximum age of files for import in hours */
 	@Value("${importFileHours}")
@@ -158,7 +162,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 	
 	/**
-	 * Determines how to import a file based on the type, and hands the file off to the corresponding handler for that media type.
+	 * Determines how to import a file based on the suffix, and hands the file off to the corresponding handler for that media type.
 	 * 
 	 * @param currentFile The file to be imported.
 	 * @param fileForImport Full path name of the file to be imported.
@@ -185,15 +189,15 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		List<FilesImportedDao> imported = FilesImportedDao.getFilesImportedByFileName(currentFile, session);
 		boolean notAlreadyImported = imported.size() == 0;
 		
-		if (notAlreadyImported) {
+		if (notAlreadyImported) { // Applies only to news articles
 			verifyDownloadCompletion(f);
 			String suffix = currentFile.substring(currentFile.toLowerCase().lastIndexOf('.') + 1);
 			
 			moveFile = switch(suffix) {
 				case "zip" -> frontPageFromZip(currentFile, fileForImport, definitionName);
-				case "jpg" -> frontPageFromJpg(currentFile, fileForImport, definitionName);
+				case "jpg" -> frontPageFromJpg(currentFile, fileForImport, definitionName, session);
 				case "pdf" -> frontPageFromPdf(currentFile, fileForImport, definitionName);
-				default -> processNewsItem(currentFile, fileForImport, definitionName, f);
+				default -> processNewsItem(currentFile, fileForImport, definitionName, f, suffix);
 			};
 		} else {
 			if (!definitionName.equalsIgnoreCase("Globe and Mail XML")) {
@@ -309,11 +313,11 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Whether this file should be moved.
 	 */
 	
-	private boolean frontPageFromJpg(String currentFile, String fileForImport, String definitionName) {
+	private boolean frontPageFromJpg(String currentFile, String fileForImport, String definitionName, Session session) {
 		
-		if (definitionName.equalsIgnoreCase("Globe and Mail")) {
+		if (definitionName.equalsIgnoreCase("Globe and Mail XML")) {
 			// Globe image file
-			return gandmImage(currentFile, fileForImport);
+			return imageHandler.gandmImageHandler(currentFile, fileForImport, session);
 		} else {
 			return true;
 		}
@@ -347,10 +351,10 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @param f Abstract representation of the file to be processed.
 	 * @return Whether this file should be moved.
 	 */
-	private boolean processNewsItem(String currentFile, String fileForImport, String definitionName, File f) {
+	private boolean processNewsItem(String currentFile, String fileForImport, String definitionName, File f, String suffix) {
 
 		// globe and mail fudge to add CDATA tags
-		if (definitionName.equalsIgnoreCase("Globe and Mail XML")) {
+		if (definitionName.equalsIgnoreCase("Globe and Mail XML") && suffix.equalsIgnoreCase("xml")) {
 			String content = "";
 			try {
 				FileReader reader = new FileReader(f);

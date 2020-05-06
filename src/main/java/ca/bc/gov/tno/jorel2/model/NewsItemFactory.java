@@ -182,4 +182,18 @@ public class NewsItemFactory extends Jorel2Root {
 		
 		return newsItem;
 	}
+	
+	public static NewsItemImagesDao createNewsItemImage(BigDecimal sourceRsn, String wwwTarget, String fileName, long width, long height) {
+		
+		NewsItemImagesDao niiRecord = new NewsItemImagesDao();
+		niiRecord.setItemRsn(sourceRsn);
+		niiRecord.setBinaryPath(wwwTarget);
+		niiRecord.setFileName(fileName);
+		niiRecord.setWidth(BigDecimal.valueOf(width));
+		niiRecord.setHeight(BigDecimal.valueOf(height));
+		niiRecord.setImageLoaded(true);
+		niiRecord.setProcessed(true);
+		
+		return niiRecord;
+	}
 }
