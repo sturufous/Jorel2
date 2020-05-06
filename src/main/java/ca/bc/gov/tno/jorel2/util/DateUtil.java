@@ -151,6 +151,14 @@ public class DateUtil extends Jorel2Root {
 		return itemTime;
 	}
 	
+	public static LocalDate localDateFromDdMmYyyy(String dateString) {
+		
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+		LocalDate localDate = LocalDate.parse(dateString, formatter);
+		
+		return localDate;
+	}
+	
 	// TODO Convert this to use java.time
 	// Creates a calendar object from a time string
 	public static Calendar createTime(String time, String frequency) {

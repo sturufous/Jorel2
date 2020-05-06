@@ -76,6 +76,12 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
     	return Optional.of("complete");
 	}
 	
+	/**
+	 * 
+	 * @param currentEvent
+	 * @param fileSep
+	 * @param session
+	 */
 	private void monitorEvent(EventsDao currentEvent, String fileSep, Session session) {
 
 		//setCountFilesImported(0);
@@ -113,7 +119,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 					if (fileIsImportFile(f, importFileHours, fileForImport)) {
 						boolean moveFile = false;
 
-						moveFile = manageImportProcess(currentFile, fileForImport, definitionName, f, session);
+						moveFile = performMediaTypeSwitching(currentFile, fileForImport, definitionName, f, session);
 
 						// Move this file elsewhere
 						if(moveFile)
@@ -151,8 +157,19 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 	}
 	
+	/**
+	 * Determines how to import a file based on the type, and hands the file off to the corresponding handler for that media type.
+	 * 
+	 * @param currentFile The file to be imported.
+	 * @param fileForImport Full path name of the file to be imported.
+	 * @param definitionName The <code>definitionName</code> value from the monitor event record.
+	 * @param f An abstract representation of the file to be processed.
+	 * @param session The current Hibernate persistence context.
+	 * @return Boolean indicating whether the file should be moved.
+	 */
+	
 	@SuppressWarnings("preview")
-	private boolean manageImportProcess(String currentFile, String fileForImport, String definitionName, File f, Session session) {
+	private boolean performMediaTypeSwitching(String currentFile, String fileForImport, String definitionName, File f, Session session) {
 		// Make sure the file is completely downloaded
 		boolean moveFile = false;
 		String moveFilePrefix = "";

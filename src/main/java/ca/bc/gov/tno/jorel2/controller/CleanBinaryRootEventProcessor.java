@@ -33,11 +33,11 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 	@Inject
 	Jorel2Instance instance;
 	
-	/** The password used in connecting to the database */
+	/** Full pathname of binary root directory */
 	@Value("${binaryRoot}")
 	private String startDirectory;
 	
-	/** The password used in connecting to the database */
+	/** Web root used in constructing path to audio-video files (a key in NEWS_ITEM_IMAGES) */
 	@Value("${wwwBinaryRoot}")
 	private String wwwBinaryRoot;
 	
