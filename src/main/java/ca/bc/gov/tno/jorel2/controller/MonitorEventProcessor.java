@@ -43,6 +43,8 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	@Value("${importFileHours}")
 	private String importFileHoursStr;
 	
+	private String sep = System.getProperty("file.separator");
+
 	/**
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
@@ -68,7 +70,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	        		//session.persist(currentEvent);
 	        		//session.getTransaction().commit();
 	        		
-	        		monitorEvent(currentEvent, System.getProperty("file.separator"), session);
+	        		monitorEvent(currentEvent, session);
 	        	}
 	        }
     	} 
@@ -83,10 +85,9 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	/**
 	 * 
 	 * @param currentEvent
-	 * @param fileSep
 	 * @param session
 	 */
-	private void monitorEvent(EventsDao currentEvent, String fileSep, Session session) {
+	private void monitorEvent(EventsDao currentEvent, Session session) {
 
 		//setCountFilesImported(0);
 
@@ -108,16 +109,13 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			try {
 				// Monitors the directory
 				// frame.addJLog("Monitor Scan directory '"+dirName+"' ["+startHour+":"+startMinute+"] at "+
-				// calendar.get(Calendar.HOUR_OF_DAY)+":"+calendar.get(Calendar.MINUTE));
 
 				int importFileHours = Integer.valueOf(importFileHoursStr);
 				//int sc=getCountFilesImported(); // start count of number of files imported
 
-				List<String> fileList = new ArrayList<>(Arrays.asList(dir.list()));
-				
-				for (String currentFile : fileList) {
+				for (String currentFile : dir.list()) {
 					String fileForImport = "";
-					fileForImport = dirName.endsWith(fileSep) ? dirName + currentFile : dirName + fileSep + currentFile;
+					fileForImport = dirName.endsWith(sep) ? dirName + currentFile : dirName + sep + currentFile;
 					File f = new File(fileForImport);
 
 					if (fileIsImportFile(f, importFileHours, fileForImport)) {
@@ -194,7 +192,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			String suffix = currentFile.substring(currentFile.toLowerCase().lastIndexOf('.') + 1);
 			
 			moveFile = switch(suffix) {
-				case "zip" -> frontPageFromZip(currentFile, fileForImport, definitionName);
+				case "zip" -> frontPageFromZip(currentFile, fileForImport, definitionName, session);
 				case "jpg" -> frontPageFromJpg(currentFile, fileForImport, definitionName, session);
 				case "pdf" -> frontPageFromPdf(currentFile, fileForImport, definitionName);
 				default -> processNewsItem(currentFile, fileForImport, definitionName, f, suffix);
@@ -295,14 +293,14 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Whether this file should be moved.
 	 */
 	
-	private boolean frontPageFromZip(String currentFile, String fileForImport, String definitionName) {
+	private boolean frontPageFromZip(String currentFile, String fileForImport, String definitionName, Session session) {
 		
-		if (definitionName.equalsIgnoreCase("infomart")) {
+		//if (definitionName.equalsIgnoreCase("infomart")) {
 			// Infomart image zip file
-			return infomartImages(currentFile, fileForImport);
-		} else {
-			return true;
-		}
+			return imageHandler.infomartImageHandler(currentFile, fileForImport, session);
+		//} else {
+		//	return true;
+		//}
 	}
 	
 	 /** Manages the extraction of front page images from Jpg files. Currently this format is used exclusively by Globe and Mail.

@@ -81,7 +81,7 @@ public class FilesImportedDao implements java.io.Serializable {
 		String sqlStmt = "from FilesImportedDao where fileName=:fileName";
 		
 		Query<FilesImportedDao> query = session.createQuery(sqlStmt, FilesImportedDao.class);
-		query.setParameter("fileName", fileName);
+		query.setParameter("fileName", fileName.toUpperCase());
         List<FilesImportedDao> results = query.getResultList();
         
         return results;

@@ -475,4 +475,23 @@ public class SourcesDao implements java.io.Serializable {
         
 		return results;
 	}
+	
+	/**
+	 * Get the source rsn in sources matching the import filename in news_items
+	 * 
+	 * @param fileName The importedfrom value for the record to match.
+	 * @param session The current Hibernate persistence context
+	 * @return A list containing the single matching record, or empty if no match.
+	 */
+	public static List<Object[]> getRsnByImportFilename(String fileName, Session session) {
+		//select s.rsn from tno.news_items n, sources s where s.source = n.source and n.importedfrom = ?		
+		String sqlStmt = "from NewsItemsDao n, SourcesDao s where s.source = n.source and n.importedfrom=:fileName";
+
+		Query<Object[]> query = session.createQuery(sqlStmt);
+		query.setParameter("fileName", fileName.toUpperCase());
+        List<Object[]> results = query.getResultList();
+        
+		return results;
+	}
+
 }

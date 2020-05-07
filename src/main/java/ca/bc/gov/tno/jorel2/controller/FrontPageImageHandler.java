@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Calendar;
@@ -29,6 +30,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root;
+import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FilesImportedDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemImagesDao;
@@ -54,6 +56,8 @@ class FrontPageImageHandler extends Jorel2Root {
 	@Value("${wwwBinaryRoot}")
 	private String wwwBinaryRoot;
 	
+	private String sep = System.getProperty("file.separator");
+	
 	/**
 	 * Manages the distribution and registration of a front page image for the Globe and Mail.
 	 * 
@@ -64,8 +68,6 @@ class FrontPageImageHandler extends Jorel2Root {
 	 */
 
 	boolean gandmImageHandler(String jpgFileName, String fullPathName, Session session) {
-
-		String sep = System.getProperty("file.separator");
 
 		// Is this an A1 page image?
 		String a1target = "-a001";
@@ -128,58 +130,18 @@ class FrontPageImageHandler extends Jorel2Root {
 	}
 	
 	// handle the Infomart image zip file
-	private boolean infomartImages(String zipFileName, String fullFileName, Session session) {
+	boolean infomartImageHandler(String zipFileName, String fullFileName, Session session) {
 
 		try {
-
-			String sep = System.getProperty("file.separator");
 			boolean failure = false;
 
 			// Only import if the corresponding fms file has been imported already	
-			String fmsFile = zipFileName.substring(0,zipFileName.length() - 3) + "fms";
-			List<FilesImportedDao> imported = FilesImportedDao.getFilesImportedByFileName(fmsFile, session);
-			
-			boolean targetNotImported = imported.size() == 0;
-			if (targetNotImported) { // no .fms file... was it a .cor file?
-				fmsFile = zipFileName.substring(0,zipFileName.length() - 3) + "cor";
-				imported = FilesImportedDao.getFilesImportedByFileName(fmsFile, session);
-				targetNotImported = imported.size() == 0;
-			}
-
-			if (targetNotImported) {
-
+			if (targetWasImported(zipFileName, session)) {
 				String zipTarget = System.getProperty("java.io.tmpdir") + zipFileName.substring(0,zipFileName.length() - 4) + sep;
 				File zipDir = new File(zipTarget);
-
-				try {
-
-					InputStream in = new BufferedInputStream(new FileInputStream(fullFileName));
-					ZipInputStream zin = new ZipInputStream(in);
-					ZipEntry zentry;
-
-					// Extract the images to a temporary folder
-					//frame.addJLog(eventLog("DailyFunctions.infomartImages(): Unzip "+zip_file_name));
-					boolean dirok = zipDir.mkdir();
-					if (dirok) {
-						while((zentry = zin.getNextEntry()) != null) {
-							//if (false) frame.addJLog(eventLog("unzipping " + zipTarget + zentry.getName()));
-							unzip(zin, zipTarget + zentry.getName());
-						}
-					} else {
-						failure = true;
-						//frame.addJLog(eventLog("DailyFunctions.infomartImages(): Could not create unzip folder "+zipTarget), true);
-					}
-
-					zin.close();
-
-				} catch (Exception ex) {
-					failure = true;
-					//frame.addJLog(eventLog("DailyFunctions.infomartImages(): Zip file error "+zip_file_name+": "+ex.toString()), true);
-				}
-
-				if (!failure) {
-
-					Calendar calendar = Calendar.getInstance();
+				String fmsFile = zipFileName.substring(0, zipFileName.length()-3) + "fms";
+				
+				if (extractArchiveToTempDir(zipFileName, fullFileName, zipDir, zipTarget, session)) {
 
 					// Process each image
 					for (File c : zipDir.listFiles()) {
@@ -187,103 +149,29 @@ class FrontPageImageHandler extends Jorel2Root {
 						String fileName = c.getName();
 
 						// Is this image referenced in the FMS file? If so there will already be a news_item_image record for it
-						List<NewsItemImagesDao> niiResults = NewsItemImagesDao.getImageRecordsByFileName(fileName, fmsFile, session);
-						boolean imageExists = niiResults.size() > 0;
+				        List<Object[]> niiResults = NewsItemImagesDao.getImageRecordsByFileNameAndSource(fileName, fmsFile, session);
 						
-						if (imageExists) {
-							Date itemDate = null;
-							NewsItemImagesDao niiRecord = niiResults.get(0);
+						if (niiResults.size() > 0) { // Image record exists
+					        Object[] entityPair = niiResults.get(0);
+							NewsItemImagesDao niiRecord = (NewsItemImagesDao) entityPair[0];
+							NewsItemsDao niRecord = (NewsItemsDao) entityPair[1];
 							
-							//frame.addJLog(eventLog("Found image record for "+c.getName()));
-
-							BigDecimal niRsn = niiResults.get(0).getItemRsn();
-							List<NewsItemsDao> niResults = NewsItemsDao.getItemByRsn(niRsn, session);
-							
-							if (niResults.size() == 1) {
-								itemDate = niResults.get(0).getItemDate();
-							}
-
-							failure = false;
-
-							// Determine location in directory structure based on date
+							Date itemDate = niRecord.getItemDate();
 							String binaryDir = binaryRootHelper(itemDate);
-							String dirTargetName = binaryRoot + binaryDir;
-							if (binaryDir.equalsIgnoreCase("")) {
-								failure = true;
-							}
 
-							// Move the file to the new location in directory structure
-							if (!failure) {
-
-								File fileTarget = new File(dirTargetName+sep + fileName);
-
-								try {
-									copyFile(c, fileTarget);
-								} catch (IOException ex) {
-									failure = true;
-									//frame.addJLog(eventLog("DailyFunctions.infomartImages(): File move error: "+ex.getMessage()));
-								}
-							}
-
-							// Get image dimensions
-							long width = 0;
-							long height = 0;
-							if (!failure) {
-								ImageDimensions id = getImageDimensions(c);
-								width = id.width;
-								height = id.height;
-							}
-
-							// Move the THUMBNAIL to the new location in directory structure
-							if (!failure) {
-
-								int p = fileName.lastIndexOf('.');
-								if (p>0) {
-
-									String thumbName = fileName.substring(0, p) + "-thumb" + fileName.substring(p);
-									File thumb = new File(zipTarget + thumbName);
-
-									if (thumb.exists()) {
-
-										File thumbFileTarget = new File(dirTargetName + sep + thumbName);
-
-										try {
-											copyFile(thumb, thumbFileTarget);
-										} catch (Exception ex) {
-											failure = true;
-											//frame.addJLog(eventLog("DailyFunctions.infomartImages(): Thumbnail file move error: "+ex.getMessage()));
-										}
-									}
-								}
-							}
-
-							if (!failure) {
+							if (copyFileToTargetDir(fileName, c, binaryDir, itemDate)) {
 								String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
-								niiRecord.setBinaryPath(wwwTargetName);
-								niiRecord.setWidth(BigDecimal.valueOf(width));
-								niiRecord.setHeight(BigDecimal.valueOf(height));
-								
-				        		session.beginTransaction();
-				        		session.persist(niiRecord);
-				        		session.getTransaction().commit();
+								ImageDimensions id = getImageDimensions(c);
+								updateNewsItemImage(niiRecord, id, wwwTargetName, session);
 							}
 
 						} else {
 
 							// Not referenced in the FMS file. Is this an A1 page image?
-							boolean a1image = false;
-
-							String a1target = zipFileName.substring(0,zipFileName.length() - 4) + "_page_A1_" + zipFileName.substring(4,12) + "_320.jpg";
-							if (fileName.equalsIgnoreCase(a1target)) a1image = true;
-							for (int i=2;i<=9;i++) {
-								// versioned file?
-								a1target = zipFileName.substring(0,zipFileName.length() - 4) + "_page_A1_" + i + "_" + zipFileName.substring(4,12) + "_320.jpg";
-								if (fileName.equalsIgnoreCase(a1target)) a1image = true;
-							}
-
-							if (a1image) {
+							if (isAnA1Image(zipFileName, fileName)) {
 								//frame.addJLog(eventLog("Found A1 image "+file_name));
 
+								List<Object[]> results = SourcesDao.getRsnByImportFilename(fmsFile, session);
 								//select s.rsn from tno.news_items n, sources s where s.source = n.source and n.importedfrom = ?
 								//ResultSet niRS = ni.selectSourceByImport(fmsFile);
 								try {
@@ -292,9 +180,7 @@ class FrontPageImageHandler extends Jorel2Root {
 
 										// Get date from file name
 										String dateString = fileName.substring(4,12);
-										java.text.DateFormat formatter = new SimpleDateFormat("yyyyMMdd");
-										java.util.Date tempItemDate = formatter.parse(dateString);
-										java.sql.Date itemDate = new java.sql.Date(tempItemDate.getTime());		
+										LocalDate localDate = DateUtil.localDateFromDdMmYyyy(dateString);
 
 										// Delete previous A1 image records
 										//nii.deleteSourceA1(source, itemDate);
@@ -302,8 +188,7 @@ class FrontPageImageHandler extends Jorel2Root {
 										failure = false;
 
 										// Determine location in directory structure based on date
-										String binaryDir = binaryRootHelper(itemDate);
-										String dirTargetName = binaryRoot + binaryDir;
+										String binaryDir = binaryRootHelper(localDate);
 										if (binaryDir.equalsIgnoreCase("")) {
 											failure = true;
 										}
@@ -311,7 +196,7 @@ class FrontPageImageHandler extends Jorel2Root {
 										// Move the file to the new location in directory structure
 										if (!failure) {
 
-											File fileTarget = new File(dirTargetName + sep + fileName);
+											File fileTarget = new File(binaryRoot + sep + binaryDir + sep + fileName);
 
 											try {
 												copyFile(c, fileTarget);
@@ -342,7 +227,7 @@ class FrontPageImageHandler extends Jorel2Root {
 										}
 
 									}
-								} catch (ParseException ex) {
+								} catch (Exception ex) {
 									//frame.addJLog(eventLog("DailyFunctions.infomartImages(): A1 image (source) error: "+ex.getMessage()));
 								}
 							}
@@ -364,6 +249,104 @@ class FrontPageImageHandler extends Jorel2Root {
 			return false;
 		}
 	}
+	
+	private boolean targetWasImported(String zipFileName, Session session) {
+		
+		boolean wasImported = false;
+		
+		String fmsFile = zipFileName.substring(0,zipFileName.length() - 3) + "fms";
+		List<FilesImportedDao> imported = FilesImportedDao.getFilesImportedByFileName(fmsFile, session);
+		
+		wasImported = imported.size() > 0;
+		if (!wasImported) { // no .fms file... was it a .cor file?
+			fmsFile = zipFileName.substring(0,zipFileName.length() - 3) + "cor";
+			imported = FilesImportedDao.getFilesImportedByFileName(fmsFile, session);
+			wasImported = imported.size() > 0;
+		}
+
+		return wasImported;
+	}
+	
+	private boolean copyFileToTargetDir(String fileName, File c, String binaryDir, Date itemDate) {
+		
+		boolean success = true;
+		
+		// Determine location in directory structure based on date
+		if (binaryDir.equalsIgnoreCase("")) {
+			success = false;
+		}
+	
+		// Move the file to the new location in directory structure
+		if (success) {
+	
+			File fileTarget = new File(binaryRoot + sep + binaryDir + sep + fileName);
+			
+			try {
+				copyFile(c, fileTarget);
+			} catch (IOException ex) {
+				success = false;
+				//frame.addJLog(eventLog("DailyFunctions.infomartImages(): File move error: "+ex.getMessage()));
+			}
+		}
+		
+		return success;
+	}
+
+	private boolean extractArchiveToTempDir(String zipFileName, String fullFileName, File zipDir, String zipTarget, Session session) {
+		
+		boolean success = true;
+		
+		try {
+			InputStream in = new BufferedInputStream(new FileInputStream(fullFileName));
+			ZipInputStream zin = new ZipInputStream(in);
+			ZipEntry zentry;
+
+			// Extract the images to a temporary folder
+			//frame.addJLog(eventLog("DailyFunctions.infomartImages(): Unzip "+zip_file_name));
+			boolean dirok = zipDir.mkdir();
+			if (dirok) {
+				while((zentry = zin.getNextEntry()) != null) {
+					unzip(zin, zipTarget + zentry.getName());
+				}
+			} else {
+				success = false;
+				//frame.addJLog(eventLog("DailyFunctions.infomartImages(): Could not create unzip folder "+zipTarget), true);
+			}
+
+			zin.close();
+			
+		} catch (Exception ex) {
+			success = false;
+			//frame.addJLog(eventLog("DailyFunctions.infomartImages(): Zip file error "+zip_file_name+": "+ex.toString()), true);
+		}
+		
+		return success;
+	}
+	
+	private void updateNewsItemImage(NewsItemImagesDao niiRecord, ImageDimensions id, String wwwTargetName, Session session) {
+		
+		niiRecord.setBinaryPath(wwwTargetName);
+		niiRecord.setWidth(BigDecimal.valueOf(id.width));
+		niiRecord.setHeight(BigDecimal.valueOf(id.height));
+		
+		session.beginTransaction();
+		session.persist(niiRecord);
+		session.getTransaction().commit();
+	}
+	
+	private boolean isAnA1Image(String zipFileName, String fileName) {
+		boolean a1image = false;
+
+		String a1target = zipFileName.substring(0,zipFileName.length() - 4) + "_page_A1_" + zipFileName.substring(4,12) + "_320.jpg";
+		if (fileName.equalsIgnoreCase(a1target)) a1image = true;
+		for (int i=2;i<=9;i++) {
+			// versioned file?
+			a1target = zipFileName.substring(0,zipFileName.length() - 4) + "_page_A1_" + i + "_" + zipFileName.substring(4,12) + "_320.jpg";
+			if (fileName.equalsIgnoreCase(a1target)) a1image = true;
+		}
+		
+		return a1image;
+	}
 		
 	/**
 	 * Version of binaryRootHelper that takes a java.util.Date object as its single parameter instead of a 
@@ -376,7 +359,7 @@ class FrontPageImageHandler extends Jorel2Root {
 		
 	private String binaryRootHelper(Date date) {
 		
-		LocalDate itemLocalDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+		LocalDate itemLocalDate = Instant.ofEpochMilli(date.getTime()).atZone(ZoneId.systemDefault()).toLocalDate();
 		return binaryRootHelper(itemLocalDate);
 	}
 	
@@ -393,7 +376,6 @@ class FrontPageImageHandler extends Jorel2Root {
 	 */
 	private String binaryRootHelper(LocalDate localDate) {
 
-		String sep = System.getProperty("file.separator");
 		int itemYear = localDate.getYear();
 		int itemMonth = localDate.getMonth().getValue();
 		int itemDay = localDate.getDayOfMonth();

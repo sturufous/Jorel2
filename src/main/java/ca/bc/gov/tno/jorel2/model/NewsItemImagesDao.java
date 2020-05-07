@@ -169,4 +169,24 @@ public class NewsItemImagesDao implements java.io.Serializable {
         
         return results;
 	}
+	
+	/**
+	 *
+	 * @param fileName The image fileName to match.
+	 * @param sourceFile The file this front page image relates to.
+	 * @param session The current Hibernate persistence context
+	 * @return The record(s) matching fileName
+	 */
+	public static List<Object[]> getImageRecordsByFileNameAndSource(String fileName, String sourceFile, Session session) {
+		
+		String sqlStmt = "from NewsItemImagesDao nii, NewsItemsDao ni where nii.itemRsn = ni.rsn and nii.fileName = :fileName and ni.importedfrom = :sourceFile";
+		
+		Query<Object[]> query = session.createQuery(sqlStmt);
+		query.setParameter("fileName", fileName);
+		query.setParameter("sourceFile", sourceFile.toUpperCase());
+        List<Object[]> results = query.getResultList();
+        
+        return results;
+	}
+	
 }
