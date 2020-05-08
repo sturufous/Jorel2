@@ -192,7 +192,7 @@ public class NewsItemFactory extends Jorel2Root {
 		niiRecord.setWidth(BigDecimal.valueOf(width));
 		niiRecord.setHeight(BigDecimal.valueOf(height));
 		niiRecord.setImageLoaded(true);
-		niiRecord.setProcessed(true);
+		niiRecord.setProcessed(false);
 		
 		return niiRecord;
 	}

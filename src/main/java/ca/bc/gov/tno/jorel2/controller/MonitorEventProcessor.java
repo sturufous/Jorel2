@@ -83,9 +83,10 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 	
 	/**
+	 * Retrieves the list of files identified by the <code>FileName</code> column of this event and processes them by file type.
 	 * 
-	 * @param currentEvent
-	 * @param session
+	 * @param currentEvent The monitor event currently being processed.
+	 * @param session The current Hibernate persistence context.
 	 */
 	private void monitorEvent(EventsDao currentEvent, Session session) {
 

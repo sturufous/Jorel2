@@ -101,6 +101,7 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 		        config.addAnnotatedClass(PreferencesDao.class);
 		        config.addAnnotatedClass(FilesImportedDao.class);
 		        config.addAnnotatedClass(SourcesDao.class);
+		        config.addAnnotatedClass(SourcePaperImagesDao.class);
 		        
 		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 		        
