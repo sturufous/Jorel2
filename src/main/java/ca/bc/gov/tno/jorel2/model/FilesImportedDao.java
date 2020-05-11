@@ -7,7 +7,10 @@ import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -40,7 +43,8 @@ public class FilesImportedDao implements java.io.Serializable {
 	}
 
 	@Id
-
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "next_rsn")
+	@SequenceGenerator(name = "next_rsn", sequenceName = "NEXT_RSN", allocationSize=10)
 	@Column(name = "RSN", unique = true, nullable = false, precision = 38, scale = 0)
 	public BigDecimal getRsn() {
 		return this.rsn;

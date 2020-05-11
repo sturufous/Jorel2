@@ -167,6 +167,14 @@ public class DateUtil extends Jorel2Root {
 		return localDate;
 	}
 	
+	public static LocalDate localDateFromMmDdYYYY(String dateString) {
+		
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMddyyyy");
+		LocalDate localDate = LocalDate.parse(dateString, formatter);
+		
+		return localDate;
+	}
+	
 	public static String localDateToTnoDateFormat(LocalDate date) {
 		
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yy");

@@ -7,9 +7,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -20,6 +25,7 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -76,7 +82,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			File c = new File(fullPathName);
 
 			try {
-				List<SourcesDao> results = SourcesDao.getItemBySource("Globe and Mail", session);
+				List<SourcesDao> results = SourcesDao.getItemBySource(GANDM_ID_STRING, session);
 				if (results.size() == 1) {
 					BigDecimal sourceRsn = results.get(0).getRsn();   // rsn column from sources
 
@@ -132,7 +138,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			if (targetWasImported(zipFileName, session)) {
 				String zipTarget = System.getProperty("java.io.tmpdir") + zipFileName.substring(0,zipFileName.length() - 4) + sep;
 				File zipDir = new File(zipTarget);
-				String fmsFile = zipFileName.substring(0, zipFileName.length()-3) + "fms";
+				String fmsFile = zipFileName.substring(0, zipFileName.length() -3 ) + "fms";
 				
 				if (extractArchiveToTempDir(fullFileName, zipDir, zipTarget, session)) {
 
@@ -163,6 +169,58 @@ class FrontPageImageHandler extends Jorel2Root {
 			success = false;
 		}
 		
+		return success;
+	}
+	
+	/**
+	 * Manages the distribution and registration of a front page images for the van24. Partially implemented and untested. This functionality 
+	 * not currently needed.
+     *
+	 * @param zipFileName Name of zip file to process.
+	 * @param fullFileName Full path name of the zip file.
+	 * @param session Current Hibernate persistence context.
+	 * @return Whether process is successful.
+	 */
+	
+	boolean van24ImageHandler(String pdfFileName, String fullFileName, Session session) {
+		
+		boolean success = true;
+		
+		String a1target = "24v";
+		if (pdfFileName.toLowerCase().indexOf(a1target) >= 0) {
+			File c = new File(fullFileName);
+
+			try {
+				List<SourcesDao> results = SourcesDao.getItemBySource(VAN24_ID_STRING, session);
+				if (results.size() == 1) {
+					BigDecimal sourceRsn = results.get(0).getRsn();   // rsn column from sources
+
+					// Get date from file name
+					int curYear = LocalDate.now().getYear();
+					String dateString = pdfFileName.substring(9,13) + curYear;
+					LocalDate itemDate = DateUtil.localDateFromMmDdYYYY(dateString);
+
+					String jpgFileName = pdfFileName.substring(0, pdfFileName.length() - 3) + "jpg";
+
+					// Delete previous source image records
+					//nii.deleteSourceA1(sourceRsn, itemDate);
+
+					// Determine location in directory structure based on date
+					String binaryDir = binaryRootHelper(itemDate);
+					
+					if (movePdfImageTo(binaryDir, fullFileName, jpgFileName, c)) {
+						ImageDimensions id = getImageDimensions(c);
+						String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
+						//success = createNewsItemImage(sourceRsn, id, wwwTargetName, jpgFileName, session);
+						//nii.insertSourceA1(sourceRsn, itemDate, wwwTargetName, jpgFileName, width, height);
+					}
+
+				}
+			} catch (Exception ex) {
+				decoratedError(INDENT1, "Processing Van24 front page image.", ex);
+			}
+		}
+
 		return success;
 	}
 	
@@ -585,6 +643,50 @@ class FrontPageImageHandler extends Jorel2Root {
 			out.write(b,0,len);
 		}
 		out.close();
+	}
+	
+	/**
+	 * Partially implemented and untested. This functionality not currently needed.
+	 * 
+	 * @param binaryDir
+	 * @param fullFileName
+	 * @param jpgFileName
+	 * @param c
+	 * @return
+	 */
+	private boolean movePdfImageTo(String binaryDir, String fullFileName, String jpgFileName, File c) {
+		
+		boolean success = true;
+		
+		String dirTargetName = binaryRoot + sep + binaryDir;
+		if (binaryDir.equalsIgnoreCase("")) {
+			success = false;
+		}
+
+		// Move the file to the new location in directory structure + convert to jpg
+		if (success) {
+			try {
+				pdfToJpg(fullFileName, dirTargetName + sep + jpgFileName, c);
+			} catch (Exception ex) {
+				decoratedError(INDENT1, "Extracting Van24 front page image from PDF.", ex);
+				success = false;
+			}
+		}
+		
+		return success;
+	}
+	
+	/**
+	 * Extract the contents of a pdf file and save them as a Jpg. Partially implemented and untested. This functionality not currently needed.
+	 * 
+	 * @param pdfFileName The full path name of the pdf file to process.
+	 * @param jpgFileName The full path name of the jpg file to create.
+	 * @throws IOException 
+	 */
+	private void pdfToJpg(String pdfFileName, String jpgFileName, File fileObj) throws IOException {
+		
+		PDDocument document = PDDocument.load(fileObj);
+		
 	}
 	
 	/**

@@ -1,9 +1,15 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +24,9 @@ import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FilesImportedDao;
+import ca.bc.gov.tno.jorel2.model.ImportDefinitionsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
+import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
@@ -195,7 +203,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			moveFile = switch(suffix) {
 				case "zip" -> frontPageFromZip(currentFile, fileForImport, definitionName, session);
 				case "jpg" -> frontPageFromJpg(currentFile, fileForImport, definitionName, session);
-				case "pdf" -> frontPageFromPdf(currentFile, fileForImport, definitionName);
+				case "pdf" -> frontPageFromPdf(currentFile, fileForImport, definitionName, session);
 				default -> processNewsItem(currentFile, fileForImport, definitionName, f, suffix);
 			};
 		} else {
@@ -296,15 +304,15 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	
 	private boolean frontPageFromZip(String currentFile, String fileForImport, String definitionName, Session session) {
 		
-		//if (definitionName.equalsIgnoreCase("infomart")) {
-			// Infomart image zip file
+		if (definitionName.equalsIgnoreCase(INFOMART_ID_STRING)) {
+			//Infomart image zip file
 			return imageHandler.infomartImageHandler(currentFile, fileForImport, session);
-		//} else {
-		//	return true;
-		//}
+		} else {
+			return true;
+		}
 	}
 	
-	 /** Manages the extraction of front page images from Jpg files. Currently this format is used exclusively by Globe and Mail.
+	/** Manages the extraction of front page images from Jpg files. Currently this format is used exclusively by Globe and Mail.
 	 * 
 	 * @param currentFile File name of jpg file to import.
 	 * @param fileForImport Full path of jpg file to import.
@@ -314,7 +322,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	
 	private boolean frontPageFromJpg(String currentFile, String fileForImport, String definitionName, Session session) {
 		
-		if (definitionName.equalsIgnoreCase("Globe and Mail XML")) {
+		if (definitionName.equalsIgnoreCase(GANDM_ID_STRING)) {
 			// Globe image file
 			return imageHandler.gandmImageHandler(currentFile, fileForImport, session);
 		} else {
@@ -322,7 +330,8 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 	}
 
-	 /** Manages the extraction of front page images from Pdf files. Currently this format is used exclusively by Vancouver 24 hrs.
+	/** Manages the extraction of front page images from Pdf files. Currently this format is used exclusively by Vancouver 24 hrs (which may 
+	 * no longer be needed. Consider this incomplete and untested.
 	 * 
 	 * @param currentFile File name of pdf file to import.
 	 * @param fileForImport Full path of pdf file to import.
@@ -330,12 +339,11 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Whether this file should be moved.
 	 */
 	
-	private boolean frontPageFromPdf(String currentFile, String fileForImport, String definitionName) {
+	private boolean frontPageFromPdf(String currentFile, String fileForImport, String definitionName, Session session) {
 		
-		if (definitionName.equalsIgnoreCase("Vancouver 24 hrs")) {
-			// Globe image file
-			return van24Image(currentFile, fileForImport);
-			//moveFile = true;
+		if (definitionName.equalsIgnoreCase(VAN24_ID_STRING)) {
+			// Vancouver 24 image file
+			return imageHandler.van24ImageHandler(currentFile, fileForImport, session);
 		} else {
 			return true;
 		}
@@ -350,6 +358,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @param f Abstract representation of the file to be processed.
 	 * @return Whether this file should be moved.
 	 */
+	
 	private boolean processNewsItem(String currentFile, String fileForImport, String definitionName, File f, String suffix) {
 
 		// globe and mail fudge to add CDATA tags
@@ -390,18 +399,133 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 
 	}
 	
-	private boolean infomartImages(String one, String two) {
+	
+	@SuppressWarnings("preview")
+	private boolean doImport(String sourceName, String currentFile, boolean triggerImport, Session session) {
+		File bFile = null;
+		FileInputStream bin = null;
+		BufferedReader in=null;
+		String importFileName="";
+		String charEncoding = "";
+		boolean success = true;
+
+		//dbImport_Definitions imports = new dbImport_Definitions(frame);
+		//ResultSet importsRS = imports.select(getImport_definition());
+		// select * from tno.import_definitions where name = ?
+		List<ImportDefinitionsDao> definitions = ImportDefinitionsDao.getEventByRsn(sourceName, session);
+		if (definitions.size() > 0) {
+			ImportDefinitionsDao importMeta = definitions.get(0);
+
+			try {
+				String dirName = currentFile; //getFilePath();
+				String fileForImport = dirName.endsWith(sep) ? dirName + currentFile : dirName + sep + currentFile;
+
+				// CLOB and BLOB files are opened so the data can be streamed directly to the CLOB or BLOB
+				if ((importMeta.getType().equalsIgnoreCase("text")) | (importMeta.getType().equalsIgnoreCase("binary"))) {
+					bFile = new File(importFileName);
+					bin = new FileInputStream(bFile);
+				} else {
+					// text files require a 1.2 jre so that CLOBs can be imported
+					if (charEncoding.equals("")) { // no character encoding provided?
+						FileReader file = new FileReader(importFileName);
+						in = new BufferedReader(file);
+					} else { // open with a particular character encoding
+						FileInputStream fis = new FileInputStream(importFileName);
+						InputStreamReader isr = new InputStreamReader(fis, charEncoding);
+						in = new BufferedReader(isr);
+					}
+				}
+			} catch (IOException err) {
+				if(false) System.out.println("IOException "+err);
+			}
+
+			// Create the news item object and import data into it.
+			//NewsItemsDao newsItem = NewsItemFactory.create
+			dbNews_Items newsItem = new dbNews_Items(frame);
+			//String msg=newsItem.getLastError();
+			//if (msg.length() <= 1) {
+			//	newsItem.initialize();
+
+				// Import the data only if the trigger is on
+			if (triggerImport) {
+
+				// Flag this file as being imported
+				//dbFiles_Imported filesImported = new dbFiles_Imported(frame);
+				
+				FilesImportedDao filesImported = new FilesImportedDao();
+				session.beginTransaction();
+				filesImported.setFileName(currentFile);
+				session.getTransaction().commit();
+
+				String importType = importMeta.getType();
+				
+				// Do the import
+				success = switch(importType) {
+					case "freeform" -> doFreeFormImport();
+					case "xml" -> doXmlImport();
+					default -> false;
+				};
+			}
+
+			// Close the file
+			try {
+				if ((imports.getType().equalsIgnoreCase("text")) | (imports.getType().equalsIgnoreCase("binary"))) {
+					if (imports.getType().equalsIgnoreCase("text")) Bin.close();
+					Bfile.delete();
+
+				} else {
+					if (!imports.getType().equalsIgnoreCase("xml")) {
+						try { in.close(); } catch (IOException e) {;}
+					}
+					dailyFunctions.incCountFilesImported();
+
+					if (moveFile) {
+						// Move this file elsewhere
+						String newFileName="";
+						String moveTo = frame.getProcessedFiles();
+						String sep = System.getProperty("file.separator");
+						if ( moveTo.charAt(moveTo.length()-1) == sep.charAt(0) )
+							newFileName = moveTo + getFileName();
+						else
+							newFileName = moveTo + sep + getFileName();
+	
+						if (importFileName.length() > 0) {
+							File f = new File(importFileName);
+							File newFile = new File(newFileName);
+	
+							// Delete the destination file if it still exists
+							if (newFile.exists()) newFile.delete();
+	
+							// Rename the file just imported
+							if (f.renameTo(newFile)) {
+								frame.addJLog(dailyFunctions.eventLog("doImport.run(): File renamed to "+newFileName));
+							} else {
+								frame.addJLog(dailyFunctions.eventLog("doImport.run(): Error renaming file to "+newFileName));
+							}
+						}
+					}
+				}
+			} catch (IOException err) { ; }
+			newsItem.destroy();
+			newsItem=null;
+
+			frame.addJLog(dailyFunctions.eventLog("doImport.run(): File imported '"+getFileName()+"'"));
+		}
+		try { importsRS.close(); } catch (SQLException err) {;}
+		imports.destroy();
+		imports=null;
+
+		dailyFunctions.setImportingNow(false);	
+	}
+	
+	private boolean doFreeFormImport() {
 		
 		return true;
 	}
 	
-	private boolean gandmImage(String one, String two) {
+	private boolean doXmlImport() {
 		
 		return true;
 	}
-	
-	private boolean van24Image(String one, String two) {
-		
-		return true;
-	}
+
 }

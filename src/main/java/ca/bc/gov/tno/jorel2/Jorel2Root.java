@@ -49,6 +49,9 @@ public class Jorel2Root {
     protected static final String INDENT1 = "    ";
     protected static final String INDENT2 = "        ";
     protected static final int CONNECTION_TIMEOUT = 3000;
+    protected static final String INFOMART_ID_STRING = "infomart";
+    protected static final String GANDM_ID_STRING = "Globe and Mail";
+    protected static final String VAN24_ID_STRING = "Vancouver 24 hrs";
     
 	public enum EventType {
 		
