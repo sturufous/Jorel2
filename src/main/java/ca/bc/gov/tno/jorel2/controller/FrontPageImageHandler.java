@@ -172,12 +172,12 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * 
 	 * @param niiResults Array containing NewsItemImagesDao record to be updated.
 	 * @param fileName Name of the image, from the zip file, that's currently being processed.
-	 * @param c Full path name of the temp location for the image file.
+	 * @param tempPath Full path name of the temp location for the image file.
 	 * @param session Current Hibernate persistence context.
 	 * @return Whether the file was successfully copied and the image record updated.
 	 */
 	
-	private boolean updateExistingNiiImage(List<Object[]> niiResults, String fileName, File c, Session session) {
+	private boolean updateExistingNiiImage(List<Object[]> niiResults, String fileName, File tempPath, Session session) {
 		
 		boolean success = true;
 		
@@ -189,9 +189,9 @@ class FrontPageImageHandler extends Jorel2Root {
 			Date itemDate = niRecord.getItemDate();
 			String binaryDir = binaryRootHelper(itemDate);
 	
-			if (copyFileToTargetDir(fileName, c, binaryDir)) {
+			if (copyFileToTargetDir(fileName, tempPath, binaryDir)) {
 				String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
-				ImageDimensions id = getImageDimensions(c);
+				ImageDimensions id = getImageDimensions(tempPath);
 				success = updateNewsItemImage(niiRecord, id, wwwTargetName, session);
 			}
 		} catch (Exception e) {
@@ -209,12 +209,12 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * @param zipFileName Name of the zip file that was extracted earlier.
 	 * @param fileName Name of the image, from the zip file, that's currently being processed.
 	 * @param fmsFile Name of the fms file that relates to this zip file.
-	 * @param c Full path name of temp location for the image file.
+	 * @param tempPath Full path name of temp location for the image file.
 	 * @param session The current Hibernate persistence context.
 	 * @return Whether the file was successfully copied and the image record created.
 	 */
 	
-	private boolean createNewNiiImage(String zipFileName, String fileName, String fmsFile, File c, Session session) {
+	private boolean createNewNiiImage(String zipFileName, String fileName, String fmsFile, File tempPath, Session session) {
 		
 		boolean success = true;
 		
@@ -239,9 +239,9 @@ class FrontPageImageHandler extends Jorel2Root {
 					String binaryDir = binaryRootHelper(localDate);
 	
 					// BigDecimal sourceRsn, ImageDimensions id, String wwwTargetName, String fileName, Session session
-					if (copyFileToTargetDir(fileName, c, binaryDir)) {
+					if (copyFileToTargetDir(fileName, tempPath, binaryDir)) {
 						String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
-						ImageDimensions id = getImageDimensions(c);
+						ImageDimensions id = getImageDimensions(tempPath);
 						success = createNewsItemImage(sourceRsn, id, wwwTargetName, fileName, session);
 					}
 				} else {
@@ -287,12 +287,12 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * If the binaryDir parameter is not empty, this method copies the file <code>c</code> to the binary root directory identified by binaryDir.
 	 * 
 	 * @param fileName The name of the destination file (minus any path information).
-	 * @param c The <code>File</code> object representing the file to copy to the destination.
+	 * @param tempPath The <code>File</code> object representing the file to copy to the destination.
 	 * @param binaryDir The YYYY/MM/DD formatted directory name into which the file should be copied.
 	 * @return
 	 */
 	
-	private boolean copyFileToTargetDir(String fileName, File c, String binaryDir) {
+	private boolean copyFileToTargetDir(String fileName, File tempPath, String binaryDir) {
 		
 		boolean success = true;
 		
@@ -307,7 +307,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			File fileTarget = new File(binaryRoot + sep + binaryDir + sep + fileName);
 			
 			try {
-				success = copyFile(c, fileTarget);
+				success = copyFile(tempPath, fileTarget);
 			} catch (IOException ex) {
 				decoratedError(INDENT1, "Copying image file to target directory.", ex);
 				success = false;
@@ -323,13 +323,13 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * the <code>zipdir</code> parameter. 
 	 * 
 	 * @param fullFileName The full filename of the zip file in the import directory.
-	 * @param zipDir The full path of the temporary directory into which the zip file is extracted.
+	 * @param tempZipDir The full path of the temporary directory into which the zip file is extracted.
 	 * @param zipTarget The full path of the temporary directory as a string.
 	 * @param session The current Hibernate persistence context.
 	 * @return Whether the unarchive process was successful.
 	 */
 	
-	private boolean extractArchiveToTempDir(String fullFileName, File zipDir, String zipTarget, Session session) {
+	private boolean extractArchiveToTempDir(String fullFileName, File tempZipDir, String zipTarget, Session session) {
 		
 		boolean success = true;
 		
@@ -339,13 +339,13 @@ class FrontPageImageHandler extends Jorel2Root {
 			ZipEntry zentry;
 
 			// Extract the images to a temporary folder
-			boolean dirok = zipDir.mkdir();
+			boolean dirok = tempZipDir.mkdir();
 			if (dirok) {
 				while((zentry = zin.getNextEntry()) != null) {
 					unzip(zin, zipTarget + zentry.getName());
 				}
 			} else {
-				IOException e = new IOException("Unable to create the directory: " + zipDir);
+				IOException e = new IOException("Unable to create the directory: " + tempZipDir);
 				decoratedError(INDENT1, "Creating temporary unzip directory.", e);
 				success = false;
 			}
@@ -359,6 +359,16 @@ class FrontPageImageHandler extends Jorel2Root {
 		
 		return success;
 	}
+	
+	/**
+	 * Takes an existing NewsItemImageDao object, updates the binaryPath field and image dimensions, and persists to the database.
+	 * 
+	 * @param niiRecord The existing NewsItemImageDao object.
+	 * @param id An ImageDimension object containing the current images width and height.
+	 * @param wwwTargetName The path of the wwwBinaryRoot directory.
+	 * @param session The current Hibernate persistence context.
+	 * @return Whether the update was successful.
+	 */
 	
 	private boolean updateNewsItemImage(NewsItemImagesDao niiRecord, ImageDimensions id, String wwwTargetName, Session session) {
 		
@@ -381,6 +391,17 @@ class FrontPageImageHandler extends Jorel2Root {
 		return success;
 	}
 	
+	/**
+	 * Creates a new NewsItemImagesDao object with a primary key matching the key of the corresponding NewsItemsDao record.
+	 * 
+	 * @param sourceRsn The rsn of the corresponding NewsItemsDao record.
+	 * @param id The ImageDimensions object containing the width and height of the 
+	 * @param wwwTargetName The path of the wwwBinaryRoot directory.
+	 * @param fileName The file name of the associated image.
+	 * @param session The current Hibernate persistence context.
+	 * @return Whether the creation of the record was successful.
+	 */
+	
 	private boolean createNewsItemImage(BigDecimal sourceRsn, ImageDimensions id, String wwwTargetName, String fileName, Session session) {
 		
 		boolean success = true;
@@ -399,6 +420,13 @@ class FrontPageImageHandler extends Jorel2Root {
 		
 		return success;
 	}
+	
+	/**
+	 * Determines, from the file name, whether the image represented is an A1 (section A page one) image.
+	 * @param zipFileName The name of the zip file from which the image was extracted.
+	 * @param fileName The name of the image being processed.
+	 * @return Whether the image represented by <code>fileName</code> is an A1 image.
+	 */
 	
 	private boolean isAnA1Image(String zipFileName, String fileName) {
 		boolean a1image = false;
@@ -541,12 +569,19 @@ class FrontPageImageHandler extends Jorel2Root {
 		return new ImageDimensions(width, height);
 	}
 	
-	private static void unzip(ZipInputStream zin, String s) throws IOException {
+	/**
+	 * 
+	 * @param zin The ZipInputStream from which to read the contents of the current zipped file.
+	 * @param The full path name of the file to which the contents of <code>zin</code> should be written to. 
+	 * @throws IOException
+	 */
+	
+	private static void unzip(ZipInputStream zin, String tempPath) throws IOException {
 		
-		FileOutputStream out = new FileOutputStream(s, true);
+		FileOutputStream out = new FileOutputStream(tempPath, true);
 		byte [] b = new byte[512];
 		int len = 0;
-		while ( (len=zin.read(b))!= -1 ) {
+		while ( (len = zin.read(b)) != -1 ) {
 			out.write(b,0,len);
 		}
 		out.close();
