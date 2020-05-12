@@ -129,9 +129,9 @@ public class ImportDefinitionsDao implements java.io.Serializable {
 	 * @param session The current Hibernate persistence context
 	 * @return The ImportDefinitionsDao object matching the name parameter.
 	 */
-	public static List<ImportDefinitionsDao> getEventByRsn(String name, Session session) {
+	public static List<ImportDefinitionsDao> getDefinitionByName(String name, Session session) {
 		
-		Query<ImportDefinitionsDao> query = session.createNamedQuery("from ImportDefinitionsDao where name=:name", ImportDefinitionsDao.class);
+		Query<ImportDefinitionsDao> query = session.createQuery("from ImportDefinitionsDao where name=:name", ImportDefinitionsDao.class);
 		query.setParameter("name", name);
         List<ImportDefinitionsDao> results = query.getResultList();
         

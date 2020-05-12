@@ -8,11 +8,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -25,8 +22,6 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FilesImportedDao;
 import ca.bc.gov.tno.jorel2.model.ImportDefinitionsDao;
-import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
-import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
@@ -43,13 +38,21 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	@Inject
 	private Jorel2Instance instance;
 	
-	/** Process we're running as (e.g. "jorel", "jorelMini3") */
+	/** Handler for processing front page images */
 	@Inject
 	private FrontPageImageHandler imageHandler;
+	
+	/** Handler for processing newspaper items */
+	@Inject
+	private NewspaperImportHandler importHandler;
 	
 	/** Maximum age of files for import in hours */
 	@Value("${importFileHours}")
 	private String importFileHoursStr;
+	
+	/** Directory to which processed files should be moved */
+	@Value("${processedFilesLoc}")
+	private String processedFilesLoc;
 	
 	private String sep = System.getProperty("file.separator");
 
@@ -106,7 +109,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		String nowHoursMinutes = "02:30"; // String.format("%02d:%02d", now.getHour(), now.getMinute());
 		
 		String dirName = currentEvent.getFileName();
-		File dir = new File(dirName);
+		File dir = new File(currentEvent.getFileName());
 		
 		if (nowHoursMinutes.equals(startHoursMinutes) && dir.isDirectory()) {
 			String definitionName = currentEvent.getDefinitionName();
@@ -130,7 +133,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 					if (fileIsImportFile(f, importFileHours, fileForImport)) {
 						boolean moveFile = false;
 
-						moveFile = performMediaTypeSwitching(currentFile, fileForImport, definitionName, f, session);
+						moveFile = performMediaTypeSwitching(currentEvent, currentFile, fileForImport, f, session);
 
 						// Move this file elsewhere
 						if(moveFile)
@@ -144,6 +147,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				//int ec=getCountFilesImported();   // end count of files imported
 				//if (sc == ec) importedOne=false; else importedOne=true;
 			} catch (Exception ex) { 
+				decoratedError(INDENT1, "Processing import file list.", ex);
 				//frame.addJLog(eventLog("doImport.run(): unknown error: "+ex.getMessage()));
 			}
 
@@ -180,14 +184,14 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 */
 	
 	@SuppressWarnings("preview")
-	private boolean performMediaTypeSwitching(String currentFile, String fileForImport, String definitionName, File f, Session session) {
+	private boolean performMediaTypeSwitching(EventsDao currentEvent, String currentFile, String fileForImport, File f, Session session) {
 		// Make sure the file is completely downloaded
 		boolean moveFile = false;
 		String moveFilePrefix = "";
 		PreferencesDao preferences = instance.getPreferences();
+		String definitionName = currentEvent.getDefinitionName();
 
 		// Move this file into the database or just move it around the file system
-		// THIS LOOKS SUSPICIOUSLY LIKE IT'S NEVER USED
 		boolean storeITinOracle=false;
 		//if ((size/1024) < preferences.getMinBinarySize().longValue()) storeITinOracle=true;
 		//if (System.getProperty("java.version").startsWith("1.1")) storeITinOracle=false;
@@ -204,7 +208,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				case "zip" -> frontPageFromZip(currentFile, fileForImport, definitionName, session);
 				case "jpg" -> frontPageFromJpg(currentFile, fileForImport, definitionName, session);
 				case "pdf" -> frontPageFromPdf(currentFile, fileForImport, definitionName, session);
-				default -> processNewsItem(currentFile, fileForImport, definitionName, f, suffix);
+				default -> processNewsItem(currentEvent, currentFile, fileForImport, f, suffix, session);
 			};
 		} else {
 			if (!definitionName.equalsIgnoreCase("Globe and Mail XML")) {
@@ -359,9 +363,10 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Whether this file should be moved.
 	 */
 	
-	private boolean processNewsItem(String currentFile, String fileForImport, String definitionName, File f, String suffix) {
+	private boolean processNewsItem(EventsDao currentEvent, String currentFile, String fileForImport, File f, String suffix, Session session) {
 
 		// globe and mail fudge to add CDATA tags
+		String definitionName = currentEvent.getDefinitionName();
 		if (definitionName.equalsIgnoreCase("Globe and Mail XML") && suffix.equalsIgnoreCase("xml")) {
 			String content = "";
 			try {
@@ -384,146 +389,179 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			//moveFile = false; // don't move the G&M files
 		}
 
-		//setImportingNow(true);
-		//doImport importFile = new doImport(frame, this, dirName, s[i], storeITinOracle, definitionName, charEncoding, triggerImport, quotes, moveFile );
-		//importFile.start();
+		//setImportingNow(true); DON'T FORGET STOREITINORACLE
+		doImport(currentEvent, currentFile, fileForImport, true, true, session);
 		//moveFile = false; // the doimport procedure will have moved this file
 
-		//do the import single file style for now
-		//while (isImportingNow()) {
-		//	try { Thread.sleep(1000*10); }
-		//	catch (InterruptedException e) { if(false) System.out.println("Thread was interrupted: " + e); }
-		//}
-		
-		return false;
+		return true;
 
 	}
 	
+	/**
+	 * Imports the file by calling <code>importFile()</code> and if the import is successful moves the import file to the processed directory.
+	 * 
+	 * @param currentEvent The monitor event record being processed.
+	 * @param currentFile The file name of the import file being processed.
+	 * @param fileForImport The full path name of the import file being processed.
+	 * @param triggerImport Whether the import process should be performed.
+	 * @param moveFile Whether the import completed successfully.
+	 * @param session
+	 * @return
+	 */
+	
+	private boolean doImport(EventsDao currentEvent, String currentFile, String fileForImport, boolean triggerImport, boolean moveFile, Session session) {
+		String charEncoding = currentEvent.getTitle();
+		boolean success = true;
+		String sourceName = currentEvent.getDefinitionName();
+		BufferedReader in = null;
+
+		List<ImportDefinitionsDao> definitions = ImportDefinitionsDao.getDefinitionByName(sourceName, session);
+		if (definitions.size() > 0) {
+			try {
+				in = getBufferedReader(fileForImport, charEncoding);
+				
+				if (triggerImport) {
+					ImportDefinitionsDao importMeta = definitions.get(0);
+					success = importFile(fileForImport, importMeta, in, session);
+				}
+				
+				in.close();
+			} catch (Exception e) {
+				decoratedError(INDENT1, "Importing file: " + fileForImport, e);
+				success = false;
+			}
+
+			try {
+				//dailyFunctions.incCountFilesImported();
+				if (success && moveFile) {
+					moveFile(currentFile, fileForImport);
+				}
+			} catch (Exception e) {
+				decoratedError(INDENT1, "Moving import file to processed location.", e);
+				success = false;
+			}
+
+			//frame.addJLog(dailyFunctions.eventLog("doImport.run(): File imported '"+getFileName()+"'"));
+		} else {
+			decoratedTrace (INDENT1, "No IMPORT_DEFINITIONS record for source: " + sourceName);
+			success = false;
+		}
+		//dailyFunctions.setImportingNow(false);	
+		return success;
+	}
+	
+	/**
+	 * Get a buffered reader from which to retrieve the import file contents.
+	 * 
+	 * @param fileForImport Full path of the file to import.
+	 * @param charEncoding Character encoding to use when reading the file.
+	 * @return The open BufferedReader.
+	 */
+	private BufferedReader getBufferedReader(String fileForImport, String charEncoding) {
+		
+		FileInputStream bin = null;
+		BufferedReader in = null;
+
+		try {
+			if (charEncoding == null || charEncoding.equals("")) { // no character encoding provided?
+				FileReader file = new FileReader(fileForImport);
+				in = new BufferedReader(file);
+			} else { // open with a particular character encoding
+				FileInputStream fis = new FileInputStream(fileForImport);
+				InputStreamReader isr = new InputStreamReader(fis, charEncoding);
+				in = new BufferedReader(isr);
+			}
+		} catch (IOException e) {
+			decoratedError(INDENT1, "Opening file for import: " + fileForImport, e);
+		}
+
+		return in;
+	}
+	
+	/**
+	 * Determines the file type from type field of <code>importMeta</code> and executes the import routine for that file type.
+	 * Also creates a new record in IMPORT_DEFINITIONS indicating that this file has already been imported.
+	 * 
+	 * @param currentFile File name of the file to be imported.
+	 * @param importMeta Definition of the import strategy for this publisher.
+	 * @param in BufferedReader from which to read the file contents.
+	 * @param session The current Hibernate persistence context.
+	 * @return Whether the file was imported successfully.
+	 */
 	
 	@SuppressWarnings("preview")
-	private boolean doImport(String sourceName, String currentFile, boolean triggerImport, Session session) {
-		File bFile = null;
-		FileInputStream bin = null;
-		BufferedReader in=null;
-		String importFileName="";
-		String charEncoding = "";
+	private boolean importFile(String currentFile, ImportDefinitionsDao importMeta, BufferedReader in, Session session) {
+		
 		boolean success = true;
-
-		//dbImport_Definitions imports = new dbImport_Definitions(frame);
-		//ResultSet importsRS = imports.select(getImport_definition());
-		// select * from tno.import_definitions where name = ?
-		List<ImportDefinitionsDao> definitions = ImportDefinitionsDao.getEventByRsn(sourceName, session);
-		if (definitions.size() > 0) {
-			ImportDefinitionsDao importMeta = definitions.get(0);
-
-			try {
-				String dirName = currentFile; //getFilePath();
-				String fileForImport = dirName.endsWith(sep) ? dirName + currentFile : dirName + sep + currentFile;
-
-				// CLOB and BLOB files are opened so the data can be streamed directly to the CLOB or BLOB
-				if ((importMeta.getType().equalsIgnoreCase("text")) | (importMeta.getType().equalsIgnoreCase("binary"))) {
-					bFile = new File(importFileName);
-					bin = new FileInputStream(bFile);
-				} else {
-					// text files require a 1.2 jre so that CLOBs can be imported
-					if (charEncoding.equals("")) { // no character encoding provided?
-						FileReader file = new FileReader(importFileName);
-						in = new BufferedReader(file);
-					} else { // open with a particular character encoding
-						FileInputStream fis = new FileInputStream(importFileName);
-						InputStreamReader isr = new InputStreamReader(fis, charEncoding);
-						in = new BufferedReader(isr);
-					}
-				}
-			} catch (IOException err) {
-				if(false) System.out.println("IOException "+err);
-			}
-
-			// Create the news item object and import data into it.
-			//NewsItemsDao newsItem = NewsItemFactory.create
-			dbNews_Items newsItem = new dbNews_Items(frame);
-			//String msg=newsItem.getLastError();
-			//if (msg.length() <= 1) {
-			//	newsItem.initialize();
-
-				// Import the data only if the trigger is on
-			if (triggerImport) {
-
+		
+		try {
+			// Do the import
+			success = switch(importMeta.getType()) {
+				case "freeform" -> doFreeFormImport(in);
+				case "xml" -> importHandler.doXmlImport(currentFile);
+				default -> false;
+			};
+			
+			if (success) {
 				// Flag this file as being imported
-				//dbFiles_Imported filesImported = new dbFiles_Imported(frame);
-				
-				FilesImportedDao filesImported = new FilesImportedDao();
+				FilesImportedDao fileImported = new FilesImportedDao();
 				session.beginTransaction();
-				filesImported.setFileName(currentFile);
+				fileImported.setFileName(currentFile.toUpperCase());
+				fileImported.setDateImported(DateUtil.getDateAtMidnight());
+				session.persist(fileImported);
 				session.getTransaction().commit();
-
-				String importType = importMeta.getType();
-				
-				// Do the import
-				success = switch(importType) {
-					case "freeform" -> doFreeFormImport();
-					case "xml" -> doXmlImport();
-					default -> false;
-				};
 			}
-
-			// Close the file
-			try {
-				if ((imports.getType().equalsIgnoreCase("text")) | (imports.getType().equalsIgnoreCase("binary"))) {
-					if (imports.getType().equalsIgnoreCase("text")) Bin.close();
-					Bfile.delete();
-
-				} else {
-					if (!imports.getType().equalsIgnoreCase("xml")) {
-						try { in.close(); } catch (IOException e) {;}
-					}
-					dailyFunctions.incCountFilesImported();
-
-					if (moveFile) {
-						// Move this file elsewhere
-						String newFileName="";
-						String moveTo = frame.getProcessedFiles();
-						String sep = System.getProperty("file.separator");
-						if ( moveTo.charAt(moveTo.length()-1) == sep.charAt(0) )
-							newFileName = moveTo + getFileName();
-						else
-							newFileName = moveTo + sep + getFileName();
-	
-						if (importFileName.length() > 0) {
-							File f = new File(importFileName);
-							File newFile = new File(newFileName);
-	
-							// Delete the destination file if it still exists
-							if (newFile.exists()) newFile.delete();
-	
-							// Rename the file just imported
-							if (f.renameTo(newFile)) {
-								frame.addJLog(dailyFunctions.eventLog("doImport.run(): File renamed to "+newFileName));
-							} else {
-								frame.addJLog(dailyFunctions.eventLog("doImport.run(): Error renaming file to "+newFileName));
-							}
-						}
-					}
-				}
-			} catch (IOException err) { ; }
-			newsItem.destroy();
-			newsItem=null;
-
-			frame.addJLog(dailyFunctions.eventLog("doImport.run(): File imported '"+getFileName()+"'"));
+		} catch (Exception e) {
+			decoratedError(INDENT1, "Importing newspaper file.", e);
 		}
-		try { importsRS.close(); } catch (SQLException err) {;}
-		imports.destroy();
-		imports=null;
+		
+		// Create NewsItem here
 
-		dailyFunctions.setImportingNow(false);	
+		return success;
 	}
 	
-	private boolean doFreeFormImport() {
+	/**
+	 * Move the import file to the processed directory.
+	 * 
+	 * @param currentFile File currently being processed.
+	 * @param fileForImport Full path name of file currently being processed.
+	 * @return Whether the file was moved successfully.
+	 */
+	
+	private boolean moveFile(String currentFile, String fileForImport) {
+		
+		boolean success;
+		
+		// Move this file elsewhere
+		String newFileName="";
+		String moveTo = processedFilesLoc;
+		
+		newFileName = moveTo.endsWith(sep) ? moveTo + currentFile : moveTo + sep + currentFile;
+
+		if (fileForImport.length() > 0) {
+			File f = new File(fileForImport);
+			File newFile = new File(newFileName);
+
+			// Delete the destination file if it still exists
+			if (newFile.exists()) newFile.delete();
+
+			// Rename the file just imported
+			if (!f.renameTo(newFile)) {
+				IOException e = new IOException("Unable to move file from export directory to: " + newFile);
+				decoratedError(INDENT1, "Moving newspaper file.", e);
+				success = false;
+			}
+		}
+		
+		return false;
+	}
+	
+	private boolean doFreeFormImport(BufferedReader in) {
 		
 		return true;
 	}
 	
-	private boolean doXmlImport() {
+	private boolean doXmlImport(BufferedReader in) {
 		
 		return true;
 	}

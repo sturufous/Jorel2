@@ -44,7 +44,7 @@ public class WordsDao extends Jorel2Root implements java.io.Serializable {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "next_rsn")
-	@SequenceGenerator(name = "next_rsn", sequenceName = "NEXT_RSN", allocationSize=10)
+	@SequenceGenerator(name = "next_rsn", sequenceName = "NEXT_RSN", allocationSize=1)
 	@Column(name = "RSN", unique = true, nullable = false, precision = 38, scale = 0)
 	public BigDecimal getRsn() {
 		return this.rsn;
