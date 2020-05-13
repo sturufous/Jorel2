@@ -104,7 +104,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
     	Session session = sessionFactory.get().openSession();
     	LocalDateTime startTime = null;
-    	instance.loadPreferences(session);
+    	//instance.loadPreferences(session);
 				
 		startTime = logThreadStartup();
 		
@@ -145,6 +145,8 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		Optional<String> eventResult;
         
 		try {
+			// This is the first query to run in Jorel2Runnable. It is used to determine the offline status of the system.
+			// If a query is inserted in the code prior to this one, without the try-catch below, offline mode will not function.
 	        List<EventsDao> results = EventsDao.getEventsForProcessing(instance.getInstanceName(), session);
 	        
 	        getUniqueEventTypes(eventMap, results);

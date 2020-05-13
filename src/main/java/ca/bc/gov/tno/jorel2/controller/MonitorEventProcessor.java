@@ -191,11 +191,6 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		PreferencesDao preferences = instance.getPreferences();
 		String definitionName = currentEvent.getDefinitionName();
 
-		// Move this file into the database or just move it around the file system
-		boolean storeITinOracle=false;
-		//if ((size/1024) < preferences.getMinBinarySize().longValue()) storeITinOracle=true;
-		//if (System.getProperty("java.version").startsWith("1.1")) storeITinOracle=false;
-
 		// Make sure this file has not already been imported
 		List<FilesImportedDao> imported = FilesImportedDao.getFilesImportedByFileName(currentFile, session);
 		boolean notAlreadyImported = imported.size() == 0;
@@ -334,8 +329,8 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 	}
 
-	/** Manages the extraction of front page images from Pdf files. Currently this format is used exclusively by Vancouver 24 hrs (which may 
-	 * no longer be needed. Consider this incomplete and untested.
+	/** Manages the extraction of front page images from Pdf files. Currently this format is used exclusively by Vancouver 24 hrs (which is 
+	 * no longer needed). Consider this incomplete and untested.
 	 * 
 	 * @param currentFile File name of pdf file to import.
 	 * @param fileForImport Full path of pdf file to import.
@@ -389,7 +384,6 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			//moveFile = false; // don't move the G&M files
 		}
 
-		//setImportingNow(true); DON'T FORGET STOREITINORACLE
 		doImport(currentEvent, currentFile, fileForImport, true, true, session);
 		//moveFile = false; // the doimport procedure will have moved this file
 
@@ -418,26 +412,20 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		List<ImportDefinitionsDao> definitions = ImportDefinitionsDao.getDefinitionByName(sourceName, session);
 		if (definitions.size() > 0) {
 			try {
-				in = getBufferedReader(fileForImport, charEncoding);
 				
 				if (triggerImport) {
+					in = getBufferedReader(fileForImport, charEncoding);
 					ImportDefinitionsDao importMeta = definitions.get(0);
-					success = importFile(fileForImport, importMeta, in, session);
-				}
-				
-				in.close();
-			} catch (Exception e) {
-				decoratedError(INDENT1, "Importing file: " + fileForImport, e);
-				success = false;
-			}
+					success = importFile(currentEvent, fileForImport, importMeta, in, session);
+					in.close();
+				}			
 
-			try {
 				//dailyFunctions.incCountFilesImported();
 				if (success && moveFile) {
 					moveFile(currentFile, fileForImport);
 				}
 			} catch (Exception e) {
-				decoratedError(INDENT1, "Moving import file to processed location.", e);
+				decoratedError(INDENT1, "Importing news item file: " + fileForImport, e);
 				success = false;
 			}
 
@@ -482,6 +470,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * Determines the file type from type field of <code>importMeta</code> and executes the import routine for that file type.
 	 * Also creates a new record in IMPORT_DEFINITIONS indicating that this file has already been imported.
 	 * 
+	 * @param currentEvent The EVENTS record currently being processed.
 	 * @param currentFile File name of the file to be imported.
 	 * @param importMeta Definition of the import strategy for this publisher.
 	 * @param in BufferedReader from which to read the file contents.
@@ -490,7 +479,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 */
 	
 	@SuppressWarnings("preview")
-	private boolean importFile(String currentFile, ImportDefinitionsDao importMeta, BufferedReader in, Session session) {
+	private boolean importFile(EventsDao currentEvent, String currentFile, ImportDefinitionsDao importMeta, BufferedReader in, Session session) {
 		
 		boolean success = true;
 		
@@ -498,7 +487,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			// Do the import
 			success = switch(importMeta.getType()) {
 				case "freeform" -> doFreeFormImport(in);
-				case "xml" -> importHandler.doXmlImport(currentFile);
+				case "xml" -> importHandler.doXmlImport(currentEvent, currentFile, session);
 				default -> false;
 			};
 			

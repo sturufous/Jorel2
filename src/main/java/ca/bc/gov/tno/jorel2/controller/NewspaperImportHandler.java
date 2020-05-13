@@ -3,21 +3,26 @@ package ca.bc.gov.tno.jorel2.controller;
 import java.io.File;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
+
+import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Nitf;
+import ca.bc.gov.tno.jorel2.model.EventsDao;
+import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
+import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 
 @Service
 public class NewspaperImportHandler extends Jorel2Root {
 
-	public boolean doXmlImport(String xmlFilePath) {
+	public boolean doXmlImport(EventsDao currentEvent, String xmlFilePath, Session session) {
 		
 		try {
 			JAXBContext jc = JAXBContext.newInstance (Nitf.class);
 		    Unmarshaller u = jc.createUnmarshaller ();
-		    Nitf o = (Nitf) u.unmarshal ( new File(xmlFilePath) );
+		    Nitf item = (Nitf) u.unmarshal (new File(xmlFilePath));
 		    
-		    
+		    NewsItemsDao newsItem = NewsItemFactory.createXmlNewsItem(item, currentEvent.getName());
 		} catch (Exception e) {
 			decoratedError(INDENT1, "Unmarshalling xml newspaper article: " + xmlFilePath, e);
 		}

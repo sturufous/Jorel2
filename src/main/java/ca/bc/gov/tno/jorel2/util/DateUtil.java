@@ -1,6 +1,8 @@
 package ca.bc.gov.tno.jorel2.util;
 
 import java.math.BigDecimal;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -11,6 +13,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 import java.util.StringTokenizer;
 
 import ca.bc.gov.tno.jorel2.Jorel2Root;
@@ -44,8 +47,8 @@ public class DateUtil extends Jorel2Root {
 		
 		String formatPattern = "E, d LLL yyyy HH:mm:ss " + zoneSymbol;
 		
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(formatPattern);
-		ZoneOffset offset = ZoneOffset.ofHours(-8) ;
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(formatPattern, Locale.UK);
+		ZoneOffset offset = ZoneOffset.ofHours(0) ;
 		LocalDateTime dateTime = LocalDateTime.parse(pubDate, formatter);
 		Date itemTime = Date.from(dateTime.toInstant(offset));
 
@@ -95,6 +98,31 @@ public class DateUtil extends Jorel2Root {
 		String dateMatch = now.format(formatter);
 		
 		return dateMatch;
+	}
+	
+	/**
+	 * 
+	 * 
+	 * @return 
+	 */
+	public static Date getDateFromYyyyMmDd(String dateStr) {
+		
+		// Process the current date using the JDK 1.8 Time API
+		Date utilDate = null;
+		
+        //try {
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd");
+			utilDate = formatter.parse(dateStr);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+ 
+        //} catch (ParseException e) {
+        //    e.printStackTrace();
+        //}
+        
+		return utilDate;
 	}
 	
 	public static String getTimeNow() {

@@ -4,10 +4,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Clob;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Date;
 import javax.sql.rowset.serial.SerialException;
 import com.sun.syndication.feed.synd.SyndEntry;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
+import ca.bc.gov.tno.jorel2.jaxb.Nitf;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
@@ -137,6 +139,45 @@ public class NewsItemFactory extends Jorel2Root {
 		return newsItem;
 	}
 	
+	/**
+	 * Creates and populates an instance of <code>NewsItemDao</code> containing data from an XML based newspaper import file.
+	 * 
+	 * @param item The news item to process.
+	 * @param source The source of the news item (e.g. The Globe and Mail)
+	 * @return A NewsItemsDao object instantiated with the data contained in <code>item</code>
+	 */
+	public static NewsItemsDao createXmlNewsItem(Nitf item, String source) {
+		
+		String content = "";
+		String summary = "";
+		String title = StringUtil.removeHTML(item.getBody().getBodyHead().getHedline().getHl1());
+		
+		content = StringUtil.removeHTML(item.getBody().getBodyContent());
+		summary = item.getBody().getBodyHead().getHedline().getHl2();
+		
+		content = StringUtil.SubstituteEmojis(content);
+		
+		// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
+		Date pubDate = DateUtil.getDateFromYyyyMmDd(item.getHead().getPubdata().getDatePublication().toString());
+
+		NewsItemsDao newsItem = createNewsItemTemplate();
+				
+		// Assign content of this Rss.Channel.Item to the NewsItemDao object
+		newsItem.setItemDate(pubDate);
+		newsItem.setItemTime(pubDate);
+		newsItem.setSource(source);
+		newsItem.setTitle(title);
+		newsItem.setString6(item.getBody().getBodyHead().getByline());
+		newsItem.setWebpath(""); // item.getLink());
+		newsItem.setText(StringUtil.stringToClob(content));
+		newsItem.setSummary(summary);
+		
+		// Saves converting back from Clob to string
+		newsItem.content = content;
+		
+		return newsItem;
+	}
+
 	/**
 	 * Creates and populates an instance of <code>NewsItemDao</code> containing data from a Non-XML based RSS feed item.
 	 * 

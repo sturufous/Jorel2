@@ -96,10 +96,9 @@ class FrontPageImageHandler extends Jorel2Root {
 					if (!binaryDir.equalsIgnoreCase("")) {
 						// Move the file to the new location in directory structure
 						File fileTarget = new File(dirTargetName + sep + jpgFileName);
-
+						
 						try {
 							if (copyFile(c, fileTarget)) {
-								// Get image dimensions
 								ImageDimensions id = getImageDimensions(c);
 								String wwwTargetName = wwwBinaryRoot + sep + binaryDir + sep;
 								success = createNewsItemImage(sourceRsn, id, wwwTargetName, jpgFileName, session);
@@ -108,7 +107,6 @@ class FrontPageImageHandler extends Jorel2Root {
 							decoratedError(INDENT1, "Copying from " + c + " to " + fileTarget, ex);
 							success = false;
 						}
-
 					}
 				}
 			} catch (Exception ex) {
@@ -174,7 +172,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	
 	/**
 	 * Manages the distribution and registration of a front page images for the van24. Partially implemented and untested. This functionality 
-	 * not currently needed.
+	 * is not currently needed.
      *
 	 * @param zipFileName Name of zip file to process.
 	 * @param fullFileName Full path name of the zip file.
