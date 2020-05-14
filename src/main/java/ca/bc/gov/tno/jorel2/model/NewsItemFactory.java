@@ -171,6 +171,7 @@ public class NewsItemFactory extends Jorel2Root {
 		newsItem.setWebpath(""); // item.getLink());
 		newsItem.setText(StringUtil.stringToClob(content));
 		newsItem.setSummary(summary);
+		newsItem.setType("Newspaper");
 		
 		// Saves converting back from Clob to string
 		newsItem.content = content;

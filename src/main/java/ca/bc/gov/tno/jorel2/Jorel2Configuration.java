@@ -16,6 +16,7 @@ import org.springframework.context.annotation.EnableMBeanExport;
 
 import ca.bc.gov.tno.jorel2.controller.Jorel2Runnable;
 import ca.bc.gov.tno.jorel2.controller.QuoteExtractor;
+import ca.bc.gov.tno.jorel2.jaxb.JaxbUnmarshallerFactory;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.controller.FifoThreadQueueScheduler;
 
@@ -66,7 +67,7 @@ public class Jorel2Configuration extends Jorel2Root {
      */
     @Bean("jorel2Runnable")
     @Scope("prototype")
-    @DependsOn({"jorel2Scheduler", "jaxbContext", "jorel2Instance", "quoteExtractor"})
+    @DependsOn({"jorel2Scheduler", "jaxbUnmarshallers", "jorel2Instance", "quoteExtractor"})
     public Jorel2Runnable jorel2Thread() {
     	return new Jorel2Runnable();
     }
@@ -75,19 +76,12 @@ public class Jorel2Configuration extends Jorel2Root {
      * 
      * @return
      */
-    @Bean("jaxbContext")
+    @Bean("jaxbUnmarshallers")
     @Scope("singleton")
-    public Unmarshaller jaxbUnmarshaller() {
-    	Unmarshaller unmarshaller = null;
-    	
-		try {
-			JAXBContext context = JAXBContext.newInstance(Rss.class);
-	    	unmarshaller = context.createUnmarshaller();
-		} catch (JAXBException e) {
-			logger.error("Instantiating the RSS feed unmarshaller.", e);
-		}
-		
-		return unmarshaller;
+    public JaxbUnmarshallerFactory jaxbUnmarshallerFactory() {
+    	JaxbUnmarshallerFactory unmarshaller = null;
+    			
+		return new JaxbUnmarshallerFactory();
     }
 
     /**

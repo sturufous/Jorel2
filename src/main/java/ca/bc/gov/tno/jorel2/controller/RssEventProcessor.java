@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
+import ca.bc.gov.tno.jorel2.jaxb.JaxbUnmarshallerFactory;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.ArticleFilter;
@@ -57,9 +58,9 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	@Inject
 	QuoteExtractor quoteExtractor;
 	
-	/**   */
+	/** Object containing a set of JAXB Unmarshaller objects, one for each xml format supported (e.g. Rss and Nitf)  */
 	@Inject
-	Unmarshaller unmarshaller;
+	JaxbUnmarshallerFactory unmarshallerFactory;
 	
 	/** Contains a concurrent map of all RSS sources currently being processed. Restricts each source to one thread. */
 	Map<String, String> sourcesBeingProcessed = new ConcurrentHashMap<>();
@@ -95,6 +96,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    		} else {
 		    			try {
 			    			sourcesBeingProcessed.put(currentSource, "");
+			    			Unmarshaller unmarshaller = unmarshallerFactory.getRssUnmarshaller();
 			    			
 			    			// The JAXB unmarshaller is not thread safe, so synchronize unmarshalling
 			    			synchronized(unmarshaller) {

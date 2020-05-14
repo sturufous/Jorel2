@@ -20,7 +20,8 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
  * Provides date manipulation utility methods for Jorel2. Preference is given to the Java 1.8 <code>time</code> package but older packages
- * like java.util.Date are also used when required by external components like jdbc drivers.
+ * like java.util.Date are also used when required by external components like jdbc drivers. The need to handle java.util.Date objects
+ * can lead to a proliferation of utility methods because we may need to perform similar translations for LocalDate and Date.
  * 
  * @author StuartM
  * @version 0.0.1
@@ -88,6 +89,7 @@ public class DateUtil extends Jorel2Root {
 	 * 
 	 * @return The current date in "Feb 5 2020" format.
 	 */
+	
 	public static String getDateNow() {
 		
 		// Process the current date using the JDK 1.8 Time API
@@ -101,16 +103,17 @@ public class DateUtil extends Jorel2Root {
 	}
 	
 	/**
+	 * Takes a date as a yyyyMMdd string and converts it into a java.util.Date object.
 	 * 
-	 * 
-	 * @return 
+	 * @param dateStr The string representation of the date to be converted.
+	 * @return The date corresponding to the input string dateStr
 	 */
+	
 	public static Date getDateFromYyyyMmDd(String dateStr) {
 		
 		// Process the current date using the JDK 1.8 Time API
 		Date utilDate = null;
 		
-        //try {
         try {
             SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd");
 			utilDate = formatter.parse(dateStr);
@@ -118,10 +121,6 @@ public class DateUtil extends Jorel2Root {
 			e.printStackTrace();
 		}
  
-        //} catch (ParseException e) {
-        //    e.printStackTrace();
-        //}
-        
 		return utilDate;
 	}
 	

@@ -113,7 +113,6 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		
 		if (nowHoursMinutes.equals(startHoursMinutes) && dir.isDirectory()) {
 			String definitionName = currentEvent.getDefinitionName();
-			boolean triggerImport = currentEvent.getTriggerImport();
 
 			// Block sync and other monitor events
 			//frame.indexBlockSet();
@@ -384,7 +383,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			//moveFile = false; // don't move the G&M files
 		}
 
-		doImport(currentEvent, currentFile, fileForImport, true, true, session);
+		doImport(currentEvent, currentFile, fileForImport, true, session);
 		//moveFile = false; // the doimport procedure will have moved this file
 
 		return true;
@@ -397,13 +396,12 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @param currentEvent The monitor event record being processed.
 	 * @param currentFile The file name of the import file being processed.
 	 * @param fileForImport The full path name of the import file being processed.
-	 * @param triggerImport Whether the import process should be performed.
 	 * @param moveFile Whether the import completed successfully.
 	 * @param session
 	 * @return
 	 */
 	
-	private boolean doImport(EventsDao currentEvent, String currentFile, String fileForImport, boolean triggerImport, boolean moveFile, Session session) {
+	private boolean doImport(EventsDao currentEvent, String currentFile, String fileForImport, boolean moveFile, Session session) {
 		String charEncoding = currentEvent.getTitle();
 		boolean success = true;
 		String sourceName = currentEvent.getDefinitionName();
@@ -413,7 +411,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		if (definitions.size() > 0) {
 			try {
 				
-				if (triggerImport) {
+				if (currentEvent.getTriggerImport()) {
 					in = getBufferedReader(fileForImport, charEncoding);
 					ImportDefinitionsDao importMeta = definitions.get(0);
 					success = importFile(currentEvent, fileForImport, importMeta, in, session);
@@ -486,7 +484,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		try {
 			// Do the import
 			success = switch(importMeta.getType()) {
-				case "freeform" -> doFreeFormImport(in);
+				case "freeform" -> importHandler.doFreeFormImport(currentEvent, importMeta, currentFile, in, session);
 				case "xml" -> importHandler.doXmlImport(currentEvent, currentFile, session);
 				default -> false;
 			};
