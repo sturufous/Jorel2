@@ -32,7 +32,7 @@ public class NewsItemFactory extends Jorel2Root {
 	 * @return The new NewsItemDao template object. This is modified by the caller.
 	 */
 	
-	private static NewsItemsDao createNewsItemTemplate() {
+	public static NewsItemsDao createNewsItemTemplate() {
 		
 		NewsItemsDao newsItem = new NewsItemsDao(
 				null,                        // BigDecimal rsn
@@ -223,6 +223,16 @@ public class NewsItemFactory extends Jorel2Root {
 		}
 		
 		return newsItem;
+	}
+	
+	public static NewsItemsDao createNewsPaperTemplate(String currentFilePath, String sep) {
+		
+		NewsItemsDao item = NewsItemFactory.createNewsItemTemplate();
+		item.setPostedby("");
+		item.setType("Newspaper");
+		item.setImportedfrom(currentFilePath.substring(currentFilePath.lastIndexOf(sep) + 1).toUpperCase());
+
+		return item;
 	}
 	
 	public static NewsItemImagesDao createNewsItemImage(BigDecimal sourceRsn, String wwwTarget, String fileName, long width, long height) {

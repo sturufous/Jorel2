@@ -125,8 +125,8 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				//int sc=getCountFilesImported(); // start count of number of files imported
 
 				for (String currentFile : dir.list()) {
-					String fileForImport = "";
-					fileForImport = dirName.endsWith(sep) ? dirName + currentFile : dirName + sep + currentFile;
+					
+					String fileForImport = dirName.endsWith(sep) ? dirName + currentFile : dirName + sep + currentFile;
 					File f = new File(fileForImport);
 
 					if (fileIsImportFile(f, importFileHours, fileForImport)) {
@@ -187,7 +187,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		// Make sure the file is completely downloaded
 		boolean moveFile = false;
 		String moveFilePrefix = "";
-		PreferencesDao preferences = instance.getPreferences();
+		PreferencesDao preferences = instance.getPreferences(); // Not currently used
 		String definitionName = currentEvent.getDefinitionName();
 
 		// Make sure this file has not already been imported
@@ -414,7 +414,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				if (currentEvent.getTriggerImport()) {
 					in = getBufferedReader(fileForImport, charEncoding);
 					ImportDefinitionsDao importMeta = definitions.get(0);
-					success = importFile(currentEvent, fileForImport, importMeta, in, session);
+					success = importFile(currentEvent, currentFile, fileForImport, importMeta, in, session);
 					in.close();
 				}			
 
@@ -470,6 +470,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * 
 	 * @param currentEvent The EVENTS record currently being processed.
 	 * @param currentFile File name of the file to be imported.
+	 * @param filePath File path of the file to be imported
 	 * @param importMeta Definition of the import strategy for this publisher.
 	 * @param in BufferedReader from which to read the file contents.
 	 * @param session The current Hibernate persistence context.
@@ -477,7 +478,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 */
 	
 	@SuppressWarnings("preview")
-	private boolean importFile(EventsDao currentEvent, String currentFile, ImportDefinitionsDao importMeta, BufferedReader in, Session session) {
+	private boolean importFile(EventsDao currentEvent, String currentFile, String filePath, ImportDefinitionsDao importMeta, BufferedReader in, Session session) {
 		
 		boolean success = true;
 		

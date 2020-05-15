@@ -263,8 +263,8 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 		return this.archivedTo;
 	}
 
-	public void setArchivedTo(String archivedTo) {
-		this.archivedTo = archivedTo;
+	public void setArchivedTo(String value) {
+		this.archivedTo = value;
 	}
 
 	@Temporal(TemporalType.DATE)
