@@ -1,10 +1,7 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.io.IOException;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -15,24 +12,15 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.persistence.PersistenceException;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.SharedSessionContract;
-import org.hibernate.exception.JDBCConnectionException;
-import org.hibernate.jdbc.Work;
 import org.springframework.core.env.Environment;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
-import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
-import ca.bc.gov.tno.jorel2.util.StringUtil;
-//import ca.bc.gov.tno.jorel2.controller.RssEventProcessor;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.

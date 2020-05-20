@@ -2,10 +2,8 @@ package ca.bc.gov.tno.jorel2.model;
 
 import java.util.Optional;
 import java.util.Properties;
-
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
-
 import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -15,10 +13,7 @@ import org.hibernate.service.ServiceRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
-
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
-import ca.bc.gov.tno.jorel2.Jorel2Root.ConnectionStatus;
-
 import org.hibernate.cfg.Configuration;
 
 /**
@@ -75,41 +70,14 @@ final class DevDataSourceConfig extends DataSourceConfig {
 	 */
 	public Optional<SessionFactory> getSessionFactory() {
 		
-		Configuration config = new Configuration();
 		
 		if (sessionFactoryOptional.isEmpty()) {
 			try {
 				logger.debug("Getting development Hibernate session factory.");
 							
-				Properties settings = new Properties();
-		        settings.put(Environment.DRIVER, "oracle.jdbc.OracleDriver");
-		        settings.put(Environment.URL, "jdbc:oracle:thin:@" + systemName + ":" + port + ":" + sid);
-		        settings.put(Environment.USER, userId);
-		        settings.put(Environment.PASS, userPw);
-		        settings.put(Environment.DIALECT, dialect);
-		        settings.put("checkoutTimeout", CONNECTION_TIMEOUT);
-		        //settings.put(Environment.SHOW_SQL, "true");
-		        
+				Properties settings = populateSettings(systemName, port, sid, userId, userPw, dialect);
+		        Configuration config = registerEntities();
 		        config.setProperties(settings);
-		        
-		        // Register all Hibernate classes used in Jorel2
-		        config.addAnnotatedClass(PreferencesDao.class);
-		        config.addAnnotatedClass(EventsDao.class);
-		        config.addAnnotatedClass(EventTypesDao.class);
-		        config.addAnnotatedClass(NewsItemsDao.class);
-		        config.addAnnotatedClass(IssuesDao.class);
-		        config.addAnnotatedClass(NewsItemIssuesDao.class);
-		        config.addAnnotatedClass(WordsDao.class);
-		        config.addAnnotatedClass(NewsItemQuotesDao.class);
-		        config.addAnnotatedClass(PagewatchersDao.class);
-		        config.addAnnotatedClass(FileQueueDao.class);
-		        config.addAnnotatedClass(NewsItemImagesDao.class);
-		        config.addAnnotatedClass(PreferencesDao.class);
-		        config.addAnnotatedClass(FilesImportedDao.class);
-		        config.addAnnotatedClass(SourcesDao.class);
-		        config.addAnnotatedClass(SourcePaperImagesDao.class);
-		        config.addAnnotatedClass(ImportDefinitionsDao.class);
-		        config.addAnnotatedClass(SyncIndexDao.class);
 		        
 		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 		        
@@ -132,14 +100,5 @@ final class DevDataSourceConfig extends DataSourceConfig {
 	private void shutDown() {
 		
 		sessionFactoryOptional.get().close();
-	}
-	
-	/** 
-	 * Provides access to the name of the system that this configuration is communicating with 
-	 * @return The system name.
-	 */
-	public String getSystemName() {
-		
-		return systemName;
 	}
 }

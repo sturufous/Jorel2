@@ -4,14 +4,9 @@ import java.io.IOException;
 import java.io.Reader;
 import java.sql.Clob;
 import java.sql.SQLException;
-
-import javax.sql.rowset.serial.SerialException;
-
 import com.vdurmont.emoji.EmojiManager;
 import com.vdurmont.emoji.EmojiParser;
-
 import ca.bc.gov.tno.jorel2.Jorel2Root;
-import ca.bc.gov.tno.jorel2.jaxb.Rss;
 
 /**
  * Provides String processing functionality for use by Jorel2.

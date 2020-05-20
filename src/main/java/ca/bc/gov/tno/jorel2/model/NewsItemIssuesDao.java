@@ -2,16 +2,12 @@ package ca.bc.gov.tno.jorel2.model;
 // Generated Dec 24, 2019, 8:06:31 AM by Hibernate Tools 5.0.6.Final
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
-
 import org.hibernate.Session;
 import org.hibernate.query.Query;
 

@@ -8,10 +8,8 @@ import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
-import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FileQueueDao;
-import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 /**
  * Manages the retrieval and processing of various RSS feeds using JAXB objects in the

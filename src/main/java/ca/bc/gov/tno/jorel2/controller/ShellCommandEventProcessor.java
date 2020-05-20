@@ -17,7 +17,6 @@ import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
-import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 /**
  * Processes the list of shell command events for this Jorel2 instance as described in the EVENTS table.

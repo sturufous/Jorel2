@@ -1,12 +1,7 @@
 package ca.bc.gov.tno.jorel2.model;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.sql.Clob;
-import java.sql.SQLException;
-import java.time.LocalDate;
 import java.util.Date;
-import javax.sql.rowset.serial.SerialException;
 import com.sun.syndication.feed.synd.SyndEntry;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Nitf;

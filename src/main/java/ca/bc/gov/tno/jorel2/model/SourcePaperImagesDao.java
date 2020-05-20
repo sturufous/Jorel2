@@ -4,19 +4,14 @@ package ca.bc.gov.tno.jorel2.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Date;
-import java.util.List;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-
 import org.hibernate.Session;
 import org.hibernate.query.Query;
-
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
@@ -26,6 +21,7 @@ import ca.bc.gov.tno.jorel2.util.DateUtil;
 @Table(name = "SOURCE_PAPER_IMAGES", schema = "TNO")
 public class SourcePaperImagesDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private BigDecimal sourceRsn;
 	private Date paperDate;

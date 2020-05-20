@@ -69,44 +69,15 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 	 */
 	public Optional<SessionFactory> getSessionFactory() {
 		
-		Configuration config = new Configuration();
-		
 		if (sessionFactoryOptional.isEmpty()) {
 			try {
 				logger.debug("Getting production Hibernate session factory.");
 							
-				Properties settings = new Properties();
-		        settings.put(Environment.DRIVER, "oracle.jdbc.OracleDriver");
-		        settings.put(Environment.URL, "jdbc:oracle:thin:@" + systemName + ":" + port + ":" + sid);
-		        settings.put(Environment.USER, userId);
-		        settings.put(Environment.PASS, userPw);
-		        settings.put(Environment.DIALECT, dialect);
-		        settings.put("checkoutTimeout", CONNECTION_TIMEOUT);
-		        //settings.put(Environment.SHOW_SQL, "true");
-		        
+				Properties settings = populateSettings(systemName, port, sid, userId, userPw, dialect);
+		        Configuration config = registerEntities();
 		        config.setProperties(settings);
 		        
-		        // Register all Hibernate classes used in Jorel2
-		        config.addAnnotatedClass(PreferencesDao.class);
-		        config.addAnnotatedClass(EventsDao.class);
-		        config.addAnnotatedClass(EventTypesDao.class);
-		        config.addAnnotatedClass(NewsItemsDao.class);
-		        config.addAnnotatedClass(IssuesDao.class);
-		        config.addAnnotatedClass(NewsItemIssuesDao.class);
-		        config.addAnnotatedClass(WordsDao.class);
-		        config.addAnnotatedClass(NewsItemQuotesDao.class);
-		        config.addAnnotatedClass(PagewatchersDao.class);
-		        config.addAnnotatedClass(FileQueueDao.class);
-		        config.addAnnotatedClass(NewsItemImagesDao.class);
-		        config.addAnnotatedClass(PreferencesDao.class);
-		        config.addAnnotatedClass(FilesImportedDao.class);
-		        config.addAnnotatedClass(SourcesDao.class);
-		        config.addAnnotatedClass(SourcePaperImagesDao.class);
-		        config.addAnnotatedClass(ImportDefinitionsDao.class);
-		        config.addAnnotatedClass(SyncIndexDao.class);
-		        
 		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
-		        
 		        SessionFactory sessionFactory = config.buildSessionFactory(serviceRegistry);
 		        sessionFactoryOptional = Optional.of(sessionFactory);
 		        instance.setConnectionStatus(ConnectionStatus.ONLINE);

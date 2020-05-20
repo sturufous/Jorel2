@@ -5,19 +5,12 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.EnableMBeanExport;
-
 import ca.bc.gov.tno.jorel2.controller.Jorel2Runnable;
 import ca.bc.gov.tno.jorel2.controller.QuoteExtractor;
 import ca.bc.gov.tno.jorel2.jaxb.JaxbUnmarshallerFactory;
-import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.controller.FifoThreadQueueScheduler;
 
 /**

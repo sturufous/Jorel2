@@ -2,11 +2,7 @@ package ca.bc.gov.tno.jorel2.model;
 // Generated Dec 24, 2019, 8:06:31 AM by Hibernate Tools 5.0.6.Final
 
 import java.util.Date;
-
-import javax.persistence.AttributeOverride;
-import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
@@ -18,6 +14,7 @@ import javax.persistence.Table;
 @Table(name = "SYNC_INDEX", schema = "TNO")
 public class SyncIndexDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private Date dateCreated;
 	private String userName;
 	private String message;

@@ -1,10 +1,7 @@
 package ca.bc.gov.tno.jorel2.controller;
 
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
 import java.net.URL;
-import java.sql.Blob;
-import java.sql.Clob;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -13,15 +10,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.inject.Inject;
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
 import org.hibernate.Session;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Service;
-
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.JaxbUnmarshallerFactory;
@@ -29,7 +22,6 @@ import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.ArticleFilter;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
-import ca.bc.gov.tno.jorel2.model.NewsItemIssuesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;

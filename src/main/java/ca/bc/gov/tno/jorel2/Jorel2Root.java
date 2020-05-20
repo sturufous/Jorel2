@@ -1,18 +1,13 @@
 package ca.bc.gov.tno.jorel2;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.persistence.MappedSuperclass;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.annotations.NamedQuery;
-
 import ca.bc.gov.tno.jorel2.util.StringUtil;
-
 import org.hibernate.annotations.NamedQueries;
 
 @NamedQueries({

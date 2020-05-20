@@ -1,9 +1,6 @@
 package ca.bc.gov.tno.jorel2.model;
 
 import java.math.BigDecimal;
-import java.util.List;
-
-import org.hibernate.Session;
 
 public interface ArticleFilter {
 
