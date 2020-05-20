@@ -2,6 +2,7 @@ package ca.bc.gov.tno.jorel2;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -44,6 +45,13 @@ public class Jorel2Instance extends Jorel2Root {
 	Map<String, Long> threadDurations = new ConcurrentHashMap<>();
 	Map<String, Integer> articleCounts = new ConcurrentHashMap<>();
 	Map<String, Integer> wordCounts = new HashMap<>();
+	
+	/** Keeps track of date and time of database connection interruptions, i.e., entering offline mode */
+	private ConcurrentHashMap<String, String> databaseInterruptions = new ConcurrentHashMap<>();
+	
+	/** Central location for event types that are not thread safe. Ensures mutual exclusion. */
+	private Map<EventType, String> activeEvents = new ConcurrentHashMap<>();
+	
 	LocalDateTime startTime = null;
 
 	/** The name of the current instance */
@@ -74,9 +82,6 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	/** Indicates whether this instance currently has access to a network connection */
 	private ConnectionStatus connectionStatus = ConnectionStatus.OFFLINE;
-	
-	/** Central location for event types that are not thread safe. Ensures mutual exclusion. */
-	private ConcurrentHashMap<EventType, String> activeEvents = new ConcurrentHashMap<>();
 	
 	private PreferencesDao preferences = null;
 	
@@ -322,6 +327,28 @@ public class Jorel2Instance extends Jorel2Root {
 	}
 	
 	/**
+	 * Exposes the list of database interruptions that took place during this run cycle.
+	 * 
+	 * @return The list of database interruptions.
+	 */
+	@ManagedAttribute(description="Records times when database interruptions took place", currencyTimeLimit=15)
+	public ConcurrentHashMap<String, String> getDatabaseInterruptions() {
+		
+		return databaseInterruptions;
+	}
+	
+	/**
+	 * Adds an entry to the databaseInterruptions Map to record the interruption.
+	 * 
+	 * @param threadName
+	 */
+	
+	public void addDatabaseInterruption(String threadName) {
+		
+		databaseInterruptions.put(threadName, LocalDateTime.now().toString());
+	}
+	
+	/**
 	 * Exposes the online status as a JMX attribute.
 	 * 
 	 * @return The eMail port number.
@@ -344,22 +371,45 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	/**
 	 * Allows the online status for this Jorel2 instance to be set based on Hibernate behaviour.
-	 * @param status
+	 * 
+	 * @param status Enum indicating whether the database connection is online or offline.
 	 */
+	
 	public void setConnectionStatus(ConnectionStatus status) {
 		
 		this.connectionStatus = status;
 	}
+	
+	/**
+	 * Adds the enum <code>eventType</code> to the <code>activeEvents</code> Map. This ensures that events which
+	 * do not support concurrent execution are only run in one thread.
+	 * 
+	 * @param eventType The exclusive event type to add.
+	 */
 	
 	public void addExclusiveEvent(EventType eventType) {
 		
 		activeEvents.put(eventType, "");
 	}
 	
+	/**
+	 * This removes a previously registered event, that does not support concurrent execution, from the <code>activeEvents</code> Map.
+	 * 
+	 * @param eventType The event type to remove from the Map.
+	 */
+	
 	public void removeExclusiveEvent(EventType eventType) {
 		
 		activeEvents.remove(eventType);
 	}
+	
+	/**
+	 * Checks to see if an event that does not support concurrent execution is currently active. This is done by searching 
+	 * for an entry in the <code>activeEvents MAP</code> that matches the event type passed in the single parameter.
+	 * 
+	 * @param eventType The event type to check against the <code>activeEvents</code> Map to see if it's already running.
+	 * @return boolean indicating whether the event is active or not.
+	 */
 	
 	public boolean isExclusiveEventActive(EventType eventType) {
 		
@@ -374,6 +424,13 @@ public class Jorel2Instance extends Jorel2Root {
 		return result;
 	}
 	
+	/**
+	 * Loads the single record from the PREFERENCES table in the TNO database. This is then stored as a PreferencesDao object in
+	 * this instance.
+	 * 
+	 * @param session The current Hibernate persistence context.
+	 */
+	
 	public void loadPreferences(Session session) {
 		
 		List<PreferencesDao> preferenceList = PreferencesDao.getPreferencesByRsn(BigDecimal.valueOf(0L), session);
@@ -385,6 +442,12 @@ public class Jorel2Instance extends Jorel2Root {
 		}
 	}
 	
+	/**
+	 * Returns the PreferencesDao object that was loaded by <code>loadPreferences()</code>. This object is used very rarely and is
+	 * likely a legacy feature of the TNO system.
+	 * 
+	 * @return The preferences object.
+	 */
 	public PreferencesDao getPreferences() {
 		
 		return preferences;

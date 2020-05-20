@@ -7,29 +7,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.FilesImportedDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
@@ -172,7 +163,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	
 	/**
 	 * Manages the distribution and registration of a front page images for the van24. Partially implemented and untested. This functionality 
-	 * is not currently needed.
+	 * is not currently needed as the Van24 is no longer available.
      *
 	 * @param zipFileName Name of zip file to process.
 	 * @param fullFileName Full path name of the zip file.
@@ -191,7 +182,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			try {
 				List<SourcesDao> results = SourcesDao.getItemBySource(VAN24_ID_STRING, session);
 				if (results.size() == 1) {
-					BigDecimal sourceRsn = results.get(0).getRsn();   // rsn column from sources
+					//BigDecimal sourceRsn = results.get(0).getRsn();   // rsn column from sources
 
 					// Get date from file name
 					int curYear = LocalDate.now().getYear();
@@ -207,8 +198,8 @@ class FrontPageImageHandler extends Jorel2Root {
 					String binaryDir = binaryRootHelper(itemDate);
 					
 					if (movePdfImageTo(binaryDir, fullFileName, jpgFileName, c)) {
-						ImageDimensions id = getImageDimensions(c);
-						String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
+						//ImageDimensions id = getImageDimensions(c);
+						//String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
 						//success = createNewsItemImage(sourceRsn, id, wwwTargetName, jpgFileName, session);
 						//nii.insertSourceA1(sourceRsn, itemDate, wwwTargetName, jpgFileName, width, height);
 					}
@@ -606,7 +597,7 @@ class FrontPageImageHandler extends Jorel2Root {
 		try {
 			ImageInputStream in = ImageIO.createImageInputStream(image);
 			try {
-				final Iterator readers = ImageIO.getImageReaders(in);
+				final Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
 				if (readers.hasNext()) {
 					ImageReader reader = (ImageReader) readers.next();
 					try {
@@ -683,7 +674,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	 */
 	private void pdfToJpg(String pdfFileName, String jpgFileName, File fileObj) throws IOException {
 		
-		PDDocument document = PDDocument.load(fileObj);
+		//PDDocument document = PDDocument.load(fileObj);
 		
 	}
 	

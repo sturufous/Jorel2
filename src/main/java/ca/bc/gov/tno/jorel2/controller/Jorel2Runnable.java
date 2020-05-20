@@ -134,7 +134,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	/**
 	 * Retrieves all eligible event records from the EVENTS table and dispatches them to their respective event processors. If a persistence exception
 	 * is thrown during the execution of this method the connection status of this instance is set to OFFLINE. The <code>run()</code> method will 
-	 * return the connection status to ONLINE 
+	 * return the connection status to ONLINE.
 	 * 
 	 * @param sessionFactory Current Hibernate persistence context.
 	 */
@@ -172,6 +172,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		catch (PersistenceException e) {
 	    	logger.error("In main event processing loop. Going offline.", e);
 	    	instance.setConnectionStatus(ConnectionStatus.OFFLINE);
+	    	instance.addDatabaseInterruption(Thread.currentThread().getName());
 	    }
         
         session.close();

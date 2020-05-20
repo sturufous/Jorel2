@@ -42,9 +42,9 @@ public class NewspaperImportHandler extends Jorel2Root {
 	@Inject
 	QuoteExtractor quoteExtractor;
 	
-	private ArrayList<String> sofMarkers = new ArrayList();
-	private ArrayList<String> eofMarkers = new ArrayList<String>();
-	private ArrayList<String> fieldNumbers = new ArrayList<String>();
+	private ArrayList<String> sofMarkers = new ArrayList<>();
+	private ArrayList<String> eofMarkers = new ArrayList<>();
+	private ArrayList<String> fieldNumbers = new ArrayList<>();
 	private String newrecord_sof;
 	private String sep = System.getProperty("file.separator");
 	
@@ -101,7 +101,6 @@ public class NewspaperImportHandler extends Jorel2Root {
 		String field=""; // field number (like 3 or 4 or C or newrecord)
 		String fieldValue="";
 		String lastfield="";
-		String theByline=" ";
 
 		boolean endOfFile=false;
 		boolean inField=false;
@@ -194,15 +193,7 @@ public class NewspaperImportHandler extends Jorel2Root {
 						if (posEnd >= 0) {
 							fieldValue = buffer.substring(0,posEnd); // get the value
 
-							/***Informart fudges ***/
-							if (importMeta.getName().toLowerCase().startsWith("infomart")) {
-								if (field.equals("3")) {
-									if (fieldValue.trim().equalsIgnoreCase("24 Hours Vancouver"))
-										fieldValue = "Vancouver 24 hrs";
-								}
-							}
-							/***Black Paper fudges ***/
-							else if (currentFile.toLowerCase().startsWith("bcng")) {
+							if (currentFile.toLowerCase().startsWith("bcng")) {
 
 								Calendar cal = Calendar.getInstance();
 								String hourString = Integer.toString( cal.get(Calendar.HOUR_OF_DAY) );

@@ -23,6 +23,7 @@ import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FilesImportedDao;
 import ca.bc.gov.tno.jorel2.model.ImportDefinitionsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
+import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
@@ -75,13 +76,10 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        		
-	        		String currentDate = DateUtil.getDateNow();
-	        		//currentEvent.setLastFtpRun(currentDate);
-	        		//session.beginTransaction();
-	        		//session.persist(currentEvent);
-	        		//session.getTransaction().commit();
-	        		
+	        		// Lock out other threads from processing monitor events
+	        		updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);	        		
 	        		monitorEvent(currentEvent, session);
+	        		updateLastFtpRun("idle", currentEvent, session);	        		
 	        	}
 	        }
     	} 
@@ -101,12 +99,11 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 */
 	private void monitorEvent(EventsDao currentEvent, Session session) {
 
-		//setCountFilesImported(0);
-
 		String startTimeStr = currentEvent.getStartTime() == null ? "00:00:00" : currentEvent.getStartTime();
 		LocalDateTime now = LocalDateTime.now();
 		String startHoursMinutes = startTimeStr.substring(0, 5);
 		String nowHoursMinutes = "02:30"; // String.format("%02d:%02d", now.getHour(), now.getMinute());
+		int numberImported = 0; 
 		
 		String dirName = currentEvent.getFileName();
 		File dir = new File(currentEvent.getFileName());
@@ -114,15 +111,8 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		if (nowHoursMinutes.equals(startHoursMinutes) && dir.isDirectory()) {
 			String definitionName = currentEvent.getDefinitionName();
 
-			// Block sync and other monitor events
-			//frame.indexBlockSet();
-
 			try {
-				// Monitors the directory
-				// frame.addJLog("Monitor Scan directory '"+dirName+"' ["+startHour+":"+startMinute+"] at "+
-
 				int importFileHours = Integer.valueOf(importFileHoursStr);
-				//int sc=getCountFilesImported(); // start count of number of files imported
 
 				for (String currentFile : dir.list()) {
 					
@@ -137,37 +127,19 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 						// Move this file elsewhere
 						if(moveFile)
 						{
+							numberImported++;
 							//movePaperFile(f, fileSep, moveFilePrefix);
 						}
 					}
 				}
-
-				// Any files imported??
-				//int ec=getCountFilesImported();   // end count of files imported
-				//if (sc == ec) importedOne=false; else importedOne=true;
+				
+				decoratedTrace(INDENT2, "Monitor Event: Imported " + numberImported + " Files.");
 			} catch (Exception ex) { 
-				decoratedError(INDENT1, "Processing import file list.", ex);
-				//frame.addJLog(eventLog("doImport.run(): unknown error: "+ex.getMessage()));
+				decoratedError(INDENT2, "Processing import file list.", ex);
 			}
-
-			// Remove block
-			//frame.indexBlockRemove();
-	
-			//Update this record to reflect that it has run and can now be run again
-			currentEvent.setLastFtpRun("idle");
-			session.beginTransaction();
-			session.persist(currentEvent);
-			session.getTransaction().commit();
-
-			//} //while (monitorEvt.next(monRS))
-		
+					
 			// If any files imported, then rebuild the index CONTENT_INDEX
-			/* if (getCountFilesImported() > 0) {
-				dbSync_Index s=new dbSync_Index(frame);
-				s.insert();
-				s.destroy();
-				s=null;
-			} */
+    		requestReindex(numberImported, session);
 		}
 	}
 	
@@ -205,11 +177,12 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				default -> processNewsItem(currentEvent, currentFile, fileForImport, f, suffix, session);
 			};
 		} else {
-			if (!definitionName.equalsIgnoreCase("Globe and Mail XML")) {
+			moveFile = false;
+		//	if (!definitionName.equalsIgnoreCase("Globe and Mail XML")) {
 				//frame.addJLog(eventLog("DailyFunctions.monitorEvent(): File already processed "+s[i]), true);
-				moveFile = true;
-				moveFilePrefix = "fap_";
-			}
+		//		moveFile = true;
+		//		moveFilePrefix = "fap_";
+		//	}
 		}
 		
 		return moveFile;
@@ -286,7 +259,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			}
 			// Wait a second
 			if (notSameSize) {
-				try { Thread.sleep(wait); } catch (InterruptedException e) { if(false) System.out.println("Thread was interrupted: " + e); }
+				try { Thread.sleep(wait); } catch (InterruptedException e) { System.out.println("Thread was interrupted: " + e); }
 			}
 		} // while (notSameSize)
 	}
@@ -418,18 +391,15 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 					in.close();
 				}			
 
-				//dailyFunctions.incCountFilesImported();
 				if (success && moveFile) {
 					moveFile(currentFile, fileForImport);
 				}
 			} catch (Exception e) {
-				decoratedError(INDENT1, "Importing news item file: " + fileForImport, e);
+				decoratedError(INDENT2, "Importing news item file: " + fileForImport, e);
 				success = false;
 			}
-
-			//frame.addJLog(dailyFunctions.eventLog("doImport.run(): File imported '"+getFileName()+"'"));
 		} else {
-			decoratedTrace (INDENT1, "No IMPORT_DEFINITIONS record for source: " + sourceName);
+			decoratedTrace (INDENT2, "No IMPORT_DEFINITIONS record for source: " + sourceName);
 			success = false;
 		}
 		//dailyFunctions.setImportingNow(false);	
@@ -458,7 +428,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				in = new BufferedReader(isr);
 			}
 		} catch (IOException e) {
-			decoratedError(INDENT1, "Opening file for import: " + fileForImport, e);
+			decoratedError(INDENT2, "Opening file for import: " + fileForImport, e);
 		}
 
 		return in;
@@ -500,7 +470,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				session.getTransaction().commit();
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT1, "Importing newspaper file.", e);
+			decoratedError(INDENT2, "Importing newspaper file.", e);
 		}
 		
 		// Create NewsItem here
@@ -536,7 +506,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			// Rename the file just imported
 			if (!f.renameTo(newFile)) {
 				IOException e = new IOException("Unable to move file from export directory to: " + newFile);
-				decoratedError(INDENT1, "Moving newspaper file.", e);
+				decoratedError(INDENT2, "Moving newspaper file.", e);
 				success = false;
 			}
 		}
@@ -544,14 +514,38 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		return false;
 	}
 	
-	private boolean doFreeFormImport(BufferedReader in) {
-		
-		return true;
+	/**
+	 * Updates lastFtpRun to the value provided.
+	 * 
+	 * @param value The value to store in lastFtpRun field of currentEvent.
+	 * @param currentEvent The monitor event currently being processed.
+	 * @param session The current Hibernate persistence context.
+	 */
+	
+	private void updateLastFtpRun(String value, EventsDao currentEvent, Session session) {
+	
+		//Update this record to reflect that it has run and can now be run again
+		currentEvent.setLastFtpRun(value);
+		session.beginTransaction();
+		session.persist(currentEvent);
+		session.getTransaction().commit();
 	}
 	
-	private boolean doXmlImport(BufferedReader in) {
+	/**
+	 * Insert a record into the SYNC_INDEX table to indicate to the Jorel instance handling the <code>sync</code> event that NEWS_ITEMS
+	 * should be reindexed.
+	 * 
+	 * @param filesImported The number of files imported by this <code>monitor</code> event.
+	 * @param session The current Hibernate persistence context.
+	 */
+	
+	private void requestReindex(int filesImported, Session session) {
 		
-		return true;
+		if (filesImported > 0) {
+			SyncIndexDao syncIndexRequest = new SyncIndexDao(new Date(), instance.getInstanceName(), "Monitor event requesting re-index");
+			session.beginTransaction();
+			session.persist(syncIndexRequest);
+			session.getTransaction().commit();
+		} 
 	}
-
 }
