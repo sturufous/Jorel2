@@ -39,6 +39,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Nitf }
      * 
+     * @return a new Nift object.
      */
     public Nitf createNitf() {
         return new Nitf();
@@ -47,6 +48,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Nitf.Body }
      * 
+     * @return the Body object for this Nitf instance.
      */
     public Nitf.Body createNitfBody() {
         return new Nitf.Body();
@@ -55,6 +57,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Nitf.Body.BodyHead }
      * 
+     * @return the BodyHead object for this Nitf instance.
      */
     public Nitf.Body.BodyHead createNitfBodyBodyHead() {
         return new Nitf.Body.BodyHead();
@@ -63,6 +66,7 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Nitf.Head }
      * 
+     * @return the Head object for this Nitf instance.
      */
     public Nitf.Head createNitfHead() {
         return new Nitf.Head();
@@ -71,14 +75,17 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Nitf.Body.BodyHead.Hedline }
      * 
+     * @return The Hedline object for this nitf instance
      */
     public Nitf.Body.BodyHead.Hedline createNitfBodyBodyHeadHedline() {
+    	
         return new Nitf.Body.BodyHead.Hedline();
     }
 
     /**
      * Create an instance of {@link Nitf.Body.BodyHead.Dateline }
      * 
+     * @return The Dateline object for this Nitf instance.
      */
     public Nitf.Body.BodyHead.Dateline createNitfBodyBodyHeadDateline() {
         return new Nitf.Body.BodyHead.Dateline();
@@ -87,8 +94,10 @@ public class ObjectFactory {
     /**
      * Create an instance of {@link Nitf.Head.Pubdata }
      * 
+     * @return The pubdata object for this Nitf instance.
      */
     public Nitf.Head.Pubdata createNitfHeadPubdata() {
+    	
         return new Nitf.Head.Pubdata();
     }
 

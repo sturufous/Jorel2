@@ -255,7 +255,7 @@ public class NewspaperImportHandler extends Jorel2Root {
 	/**
 	 * Only format we have to worry about is freeform.
 	 * 
-	 * @param posList
+	 * @param list The list of parser tokens for this definition.
 	 */
 	
 	private void populatePositionList(String list) {

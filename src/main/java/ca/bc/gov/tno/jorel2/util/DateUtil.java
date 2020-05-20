@@ -74,6 +74,7 @@ public class DateUtil extends Jorel2Root {
 	 * Otis expects the time portion of the NEWS_ITEMS.ITEM_DATE to be '00:00:00', otherwise the article will not be displayed. This 
 	 * method ensures that this is the case.
 	 * 
+	 * @param itemTime The date/time on which the date at midnight is based.
 	 * @return Today's date with a time portion of '00:00:00'.
 	 */
 	public static Date getDateAtMidnightByDate(Date itemTime) {

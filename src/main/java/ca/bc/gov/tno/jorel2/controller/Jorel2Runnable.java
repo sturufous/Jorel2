@@ -136,7 +136,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	 * is thrown during the execution of this method the connection status of this instance is set to OFFLINE. The <code>run()</code> method will 
 	 * return the connection status to ONLINE.
 	 * 
-	 * @param sessionFactory Current Hibernate persistence context.
+	 * @param session Current Hibernate persistence context.
 	 */
 	@SuppressWarnings("preview")
 	private void processOnlineEvents(Session session) {

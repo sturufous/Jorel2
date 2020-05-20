@@ -146,9 +146,9 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	/**
 	 * Determines how to import a file based on the suffix, and hands the file off to the corresponding handler for that media type.
 	 * 
+	 * @param currentEvent The monitor event being processed.
 	 * @param currentFile The file to be imported.
 	 * @param fileForImport Full path name of the file to be imported.
-	 * @param definitionName The <code>definitionName</code> value from the monitor event record.
 	 * @param f An abstract representation of the file to be processed.
 	 * @param session The current Hibernate persistence context.
 	 * @return Boolean indicating whether the file should be moved.
@@ -270,6 +270,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @param currentFile File name of zip file to import.
 	 * @param fileForImport Full path of zip file to import.
 	 * @param definitionName Definition name from EVENTS record.
+	 * @param session The current Hibernate persistence context.
 	 * @return Whether this file should be moved.
 	 */
 	
@@ -288,6 +289,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @param currentFile File name of jpg file to import.
 	 * @param fileForImport Full path of jpg file to import.
 	 * @param definitionName Definition name from EVENTS record.
+	 * @param session The current hibernate persistence context.
 	 * @return Whether this file should be moved.
 	 */
 	
@@ -307,6 +309,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @param currentFile File name of pdf file to import.
 	 * @param fileForImport Full path of pdf file to import.
 	 * @param definitionName Definition name from EVENTS record.
+	 * @param session The current Hibernate persistence context.
 	 * @return Whether this file should be moved.
 	 */
 	
@@ -321,13 +324,15 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 	
 	/**
-	 * Handles the import of all file types other than front page images.
+	 * Performs insertion of CDATA tags for Globe and Mail articles, and imports the file using doImport().
 	 * 
-	 * @param currentFile File name of pdf file to import.
-	 * @param fileForImport Full path of pdf file to import.
-	 * @param definitionName Definition name from EVENTS record.
-	 * @param f Abstract representation of the file to be processed.
-	 * @return Whether this file should be moved.
+	 * @param currentEvent The monitor event being processed.
+	 * @param currentFile The file name of the current file.
+	 * @param fileForImport The full path name of the current file.
+	 * @param f An abstract representation of the current file.
+	 * @param suffix The suffix of the current file
+	 * @param session The current Hibernate persistence context.
+	 * @return Whether the import was successful.
 	 */
 	
 	private boolean processNewsItem(EventsDao currentEvent, String currentFile, String fileForImport, File f, String suffix, Session session) {
@@ -370,8 +375,8 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @param currentFile The file name of the import file being processed.
 	 * @param fileForImport The full path name of the import file being processed.
 	 * @param moveFile Whether the import completed successfully.
-	 * @param session
-	 * @return
+	 * @param session The current Hibernate persistence context.
+	 * @return Whether the operation was successful.
 	 */
 	
 	private boolean doImport(EventsDao currentEvent, String currentFile, String fileForImport, boolean moveFile, Session session) {

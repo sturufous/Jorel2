@@ -158,6 +158,7 @@ public class NewsItemImagesDao implements java.io.Serializable {
 	 * Get the NEWS_ITEM_IMAGES record(s) matching the fileName.
 	 *
 	 * @param fileName The fileName to match.
+	 * @param avPath The path to the web directory for the image.
 	 * @param session The current Hibernate persistence context
 	 * @return The record(s) matching fileName
 	 */
@@ -195,7 +196,7 @@ public class NewsItemImagesDao implements java.io.Serializable {
 	/**
 	 * 
 	 * @param fmsFile The name of the import file (fms or cor)
-	 * @param sessionThe current Hibernate persistence context
+	 * @param session The current Hibernate persistence context
 	 */
 	
 	public static void updateProcessedByImportFile(String fmsFile, Session session) {

@@ -312,7 +312,8 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	/**
 	 * Returns all Jorel entries in the EVENTS table that have a LAST_FTP_RUN value prior to the current date.
 	 * 
-	 * @param session - The currently active Hibernate DB session
+	 * @param instance The name of the currently executing Jorel2 instance.
+	 * @param session - The currently active Hibernate DB session.
 	 * @return List of EventsDao objects that match the Events_FindEventsForProcessing named query.
 	 */
 	public static List<EventsDao> getEventsForProcessing(String instance, Session session) {
@@ -375,7 +376,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	/**
 	 * Retrieves the EventsDao object corresponding to the key stored in the rsn parameter.
 	 *  
-	 * @param rsn2 The key of the record to read.
+	 * @param rsn The key of the record to read.
 	 * @param session The current Hibernate persistence context
 	 * @return The EventsDao object corresponding to the key stored in the rsn parameter.
 	 */

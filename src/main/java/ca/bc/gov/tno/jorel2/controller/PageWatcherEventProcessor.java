@@ -140,7 +140,9 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	 * Sets the lastModified, resultCode, pageContent and dateModified for this watcher record. Also notifies the watcher's recipient
 	 * list, by email, that a change has occurred and writes a log message. 
 	 * 
-	 * @param watcher The watcher record being processed
+	 * @param watcher The watcher record being processed.
+	 * @param changes The changes that occurred on this watched page.
+	 * @param pageContent2 The contents of the updated page.
 	 * @return The updated watcher
 	 */
 	private PagewatchersDao getChangedWatcher (PagewatchersDao watcher, String changes, String pageContent2) {
@@ -217,7 +219,7 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	 * 
 	 * @param watcher The pagewatcher record being processed
 	 * @param changes The differences between the current page and the one saved on the previous run
-	 * @return
+	 * @return The email message.
 	 */
 	private String formatEmailMessage(PagewatchersDao watcher, String changes) {
 		

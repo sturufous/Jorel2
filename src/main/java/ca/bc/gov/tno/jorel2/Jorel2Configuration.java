@@ -50,7 +50,7 @@ public class Jorel2Configuration extends Jorel2Root {
 	 * Create the scheduler object that maintains control over the lifecycle of Jorel2Runnable objects. This scheduler provides
 	 * the entry point for all Jorel2 execution cycles. There is no explicit method call from anywhere else in the package.
 	 * 
-	 * @return 
+	 * @return The FifoThreadQueueScheduler singleton that maintains control over thread creation and scheduling.
 	 */
     @Bean("jorel2Scheduler")
     @Scope("singleton")
@@ -73,8 +73,9 @@ public class Jorel2Configuration extends Jorel2Root {
     }
     
     /**
+     * Creates a JaxbUnmrshallerFactory object containing unmarshallers for all supported XML import formats (e.g. Nitf, Rss)
      * 
-     * @return
+     * @return The JaxbUnmarshallerFactory created.
      */
     @Bean("jaxbUnmarshallers")
     @Scope("singleton")

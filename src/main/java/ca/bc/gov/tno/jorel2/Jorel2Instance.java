@@ -110,8 +110,11 @@ public class Jorel2Instance extends Jorel2Root {
 	}
 	
 	/**
-	 * Allows the <code>instanceName<code> JMX attribute to be set remotely.
+	 * Allows the <code>instanceName</code> JMX attribute to be set remotely.
+	 * 
+	 * @param instanceName The name of the currenly executing Jorel2 instance.
 	 */
+	
 	@ManagedOperation(description="Set the instance name")
 	  @ManagedOperationParameters({
 	    @ManagedOperationParameter(name = "instanceName", description = "The name of the currently executing instance."),
@@ -128,6 +131,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * @param threadName Name of the currently executing thread used as key the the threadDurations map.
 	 * @param duration Number of seconds it took for this thread to complete event processing.
 	 */
+	
 	public void addThreadDuration(String threadName, long duration) {
 		
 		threadDurations.put(threadName, Long.valueOf(duration));
@@ -140,6 +144,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * @param source The source of the RSS articles added.
 	 * @param count The number of articles added my the thread that just completed.
 	 */
+	
 	public void incrementArticleCount(String source, int count) {
 		
 		if (articleCounts.containsKey(source)) {
@@ -156,6 +161,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The number of seconds.
 	 */
+	
 	@ManagedAttribute(description="Maximum thread duration since startup", currencyTimeLimit=15)
 	public Long getThreadMaxDurationSeconds() {
 		
@@ -168,6 +174,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The number of seconds.
 	 */
+	
 	@ManagedAttribute(description="Minimum thread duration since startup", currencyTimeLimit=15)
 	public Long getThreadMinDurationSeconds() {
 		
@@ -180,6 +187,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The number of seconds.
 	 */
+	
 	@ManagedAttribute(description="Mean thread duration since startup", currencyTimeLimit=15)
 	public Double getThreadMeanDurationSeconds() {
 		
@@ -192,6 +200,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The number of threads that have run.
 	 */
+	
 	@ManagedAttribute(description="Number of thread runs included in stats", currencyTimeLimit=15)
 	public int getThreadCompleteCount() {
 		
@@ -204,6 +213,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The list of sources from which articles have been added, and their respective counts.
 	 */
+	
 	@ManagedAttribute(description="Number of articles added by source", currencyTimeLimit=15)
 	public Map<String, Integer> getArticleCounts() {
 		
@@ -215,6 +225,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The startTime attribute for this instance.
 	 */
+	
 	@ManagedAttribute(description="Start time of this instance", currencyTimeLimit=15)
 	public String getStartTime() {
 		
@@ -229,6 +240,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The startTime attribute for this instance.
 	 */
+	
 	@ManagedAttribute(description="Length of last run duration in seconds", currencyTimeLimit=15)
 	public long getLastDuration() {
 		
@@ -241,6 +253,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The length of time this instance has been running.
 	 */
+	
 	@ManagedAttribute(description="Run time of this instance", currencyTimeLimit=15)
 	public String getInstanceRunTime() {
 		
@@ -258,6 +271,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The number of seconds.
 	 */
+	
 	@ManagedAttribute(description="Max thread run time of this instance", currencyTimeLimit=15)
 	public int getMaxThreadRuntime() {
 		
@@ -265,8 +279,11 @@ public class Jorel2Instance extends Jorel2Root {
 	}	
 	
 	/**
-	 * Allows the <code>maxThreadRuntime<code> JMX attribute to be set remotely.
+	 * Allows the <code>maxThreadRuntime</code> JMX attribute to be set remotely.
+	 * 
+	 * @param maxThreadRuntime The maximum time, in seconds, before Jorel2 will timeout and exit.
 	 */
+	
 	@ManagedOperation(description="Set the thread timeout value")
 	  @ManagedOperationParameters({
 	    @ManagedOperationParameter(name = "maxThreadRuntime", description = "How long a thread can run before the VM exits."),
@@ -275,6 +292,14 @@ public class Jorel2Instance extends Jorel2Root {
 		
 		this.maxThreadRuntime = maxThreadRuntime;
 	}
+	
+	/**
+	 * Adds a Quote Extractor word count entry. This allows a monitoring entity to see how many entries there are for the types
+	 * Noise, Verb, Title and Noisename.
+	 * 
+	 * @param type a string representation of the type of word (e.g. Noise, Verb)
+	 * @param count The number of entries for this type of word in the quote extractor.
+	 */
 	
 	public void addWordCountEntry(String type, int count) {
 		
@@ -287,6 +312,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The list of sources from which articles have been added, and their respective counts.
 	 */
+	
 	@ManagedAttribute(description="Number of quote extractor words by type", currencyTimeLimit=15)
 	public Map<String, Integer> getWordCounts() {
 		
@@ -298,6 +324,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The eMail from address.
 	 */
+	
 	@ManagedAttribute(description="From address for use when sending Jorel2 emails", currencyTimeLimit=15)
 	public String getMailFromAddress() {
 		
@@ -309,6 +336,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The eMail host address.
 	 */
+	
 	@ManagedAttribute(description="Host address for use when sending Jorel2 emails", currencyTimeLimit=15)
 	public String getMailHostAddress() {
 		
@@ -320,6 +348,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The eMail port number.
 	 */
+	
 	@ManagedAttribute(description="Number of quote extractor words by type", currencyTimeLimit=15)
 	public String getMailPortNumber() {
 		
@@ -331,6 +360,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The list of database interruptions.
 	 */
+	
 	@ManagedAttribute(description="Records times when database interruptions took place", currencyTimeLimit=15)
 	public ConcurrentHashMap<String, String> getDatabaseInterruptions() {
 		
@@ -340,7 +370,7 @@ public class Jorel2Instance extends Jorel2Root {
 	/**
 	 * Adds an entry to the databaseInterruptions Map to record the interruption.
 	 * 
-	 * @param threadName
+	 * @param threadName The name of the current thread.
 	 */
 	
 	public void addDatabaseInterruption(String threadName) {
@@ -353,6 +383,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The eMail port number.
 	 */
+	
 	@ManagedAttribute(description="Connection status - ONLINE or OFFLINE", currencyTimeLimit=15)
 	public String getConnectionStatusStr() {
 		
@@ -364,6 +395,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The eMail port number.
 	 */
+	
 	public ConnectionStatus getConnectionStatus() {
 		
 		return connectionStatus;
@@ -448,6 +480,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The preferences object.
 	 */
+	
 	public PreferencesDao getPreferences() {
 		
 		return preferences;

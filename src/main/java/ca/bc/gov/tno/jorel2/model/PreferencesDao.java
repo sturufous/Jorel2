@@ -520,7 +520,7 @@ public class PreferencesDao implements java.io.Serializable {
 	/**
 	 * Retrieves the EventsDao object corresponding to the key stored in the rsn parameter.
 	 *  
-	 * @param rsn2 The key of the record to read.
+	 * @param rsn The key of the record to read.
 	 * @param session The current Hibernate persistence context
 	 * @return The EventsDao object corresponding to the key stored in the rsn parameter.
 	 */

@@ -165,7 +165,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * Manages the distribution and registration of a front page images for the van24. Partially implemented and untested. This functionality 
 	 * is not currently needed as the Van24 is no longer available.
      *
-	 * @param zipFileName Name of zip file to process.
+	 * @param pdfFileName Name of zip file to process.
 	 * @param fullFileName Full path name of the zip file.
 	 * @param session Current Hibernate persistence context.
 	 * @return Whether process is successful.
@@ -336,7 +336,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * @param fileName The name of the destination file (minus any path information).
 	 * @param tempPath The <code>File</code> object representing the file to copy to the destination.
 	 * @param binaryDir The YYYY/MM/DD formatted directory name into which the file should be copied.
-	 * @return
+	 * @return Whether the operation was successful.
 	 */
 	
 	private boolean copyFileToTargetDir(String fileName, File tempPath, String binaryDir) {
@@ -544,9 +544,10 @@ class FrontPageImageHandler extends Jorel2Root {
 	/**
 	 * Copies the contents of sourceFile to destinationFile.
 	 * 
-	 * @param sourcefile The file to read from.
-	 * @param destinationfile the file to write to.
-	 * @throws IOException
+	 * @param sourceFile The file to read from.
+	 * @param destinationFile the file to write to.
+	 * @throws IOException On error copying the file.
+	 * @return Whether the operation was successful.
 	 */
 	
 	private boolean copyFile(File sourceFile, File destinationFile) throws IOException {	
@@ -617,10 +618,11 @@ class FrontPageImageHandler extends Jorel2Root {
 	}
 	
 	/**
+	 * Unzips the file connected to the ZipImputStream to the temporary directory pointed to by tempPath.
 	 * 
 	 * @param zin The ZipInputStream from which to read the contents of the current zipped file.
-	 * @param The full path name of the file to which the contents of <code>zin</code> should be written to. 
-	 * @throws IOException
+	 * @param tempPath The full path name of the file to which the contents of <code>zin</code> should be written to. 
+	 * @throws IOException On error reading from the zip file or writing to the temp directory.
 	 */
 	
 	private static void unzip(ZipInputStream zin, String tempPath) throws IOException {
@@ -635,13 +637,13 @@ class FrontPageImageHandler extends Jorel2Root {
 	}
 	
 	/**
-	 * Partially implemented and untested. This functionality not currently needed.
+	 * Partially implemented and untested. This functionality not currently needed as Van24 is no longer in use.
 	 * 
-	 * @param binaryDir
-	 * @param fullFileName
-	 * @param jpgFileName
-	 * @param c
-	 * @return
+	 * @param binaryDir Not used
+	 * @param fullFileName Not used
+	 * @param jpgFileName Not used
+	 * @param c Not used
+	 * @return Not used
 	 */
 	private boolean movePdfImageTo(String binaryDir, String fullFileName, String jpgFileName, File c) {
 		
@@ -670,9 +672,9 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * 
 	 * @param pdfFileName The full path name of the pdf file to process.
 	 * @param jpgFileName The full path name of the jpg file to create.
-	 * @throws IOException 
+	 * @param fileObj An abstract representation of the file to be converted.
 	 */
-	private void pdfToJpg(String pdfFileName, String jpgFileName, File fileObj) throws IOException {
+	private void pdfToJpg(String pdfFileName, String jpgFileName, File fileObj) {
 		
 		//PDDocument document = PDDocument.load(fileObj);
 		

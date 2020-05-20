@@ -130,7 +130,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	
 	/**
 	 * Executes shell command events when the connection to the database is down. The commands are read from files in the <code>offline</code>
-	 * directory which have the following naming convention: <code>shellcmd_<event-name>.txt</code>. These files are created when 
+	 * directory which have the following naming convention: <code>shellcmd_[event-name].txt</code>. These files are created when 
 	 * <code>shellCommandEventOnline()</code> is executed. 
 	 */
 	public void shellCommandEventOffline() {

@@ -119,10 +119,10 @@ public class SourcePaperImagesDao implements java.io.Serializable {
 	}
 	
 	/**
-	 * Deletes old versions of 
+	 * Deletes old versions of source paper images.
 	 * 
 	 * @param rsn The source rsn for this import.
-	 * @param date The date the paper containing this image was published.
+	 * @param localDate The date the paper containing this image was published.
 	 * @param session - The currently active Hibernate DB session
 	 */
 	
