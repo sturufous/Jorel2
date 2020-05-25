@@ -43,10 +43,12 @@ public class Jorel2Root {
     protected static final String INDENT0 = "";
     protected static final String INDENT1 = "    ";
     protected static final String INDENT2 = "        ";
-    protected static final int CONNECTION_TIMEOUT = 3000;
+    protected static final int DB_CONNECTION_TIMEOUT = 3000;
     protected static final String INFOMART_ID_STRING = "infomart";
     protected static final String GANDM_ID_STRING = "Globe and Mail";
     protected static final String VAN24_ID_STRING = "Vancouver 24 hrs";
+    protected static final int URL_READ_TIMEOUT = 10000;
+    protected static final int URL_CONNECTION_TIMEOUT = 10000;
     
 	public enum EventType {
 		
@@ -75,13 +77,13 @@ public class Jorel2Root {
 		
 	}
 	
-	protected void decoratedError(String indent, String message, Exception e) {
+	protected static void decoratedError(String indent, String message, Exception e) {
 		
 		String decoratedMsg = StringUtil.getLogMarker(indent) + message;
 		logger.error(decoratedMsg, e);
 	}
 	
-	protected void decoratedTrace(String indent, String message) {
+	protected static void decoratedTrace(String indent, String message) {
 		
 		String decoratedMsg = StringUtil.getLogMarker(indent) + message + StringUtil.getThreadNumber();
 		logger.trace(decoratedMsg);

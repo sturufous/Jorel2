@@ -80,7 +80,7 @@ public abstract class DataSourceConfig extends Jorel2Root {
         settings.put(Environment.USER, userId);
         settings.put(Environment.PASS, userPw);
         settings.put(Environment.DIALECT, dialect);
-        settings.put("checkoutTimeout", CONNECTION_TIMEOUT);
+        settings.put("checkoutTimeout", DB_CONNECTION_TIMEOUT);
         //settings.put(Environment.SHOW_SQL, "true");
         
         return settings;

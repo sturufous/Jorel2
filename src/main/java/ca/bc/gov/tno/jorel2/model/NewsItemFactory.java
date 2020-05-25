@@ -3,6 +3,8 @@ package ca.bc.gov.tno.jorel2.model;
 import java.math.BigDecimal;
 import java.util.Date;
 import com.sun.syndication.feed.synd.SyndEntry;
+
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Nitf;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
@@ -179,15 +181,16 @@ public class NewsItemFactory extends Jorel2Root {
 	 * 
 	 * @param item The news item to process.
 	 * @param source The source of the news item (e.g. CP News)
+	 * @param instance Used to track timeout events when retrieving a news item.
 	 * @return A NewsItemsDao object instantiated with the data contained in <code>item</code>
 	 */
-	public static NewsItemsDao createCPNewsItem(SyndEntry item, String source) {
+	public static NewsItemsDao createCPNewsItem(SyndEntry item, String source, Jorel2Instance instance) {
 		
 		String content;
 		NewsItemsDao newsItem = createNewsItemTemplate();
 		
 		try {
-			content = UrlUtil.retrieveCPNewsItem(item, source);
+			content = UrlUtil.retrieveCPNewsItem(item, source, instance);
 			if (content != null) {
 			
 				// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.

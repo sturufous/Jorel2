@@ -1,7 +1,12 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -88,15 +93,13 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    		} else {
 		    			try {
 			    			sourcesBeingProcessed.put(currentSource, "");
-			    			Unmarshaller unmarshaller = unmarshallerFactory.getRssUnmarshaller();
+			    			rssContent = getRssContent(currentEvent.getTitle());
 			    			
-			    			// The JAXB unmarshaller is not thread safe, so synchronize unmarshalling
-			    			synchronized(unmarshaller) {
-			    				rssContent = (Rss) unmarshaller.unmarshal(new URL(currentEvent.getTitle()));
-			    				unmarshaller.notify();
+			    			if(rssContent != null) {
+					    		newRssItems = getNewRssItems(currentSource, rssContent, session);
+					    		insertNewsItems(currentSource, newRssItems, rssContent, session);
 			    			}
-				    		newRssItems = getNewRssItems(currentSource, session, rssContent);
-				    		insertNewsItems(currentSource, newRssItems, session, rssContent);
+			    			
 				    		sourcesBeingProcessed.remove(currentSource);
 		    			}
 		    			catch (Exception e) {
@@ -121,11 +124,11 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	 * Filters out Rss.Channel.Items objects that correspond with existing entries in the NEWS_ITEMS table. This prevents the creation of duplicate records. 
 	 * 
 	 * @param source The name of the publisher of this rss feed (e.g. iPolitics, Daily Hive)
-	 * @param session The active Hibernate persistence context
 	 * @param rss The feed retrieved from the publisher
+	 * @param session The active Hibernate persistence context
 	 * @return News items that are not currently in the NEWS_ITEMS table
 	 */
-	private List<Rss.Channel.Item> getNewRssItems(String source, Session session, Rss rss) {
+	private List<Rss.Channel.Item> getNewRssItems(String source, Rss rss, Session session) {
 		
 		List<Rss.Channel.Item> newRssItems = new ArrayList<>();
 		List<NewsItemsDao> existingItems = NewsItemsDao.getItemsAddedSinceYesterday(source, session);
@@ -163,7 +166,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @param rss The entire rss feed retrieved from the publisher
 	 */
 	@SuppressWarnings("preview")
-	private void insertNewsItems(String source, List<Rss.Channel.Item> newsItems, Session session, Rss rss) {
+	private void insertNewsItems(String source, List<Rss.Channel.Item> newsItems, Rss rss, Session session) {
 		
 		NewsItemsDao newsItem = null;
 		int articleCount = 0;
@@ -191,6 +194,39 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 			instance.incrementArticleCount(source, articleCount);
 			decoratedTrace(INDENT1, "Added: " + articleCount + " article(s) from " + source);
 		}
+	}
+	
+	/**
+	 * Returns a JAXB Rss object containing all rss items at the url <code>address</code> or null if an error occurs.
+	 * 
+	 * @param address The web address of the RSS source.
+	 * @return All articles at the url indicated in the <code>address</code> parameter.
+	 */
+	
+	private Rss getRssContent(String address) {
+		
+		Rss rssContent = null;
+		Unmarshaller unmarshaller = unmarshallerFactory.getRssUnmarshaller();
+		
+		try {
+			// The JAXB unmarshaller is not thread safe, so synchronize unmarshalling
+			synchronized(unmarshaller) {
+				URL url = new URL(address);
+				URLConnection connection = url.openConnection();
+				connection.setConnectTimeout(URL_CONNECTION_TIMEOUT);
+				connection.setReadTimeout(URL_READ_TIMEOUT);
+				InputStream inputStream = connection.getInputStream();
+				rssContent = (Rss) unmarshaller.unmarshal(inputStream);
+				unmarshaller.notify();
+			}
+		} catch (SocketTimeoutException se) {
+			instance.addHttpFailure("Timeout at: " + address);
+			decoratedError(INDENT2, "Timeout at: " + address, se);
+		} catch (Exception me) {
+			decoratedError(INDENT1, "Retrieving RSS content from " + address, me);
+		}
+		
+		return rssContent;
 	}
 	
 	/**

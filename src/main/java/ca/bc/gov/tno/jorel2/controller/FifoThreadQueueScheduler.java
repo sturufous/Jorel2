@@ -48,10 +48,10 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     private Jorel2Instance instance;
     
 	/** Queue that lets Jorel2 push threads in one end and pull them out the other. If there are none the scheduler blocks. */
-	ArrayBlockingQueue<Thread> threadQueue = null;
+	private ArrayBlockingQueue<Thread> threadQueue = null;
 	
 	/** Used to cycle through the thread names Jorel2Thread-0, -1 and -2. A maximum of three threads can run concurrently. */
-	int threadCounter = 3;
+	private volatile int threadCounter = 3;
 	
 	/**
 	 * Adds the initial three threads and their associated runnable objects to the <code>threadQueue</code>. This is done <code>PostConstruct</code>

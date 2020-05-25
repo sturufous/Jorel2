@@ -13,7 +13,6 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * This package will follow these conventions:
  * <ul>
  * <li>There will be no conditional logic in constructors, therefore they will not be unit tested.
- * <li>Hibernate exceptions inherit from RuntimeException, are unchecked, and will not be tried.
  * <li>All Hibernate named queries are defined in Jore2Root
  * </ul>
  * 

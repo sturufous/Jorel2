@@ -43,6 +43,9 @@ public class Jorel2Instance extends Jorel2Root {
 	/** Keeps track of date and time of database connection interruptions, i.e., entering offline mode */
 	private ConcurrentHashMap<String, String> databaseInterruptions = new ConcurrentHashMap<>();
 	
+	/** Keeps track of date and time of https failures, i.e., no data returned, timeout */
+	private ConcurrentHashMap<String, String> httpFailures = new ConcurrentHashMap<>();
+	
 	/** Central location for event types that are not thread safe. Ensures mutual exclusion. */
 	private Map<EventType, String> activeEvents = new ConcurrentHashMap<>();
 	
@@ -369,7 +372,30 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	public void addDatabaseInterruption(String threadName) {
 		
-		databaseInterruptions.put(threadName, LocalDateTime.now().toString());
+		databaseInterruptions.put(LocalDateTime.now().toString(), threadName);
+	}
+	
+	/**
+	 * Exposes the list of http failures that took place during this run cycle.
+	 * 
+	 * @return The list of database interruptions.
+	 */
+	
+	@ManagedAttribute(description="Records times when httpFailures took place, and the url being accessed", currencyTimeLimit=15)
+	public ConcurrentHashMap<String, String> getHttpFailures() {
+		
+		return httpFailures;
+	}
+	
+	/**
+	 * Adds an entry to the httpFailures Map to record the error condition.
+	 * 
+	 * @param url The url that caused the failure.
+	 */
+	
+	public void addHttpFailure(String url) {
+		
+		httpFailures.put(LocalDateTime.now().toString(), url);
 	}
 	
 	/**

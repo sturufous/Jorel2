@@ -4,8 +4,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
+
+import javax.inject.Inject;
+
 import com.sun.syndication.feed.synd.SyndEntry;
+
+import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -22,17 +28,18 @@ public class UrlUtil extends Jorel2Root {
 	 * a line at a time, and builds the article text for display in Otis.
 	 * 
 	 * @param item The current news item.
-	 * @param source The source of the current news feed (e.g. 'CP News')
+	 * @param source The source of the current news feed (e.g. 'CP News').
+	 * @param instance Used to track timeouts when retrieving page content.
 	 * @return The complete article text retrieved from the item's link.
 	 */
-	public static String retrieveCPNewsItem(SyndEntry item, String source) {
+	public static String retrieveCPNewsItem(SyndEntry item, String source, Jorel2Instance instance) {
 		
 		String currentUrl = item.getLink();
 		String articlePage = new String("");
 		String articleTitle = new String("");
 		String content = new String("");
 		
-		articlePage = retrievePageContent(currentUrl);
+		articlePage = retrievePageContent(currentUrl, instance);
 
 		if (articlePage != null && articlePage.length() > 0) {
 			content = StringUtil.getArticle(articlePage);
@@ -50,7 +57,7 @@ public class UrlUtil extends Jorel2Root {
 	 * @param url The url from which content should be retrieved.
 	 * @return The page content.
 	 */
-	public static String retrievePageContent(String url) {
+	public static String retrievePageContent(String url, Jorel2Instance instance) {
 		
 		String inputLine;
 		String articlePage = new String("");
@@ -59,6 +66,8 @@ public class UrlUtil extends Jorel2Root {
 		try {
 			HttpURLConnection urlConnection = (HttpURLConnection) new URL(url).openConnection();
 			urlConnection.setUseCaches(false);
+			urlConnection.setConnectTimeout(URL_CONNECTION_TIMEOUT);
+			urlConnection.setReadTimeout(URL_READ_TIMEOUT);
 			urlConnection.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
 			BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 			
@@ -68,7 +77,10 @@ public class UrlUtil extends Jorel2Root {
 			
 			in.close();
 			urlConnection.disconnect();
-		} catch (IOException e) {
+		} catch (SocketTimeoutException te) {
+			instance.addHttpFailure("Timeout at: " + url);			
+			decoratedError(INDENT2, "Timeout at: " + url, te);
+		} catch (Exception e) {
 			logger.error("Error retrieving page at: {}", url, e);
 			articlePage = null;
 		}

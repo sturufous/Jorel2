@@ -94,7 +94,7 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	        for (PagewatchersDao watcher : results) {
 				Clob clobContent = watcher.getPageContent();
 				String pageContent = (clobContent != null) ? StringUtil.clobToString(clobContent) : "";
-				String pageContent2 = UrlUtil.retrievePageContent(watcher.getUrl());
+				String pageContent2 = UrlUtil.retrievePageContent(watcher.getUrl(), instance);
 				
 				if (pageContent2 != null) {
 					pageContent2 = StringUtil.fix(pageContent2, watcher.getStartString(), watcher.getEndString());
