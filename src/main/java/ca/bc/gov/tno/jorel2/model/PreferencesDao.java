@@ -533,6 +533,4 @@ public class PreferencesDao implements java.io.Serializable {
         
 		return results;
 	}
-		
-
 }

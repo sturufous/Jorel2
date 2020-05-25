@@ -85,7 +85,7 @@ public class DateUtil extends Jorel2Root {
 	}
 	
 	/**
-	 * Formats a date for use in comparisons (or instantiations) of dates in standard TNO format.
+	 * Formats a date for use in comparisons (or instantiations) of dates in LAST_FTP_RUN format.
 	 * 
 	 * @return The current date in "Feb 5 2020" format.
 	 */

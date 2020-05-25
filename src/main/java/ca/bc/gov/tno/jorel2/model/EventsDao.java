@@ -370,6 +370,23 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	}
 	
 	/**
+	 * Returns the list of newspaper import jobs that are currently running, regardless of which Jorel instance initiated the import.
+	 * 
+	 * @param session - The currently active Hibernate DB session
+	 * @return List of monitor objects with a lastFtpRun that matches today.
+	 */
+	public static List<Object[]> getMonitorEventsRunningNow(Session session) {
+
+		@SuppressWarnings("unchecked")
+		Query<Object[]> query = session.createNamedQuery("Events_FindMonitorEventsByDate");
+		query.setParameter("eventType", "Monitor");
+		query.setParameter("runDate", DateUtil.getDateNow());
+        List<Object[]> results = query.getResultList();
+        
+        return results;
+	}
+	
+	/**
 	 * Retrieves the EventsDao object corresponding to the key stored in the rsn parameter.
 	 *  
 	 * @param rsn The key of the record to read.

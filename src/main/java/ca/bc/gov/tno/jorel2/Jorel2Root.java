@@ -17,6 +17,8 @@ import org.hibernate.annotations.NamedQueries;
 	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype"),
 	@NamedQuery(name = "Events_FindElligibleEventsByEventType", 
 	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype and e.lastFtpRun <> :runDate"),
+	@NamedQuery(name = "Events_FindMonitorEventsByDate", 
+	query = "from EventsDao e inner join e.eventType as et where et.eventType=:eventType and e.lastFtpRun = :runDate"),
 	@NamedQuery(name = "Events_GetEventByRsn", 
 	query = "from EventsDao e where e.rsn = :rsn"),
 	@NamedQuery(name = "Quotes_FindWordsByType", 
