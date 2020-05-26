@@ -12,10 +12,11 @@ import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
 
 /**
- * Manages the re-indexing of the NEWS_ITEMS table. Reindexing occurs when an event adds content to the NEWS_ITEMS table and then
- * requests that this sync event processor call the DOSYNCINDEX stored procedure by adding a record to the SYNC_INDEX table. Simply put,
- * this processor ensures that no other event handler is currently importing data into NEWS_ITEMS, if so, it checks SYNC_INDEX for
- * records. If records exist it calls DOSYNCINDEX.
+ * Manages the re-indexing of the NEWS_ITEMS table. Re-indexing occurs when an event adds content to the NEWS_ITEMS table and then
+ * requests that this sync event processor call the DOSYNCINDEX stored procedure. This is achieved by adding a record to the SYNC_INDEX 
+ * table. Simply put, this processor ensures that no other event handler is currently importing data into NEWS_ITEMS, if no import is in
+ * progress, it checks 
+ * SYNC_INDEX for records. If records exist it calls DOSYNCINDEX.
  * 
  * Records are added to SYNC_INDEX by the Monitor event and the REINDEX_CONTENT stored procedure. REINDEX_CONTENT is called in response
  * to a PL/SQL event with a FILE_NAME value of REINDEX_CONTENT. There are currently 105 events of this type which run at the designated
@@ -64,7 +65,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 		        		List<SyncIndexDao> syncIndex = SyncIndexDao.getSyncIndexRecords(session);
 		        		
 		        		if (syncIndex.size() > 0) {
-			        		// Check for any other Jorel2 that is doing a paper import right now
+			        		// Check for any other Jorel2 that is doing a paper import right now.
 		        			List<Object[]> imports = EventsDao.getMonitorEventsRunningNow(session);
 		        			
 		        			if (imports.size() == 0) {
@@ -92,7 +93,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 	 * Re-index the NEWS_ITEMS table using a Hibernate StoredProcedureQuery for the procedure DOSYNCINDEX.
 	 * 
 	 * @param session The current Hibernate presistence context.
-	 * @return true if the connection referenced by <code>session</code> is an active connection.
+	 * @return the result of the query.execute() call.
 	 */
 	
 	private boolean reIndexNewsItems(Session session) {

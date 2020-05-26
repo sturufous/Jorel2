@@ -370,9 +370,11 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns the list of newspaper import jobs that are currently running, regardless of which Jorel instance initiated the import.
+	 * Returns the list of newspaper import jobs that are currently running, regardless of which Jorel instance initiated the import. The default value
+	 * for lastFtpRun for monitor events is "idle". The only time this field contains a date is during newspaper import processing, in which case the date
+	 * is today's date (in MMM d yyyy format). Matching on this date, as performed below, finds all active imports.
 	 * 
-	 * @param session - The currently active Hibernate DB session
+	 * @param session - The currently active Hibernate persistence context.
 	 * @return List of monitor objects with a lastFtpRun that matches today.
 	 */
 	public static List<Object[]> getMonitorEventsRunningNow(Session session) {

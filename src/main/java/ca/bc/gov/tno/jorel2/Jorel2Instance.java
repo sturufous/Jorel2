@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -16,10 +17,14 @@ import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jmx.export.annotation.ManagedResource;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedOperationParameter;
 import org.springframework.jmx.export.annotation.ManagedOperationParameters;
 import org.springframework.jmx.export.annotation.ManagedAttribute;
+
+import static java.util.stream.Collectors.*;
+import static java.util.Map.Entry.*;
 
 /**
  * Indicates the process we're running on (e.g. "jorel", "jorelMini3")
@@ -372,7 +377,7 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	public void addDatabaseInterruption(String threadName) {
 		
-		databaseInterruptions.put(LocalDateTime.now().toString(), threadName);
+		databaseInterruptions.put(DateUtil.getTimeNow(), threadName);
 	}
 	
 	/**
@@ -381,10 +386,26 @@ public class Jorel2Instance extends Jorel2Root {
 	 * @return The list of database interruptions.
 	 */
 	
+	@SuppressWarnings("unchecked")
 	@ManagedAttribute(description="Records times when httpFailures took place, and the url being accessed", currencyTimeLimit=15)
-	public ConcurrentHashMap<String, String> getHttpFailures() {
+	public LinkedHashMap<String, String> getHttpFailures() {
 		
-		return httpFailures;
+		Map<String, String> sorted = httpFailures.entrySet().stream().sorted(comparingByValue())
+				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+		
+		return (LinkedHashMap<String, String>) sorted;
+	}
+	
+	/**
+	 * Exposes the online status as a JMX attribute.
+	 * 
+	 * @return The eMail port number.
+	 */
+	
+	@ManagedAttribute(description="The number of HTTP failures that occurred since this Jorel2 process started.", currencyTimeLimit=15)
+	public int getHttpFailureCount() {
+		
+		return httpFailures.size();
 	}
 	
 	/**
@@ -395,7 +416,7 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	public void addHttpFailure(String url) {
 		
-		httpFailures.put(LocalDateTime.now().toString(), url);
+		httpFailures.put(DateUtil.getTimeNow(), url);
 	}
 	
 	/**
