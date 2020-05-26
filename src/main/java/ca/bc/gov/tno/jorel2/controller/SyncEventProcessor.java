@@ -1,23 +1,30 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
-
-import org.hibernate.HibernateException;
+import javax.persistence.StoredProcedureQuery;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
-import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
 
 /**
- * Manages the re-indexing of the NEWS_ITEMS table.
+ * Manages the re-indexing of the NEWS_ITEMS table. Reindexing occurs when an event adds content to the NEWS_ITEMS table and then
+ * requests that this sync event processor call the DOSYNCINDEX stored procedure by adding a record to the SYNC_INDEX table. Simply put,
+ * this processor ensures that no other event handler is currently importing data into NEWS_ITEMS, if so, it checks SYNC_INDEX for
+ * records. If records exist it calls DOSYNCINDEX.
+ * 
+ * Records are added to SYNC_INDEX by the Monitor event and the REINDEX_CONTENT stored procedure. REINDEX_CONTENT is called in response
+ * to a PL/SQL event with a FILE_NAME value of REINDEX_CONTENT. There are currently 105 events of this type which run at the designated
+ * START_TIME. This means a record is added to SYNC_INDEX roughly four times per hour, ensuring that the index is updated on a regular
+ * basis. The REINDEX_CONTENT process handles the re-indexing of news items added by RSS events. The Monitor task requests that the indexes 
+ * be updated immediately after each newspaper import. The last step performed by DOSYNCINDEX is to delete all records in SYNC_INDEX.
+ * 
+ * The Sync event (if present in the EVENTS table and associated with the current Jorel2 instance) will be run every time Jorel2 runs.
+ * This ensures that if a request has been made to re-index NEWS_ITEMS it is initiated within thirty seconds.
  * 
  * @author Stuart Morse
  * @version 0.0.1
@@ -70,14 +77,6 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 						instance.removeExclusiveEvent(EventType.SYNC);
 	        		}
 	        	}
-	        		
-        		/*
-        		// Sync away
-        		setSyncFlag(true);
-        		SyncThread st = new SyncThread(frame,this);
-        		st.start();
-        		activityCounter++;
-        		return; */
 	        }
 	        
 			decoratedTrace(INDENT1, "Completing sync event processing");
@@ -90,7 +89,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 	}
 	
 	/**
-	 * Re-index the NEWS_ITEMS table.
+	 * Re-index the NEWS_ITEMS table using a Hibernate StoredProcedureQuery for the procedure DOSYNCINDEX.
 	 * 
 	 * @param session The current Hibernate presistence context.
 	 * @return true if the connection referenced by <code>session</code> is an active connection.
@@ -99,19 +98,10 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 	private boolean reIndexNewsItems(Session session) {
 		
 		boolean result = false;
-		final String query = "select * from dual";
 		
-		try {
-			session.doWork(connection -> {
-				PreparedStatement stmt = connection.prepareStatement(query);
-				ResultSet rs = stmt.executeQuery(query);
-			});
-			result = true;
-		}
-		catch (HibernateException e) {
-			result = false;
-		}
-		
+		StoredProcedureQuery query = session.createStoredProcedureQuery("DOSYNCINDEX");
+		result = query.execute();
+				
 		return result;
 	}
 }
