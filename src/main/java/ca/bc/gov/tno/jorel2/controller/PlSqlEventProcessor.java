@@ -55,7 +55,7 @@ public class PlSqlEventProcessor extends Jorel2Root implements EventProcessor {
 	public Optional<String> processEvents(String eventType, Session session) {
     	
     	try {
-    		decoratedTrace(INDENT1, "Starting CleanBinaryRoot event processing");
+    		decoratedTrace(INDENT1, "Starting PL/SQL event processing");
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        
@@ -71,10 +71,10 @@ public class PlSqlEventProcessor extends Jorel2Root implements EventProcessor {
 	        }
     	} 
     	catch (Exception e) {
-    		logger.error("Processing CleanBinaryRoot entries.", e);
+    		logger.error("Processing PL/SQL entries.", e);
     	}
     	
-		decoratedTrace(INDENT1, "Completed CleanBinaryRoot event processing");
+		decoratedTrace(INDENT1, "Completed PL/SQL event processing");
     	
     	return Optional.of("complete");
 	}
@@ -111,6 +111,7 @@ public class PlSqlEventProcessor extends Jorel2Root implements EventProcessor {
 			    		session.getTransaction().commit();
 			    		
 						executeStoredProcedure(currentEvent.getFileName(), session);
+						decoratedTrace(INDENT2, "PL/SQL: Executed " + currentEvent.getFileName() + " for event " + currentEvent.getName());
 					}
 				} else {
 					IllegalArgumentException e = new IllegalArgumentException("Processing cleanBinaryRoot event.");

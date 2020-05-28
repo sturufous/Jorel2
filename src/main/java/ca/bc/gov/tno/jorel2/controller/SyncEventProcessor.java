@@ -49,7 +49,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 	public Optional<String> processEvents(String eventType, Session session) {
     	
     	try {
-    		decoratedTrace(INDENT1, "Starting sync event processing");
+    		decoratedTrace(INDENT1, "Starting Sync event processing");
     		
 	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        
@@ -71,7 +71,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 		        			if (imports.size() == 0) {
 		        				reIndexNewsItems(session);
 		        			} else {
-		        				decoratedTrace(INDENT1, "Sync event: news item import in progress.");
+		        				decoratedTrace(INDENT2, "Sync: news item import in progress.");
 		        			}
 		        		}
 		        		
@@ -80,7 +80,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 	        	}
 	        }
 	        
-			decoratedTrace(INDENT1, "Completing sync event processing");
+			decoratedTrace(INDENT1, "Completing Sync event processing");
     	} 
     	catch (Exception e) {
     		logger.error("Processing sync event.", e);
@@ -102,6 +102,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 		
 		StoredProcedureQuery query = session.createStoredProcedureQuery("DOSYNCINDEX");
 		result = query.execute();
+		decoratedTrace(INDENT2, "Sync: Executed stored procedure DOSYNCINDEX");
 				
 		return result;
 	}

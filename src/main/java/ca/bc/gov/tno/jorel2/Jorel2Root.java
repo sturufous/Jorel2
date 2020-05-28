@@ -1,5 +1,6 @@
 package ca.bc.gov.tno.jorel2;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,7 +17,7 @@ import org.hibernate.annotations.NamedQueries;
 	@NamedQuery(name = "Events_FindEventsByEventType", 
 	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype"),
 	@NamedQuery(name = "Events_FindElligibleEventsByEventType", 
-	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype and e.lastFtpRun <> :runDate"),
+	query = "from EventsDao e inner join e.eventType as et where e.process=:process and et.eventType=:eventtype and e.lastFtpRun <> :runDate order by et.eventType"),
 	@NamedQuery(name = "Events_FindMonitorEventsByDate", 
 	query = "from EventsDao e inner join e.eventType as et where et.eventType=:eventType and e.lastFtpRun = :runDate"),
 	@NamedQuery(name = "Events_GetEventByRsn", 
@@ -51,6 +52,7 @@ public class Jorel2Root {
     protected static final String VAN24_ID_STRING = "Vancouver 24 hrs";
     protected static final int URL_READ_TIMEOUT = 10000;
     protected static final int URL_CONNECTION_TIMEOUT = 10000;
+    protected static final BigDecimal PREFERENCES_RSN = BigDecimal.valueOf(0L);
     
 	public enum EventType {
 		

@@ -7,12 +7,14 @@ import java.util.Vector;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 // SFTP
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 
+@Service
 public class FtpDataSource {
 	
 	/** The name of the FTP server to connect to, e.g., alfredo.tno.gov.bc.ca */
@@ -28,14 +30,14 @@ public class FtpDataSource {
 	String password;
 	
 	/** Indicates whether this FTP connection should be secure or not */
-	@Value("${ftp.secure")
+	@Value("${ftp.secure}")
 	String secureFlag;
 	
 	/** Indicates whether this FTP connection is active or passive */
-	@Value("${ftp.type")
+	@Value("${ftp.type}")
 	String type;
 	
-	String              ftpError;
+	String ftpError;
 	
 	// FTP
 	FTPClient ftp;

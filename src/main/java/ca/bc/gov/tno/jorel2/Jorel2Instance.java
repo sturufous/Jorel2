@@ -56,6 +56,10 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	LocalDateTime startTime = null;
 
+	/** Description of the execution platform */
+	@Value("${localDesc}")
+	public String localDesc;
+	
 	/** The name of the current instance */
 	@Value("${instanceName}")
 	public String instanceName;
@@ -383,7 +387,7 @@ public class Jorel2Instance extends Jorel2Root {
 	/**
 	 * Exposes the list of http failures that took place during this run cycle.
 	 * 
-	 * @return The list of database interruptions.
+	 * @return The list of http failure times and their causes.
 	 */
 	
 	@SuppressWarnings("unchecked")
@@ -397,9 +401,9 @@ public class Jorel2Instance extends Jorel2Root {
 	}
 	
 	/**
-	 * Exposes the online status as a JMX attribute.
+	 * Exposes the http failure count as a JMX attribute.
 	 * 
-	 * @return The eMail port number.
+	 * @return The number of http failures that occurred during this run.
 	 */
 	
 	@ManagedAttribute(description="The number of HTTP failures that occurred since this Jorel2 process started.", currencyTimeLimit=15)
@@ -411,30 +415,54 @@ public class Jorel2Instance extends Jorel2Root {
 	/**
 	 * Adds an entry to the httpFailures Map to record the error condition.
 	 * 
-	 * @param url The url that caused the failure.
+	 * @param message The failure description (e.g. timeout) and url that caused the failure.
 	 */
 	
-	public void addHttpFailure(String url) {
+	public void addHttpFailure(String message) {
 		
-		httpFailures.put(DateUtil.getTimeNow(), url);
+		httpFailures.put(DateUtil.getTimeNow(), message);
 	}
 	
 	/**
 	 * Exposes the online status as a JMX attribute.
 	 * 
-	 * @return The eMail port number.
+	 * @return The connection status enum as a string.
 	 */
 	
-	@ManagedAttribute(description="Connection status - ONLINE or OFFLINE", currencyTimeLimit=15)
+	@ManagedAttribute(description="DB Connection status - ONLINE or OFFLINE", currencyTimeLimit=15)
 	public String getConnectionStatusStr() {
 		
 		return connectionStatus.toString();
 	}
 	
 	/**
+	 * Exposes database profile name as a JMX attribute.
+	 * 
+	 * @return The database profile name - System.getProperty("dbProfile").
+	 */
+	
+	@ManagedAttribute(description="Database profile name.", currencyTimeLimit=15)
+	public String getDatabaseProfileName() {
+		
+		return System.getProperty("dbProfile");
+	}
+	
+	/**
+	 * Exposes database profile name as a JMX attribute.
+	 * 
+	 * @return The database profile name - System.getProperty("dbProfile").
+	 */
+	
+	@ManagedAttribute(description="Description of the execution environment.", currencyTimeLimit=15)
+	public String getAaLocalEnvironment() {
+		
+		return localDesc;
+	}
+	
+	/**
 	 * Exposes the online status.
 	 * 
-	 * @return The eMail port number.
+	 * @return The connection status as an enum.
 	 */
 	
 	public ConnectionStatus getConnectionStatus() {
@@ -478,7 +506,7 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	/**
 	 * Checks to see if an event that does not support concurrent execution is currently active. This is done by searching 
-	 * for an entry in the <code>activeEvents MAP</code> that matches the event type passed in the single parameter.
+	 * for an entry in the <code>activeEvents Map</code> that matches the event type passed in the single parameter.
 	 * 
 	 * @param eventType The event type to check against the <code>activeEvents</code> Map to see if it's already running.
 	 * @return boolean indicating whether the event is active or not.

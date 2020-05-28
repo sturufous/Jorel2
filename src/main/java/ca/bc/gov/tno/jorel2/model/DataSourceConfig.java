@@ -2,11 +2,9 @@ package ca.bc.gov.tno.jorel2.model;
 
 import java.util.Optional;
 import java.util.Properties;
-
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
-
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -55,6 +53,8 @@ public abstract class DataSourceConfig extends Jorel2Root {
         config.addAnnotatedClass(SourcePaperImagesDao.class);
         config.addAnnotatedClass(ImportDefinitionsDao.class);
         config.addAnnotatedClass(SyncIndexDao.class);
+        config.addAnnotatedClass(HnewsItemsDao.class);
+        config.addAnnotatedClass(SourceTypesDao.class);
         
         return config;
 	}
