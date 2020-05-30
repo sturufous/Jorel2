@@ -2,6 +2,9 @@ package ca.bc.gov.tno.jorel2.controller;
 
 
 import java.io.File;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -12,6 +15,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FtpDataSource;
+import ca.bc.gov.tno.jorel2.model.HnewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
@@ -40,6 +44,14 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	/** Maximum CD capacity in kilobytes */
 	@Value("${maxCdSize}")
 	private String maxCdSize;
+	
+	/** Rollover period in days, after which CD images should be deleted. */
+	@Value("${rolloverPeriod}")
+	private String rolloverPeriod;
+	
+	/** Location of tno related data on remote server. */
+	@Value("${ftp.root}")
+	private String ftpRoot;
 	
 	private String sep = System.getProperty("file.separator");
 	
@@ -77,26 +89,97 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	}
 	
 	private void archiverEvent(EventsDao currentEvent, Session session) {
-		
-		List<PreferencesDao> prefs = PreferencesDao.getPreferencesByRsn(PREFERENCES_RSN, session);
-		String label = "";
-		
-		if (ftpService.connect()) {
-			//updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
-			
-			if (prefs.size() > 0) {
-				label = prefs.get(0).getLastArchiveRun();
-				long cdSize = calcCDFileSize(label);
-				long maxSize = Integer.parseInt(maxCdSize) * 1024 * 1024;
 				
-				List<Object[]> results = NewsItemsDao.getEligibleForArchive(session);
+		try {
+			if (ftpService.connect()) {
+				//updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
+				List<PreferencesDao> prefs = PreferencesDao.getPreferencesByRsn(PREFERENCES_RSN, session);
+				String label = "";
 				
-				int count = 1;
+				if (prefs.size() > 0) {
+					label = prefs.get(0).getLastArchiveRun();
+					long cdSize = calcCDFileSize(label);
+					long maxSize = Integer.parseInt(maxCdSize) * 1024 * 1024;
+					
+					List<Object[]> results = NewsItemsDao.getEligibleForArchive(session);
+					
+			        for (Object[] fieldSet : results) {
+			        	BigDecimal rsn = (BigDecimal) fieldSet[0];
+			        	String type = (String) fieldSet[1];
+			        	Date itemDate = (Date) fieldSet[2];
+			        	
+			        	if(ftpService.isConnected()) {
+			        		cdSize = archiveFile(rsn, type, label, cdSize, session);
+			        	}
+			        }
+				}
+				
+				ftpService.disconnect();
 			}
-			
-			ftpService.disconnect();
+		} catch (Exception e) {
+			decoratedError(INDENT2, "Processing Archiver event.", e);
+		}
+	}
+	
+	private long archiveFile(BigDecimal rsn, String type, String label, long cdSize, Session session) throws Exception {
+		
+		long cdSizeIncremented = 0;
+		String archiveDirectory = tempArchive + sep + label + sep + type + sep;
+		
+		File tempdir = new File(archiveDirectory);
+		try {
+			if (!tempdir.exists()) {
+				tempdir.mkdirs(); 
+			}
+		} catch (Exception err) { 
+			throw new IOException("Creating temp archive directory " + tempdir, err);
 		}
 		
+		List<HnewsItemsDao> results = HnewsItemsDao.getItemByRsn(rsn, session);
+		
+		if(results.size() == 1 && results.get(0) instanceof HnewsItemsDao) {
+			HnewsItemsDao currentItem = results.get(0);
+		
+			String extension = currentItem.getContenttype();
+			String fileName = currentItem.getFilename();
+			String filePath = currentItem.getFullfilepath();
+			
+			if(currentItem.getExternalbinary()) {
+				String tempFilePath = tempArchive + sep + fileName;
+				File tempLog = new File(tempFilePath);
+				if (!tempLog.createNewFile()) {
+					throw new IOException("Creating file " + tempFilePath);
+				} else {
+					String remoteFile = ftpRoot + filePath;
+
+					if (ftpService.exists(remoteFile)) {
+						long fileSize = 0;
+					
+						ftpService.setTypeBinary();
+						if (!ftpService.download(tempFilePath, remoteFile) ) {
+							throw new IOException("Downloading file " + remoteFile + " from server.");
+						} else {
+							if (tempLog.exists()) {
+								fileSize = tempLog.length();
+			
+								if (fileSize < 1) {
+									throw new IllegalArgumentException("Zero bytes in " + tempFilePath);
+								} else {
+									cdSizeIncremented = cdSize + fileSize;
+									decoratedTrace(INDENT2, "Archived file to " + tempFilePath);
+									//ftpService.delete(remoteFile);
+								}
+							} else {
+								cdSizeIncremented = cdSize;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		//from tno.hnews_items c, tno.content_types x where c.contenttype = x.contenttype and c.rsn = ?
+		return cdSizeIncremented;
 	}
 	
 	/**

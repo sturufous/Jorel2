@@ -740,9 +740,10 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 		String sqlStmt = "select n.rsn, n.type, n.itemDate from HnewsItemsDao n, SourceTypesDao t, SourcesDao s where n.type = t.type" + 
 				" and n.source = s.source and n.archived = 0 and ((t.action = 1 and ((n.expireRule = 0 and FLOOR(sysdate - n.itemDate) > t.days)" + 
 				" or (n.expireRule = 1 and FLOOR(sysdate - n.itemDate) > t.special))) OR (t.action = 2 and s.tvarchive = 1" + 
-				" and ((n.expireRule = 0 and FLOOR(sysdate - n.itemDate) > t.days) or (n.expireRule = 1 and FLOOR(sysdate - n.itemDate) > t.special))))";
+				" and ((n.expireRule = 0 and FLOOR(sysdate - n.itemDate) > t.days) or (n.expireRule = 1 and FLOOR(sysdate - n.itemDate) > t.special)))) order by n.itemDate";
 
 		Query<Object[]> query = session.createQuery(sqlStmt);
+		query.setMaxResults(5);
         List<Object[]> results = query.getResultList();
         
 		return results;
