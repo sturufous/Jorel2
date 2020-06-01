@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import ca.bc.gov.tno.jorel2.model.HnewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
+import ca.bc.gov.tno.jorel2.util.EmailUtil;
 
 /**
  * 
@@ -80,6 +82,8 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	        		}
 	        	}
 	        }
+	        
+    		decoratedTrace(INDENT1, "Completed Archiver event processing");
     	} 
     	catch (Exception e) {
     		logger.error("Processing Archiver event " + currentEvent.getName(), e);
@@ -93,13 +97,13 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		try {
 			if (ftpService.connect()) {
 				//updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
-				List<PreferencesDao> prefs = PreferencesDao.getPreferencesByRsn(PREFERENCES_RSN, session);
-				String label = "";
+				List<PreferencesDao> preferences = PreferencesDao.getPreferencesByRsn(PREFERENCES_RSN, session);
 				
-				if (prefs.size() > 0) {
-					label = prefs.get(0).getLastArchiveRun();
-					long cdSize = calcCDFileSize(label);
-					long maxSize = Integer.parseInt(maxCdSize) * 1024 * 1024;
+				if (preferences.size() == 1 && preferences.get(0) instanceof PreferencesDao) {
+					PreferencesDao prefs = preferences.get(0);
+					String lastLabel = prefs.getLastArchiveRun();
+					long cdSize = calcCDFileSize(lastLabel);
+					ArchiveEventMetadata meta = new ArchiveEventMetadata(cdSize, lastLabel, prefs);
 					
 					List<Object[]> results = NewsItemsDao.getEligibleForArchive(session);
 					
@@ -109,9 +113,19 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 			        	Date itemDate = (Date) fieldSet[2];
 			        	
 			        	if(ftpService.isConnected()) {
-			        		cdSize = archiveFile(rsn, type, label, cdSize, session);
+			        		manageCdFullRollover(meta, session);
+							String archiveDir = tempArchive + sep + meta.label + sep + type + sep;
+			        		archiveFile(rsn, archiveDir, meta, session);
 			        	}
 			        }
+			        
+			        if (meta.sendMessage) {
+			        	EmailUtil.archiverSendMail(instance.getMailHostAddress(), instance.getMailPortNumber(), 
+			        			instance.getMailFromAddress(), instance.getMailToAddress(), meta.emailMessage);
+			        }
+				} else {
+					HibernateException e = new HibernateException("Retrieving the preferences record.");
+					decoratedError(INDENT2, "Zero records returned, or unexpected return format.", e);
 				}
 				
 				ftpService.disconnect();
@@ -121,12 +135,9 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		}
 	}
 	
-	private long archiveFile(BigDecimal rsn, String type, String label, long cdSize, Session session) throws Exception {
+	private void archiveFile(BigDecimal rsn, String archiveDir, ArchiveEventMetadata meta, Session session) throws IOException, IllegalArgumentException {
 		
-		long cdSizeIncremented = 0;
-		String archiveDirectory = tempArchive + sep + label + sep + type + sep;
-		
-		File tempdir = new File(archiveDirectory);
+		File tempdir = new File(archiveDir);
 		try {
 			if (!tempdir.exists()) {
 				tempdir.mkdirs(); 
@@ -139,47 +150,49 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		
 		if(results.size() == 1 && results.get(0) instanceof HnewsItemsDao) {
 			HnewsItemsDao currentItem = results.get(0);
-		
-			String extension = currentItem.getContenttype();
 			String fileName = currentItem.getFilename();
 			String filePath = currentItem.getFullfilepath();
 			
 			if(currentItem.getExternalbinary()) {
-				String tempFilePath = tempArchive + sep + fileName;
+				meta.currentItem = currentItem;
+				String tempFilePath = archiveDir + fileName;
 				File tempLog = new File(tempFilePath);
 				if (!tempLog.createNewFile()) {
 					throw new IOException("Creating file " + tempFilePath);
 				} else {
-					String remoteFile = ftpRoot + filePath;
+					meta.remoteFile = ftpRoot + filePath;
 
-					if (ftpService.exists(remoteFile)) {
-						long fileSize = 0;
-					
-						ftpService.setTypeBinary();
-						if (!ftpService.download(tempFilePath, remoteFile) ) {
-							throw new IOException("Downloading file " + remoteFile + " from server.");
-						} else {
-							if (tempLog.exists()) {
-								fileSize = tempLog.length();
-			
-								if (fileSize < 1) {
-									throw new IllegalArgumentException("Zero bytes in " + tempFilePath);
-								} else {
-									cdSizeIncremented = cdSize + fileSize;
-									decoratedTrace(INDENT2, "Archived file to " + tempFilePath);
-									//ftpService.delete(remoteFile);
-								}
-							} else {
-								cdSizeIncremented = cdSize;
-							}
-						}
+					if (ftpService.exists(meta.remoteFile)) {
+						downloadFile(tempFilePath, meta, tempLog, rsn, session);
 					}
 				}
 			}
+		} else {
+			HibernateException e = new HibernateException("Retrieving the hnews_items record.");
+			decoratedError(INDENT2, "Zero records returned, or unexpected return format.", e);
 		}
+	}
+	
+	private void downloadFile(String tempFilePath, ArchiveEventMetadata meta, File tempLog, BigDecimal rsn, Session session) throws IOException {
 		
-		//from tno.hnews_items c, tno.content_types x where c.contenttype = x.contenttype and c.rsn = ?
-		return cdSizeIncremented;
+		long fileSize = 0;
+		ftpService.setTypeBinary();
+		if (!ftpService.download(tempFilePath, meta.remoteFile) ) {
+			throw new IOException("Downloading file " + meta.remoteFile + " from server.");
+		} else {
+			if (tempLog.exists()) {
+				fileSize = tempLog.length();
+
+				if (fileSize < 1) {
+					throw new IllegalArgumentException("Zero bytes in " + tempFilePath);
+				} else {
+					meta.cdSize = meta.cdSize + fileSize;
+					decoratedTrace(INDENT2, "Archived file to " + tempFilePath);
+					updateArchivedStatus(meta.currentItem, tempFilePath, rsn, session);
+					//ftpService.delete(remoteFile);
+				}
+			}
+		}
 	}
 	
 	/**
@@ -200,7 +213,6 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	}
 	
 	private long calcCDFileSize( String label ) {
-		//String userDir = System.getProperty("user.dir");
 		String fileSep = System.getProperty("file.separator");
 		long size = 0;
 
@@ -225,6 +237,29 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 			}
 		}
 		return size;
+	}
+	
+	private void updateArchivedStatus(HnewsItemsDao currentItem, String archivedPath, BigDecimal rsn, Session session) {
+		//update tno.hnews_items set archived = 1, archived_to = ? where rsn = ?
+	}
+	
+	private void manageCdFullRollover(ArchiveEventMetadata meta, Session session) {
+		
+		String lastLabel = "";
+		
+		if (meta.cdSize > meta.maxSize) {
+			meta.emailMessage = meta.emailMessage + "  " + meta.label + ", ";
+			lastLabel = meta.label;
+			meta.label = calcNextLabel(lastLabel);
+			meta.cdSize = 0;
+			meta.sendMessage = true;
+			decoratedTrace(INDENT2, "Disc " + lastLabel + " is full. Archiving to " + meta.label);
+			
+			meta.prefs.setLastArchiveRun(meta.label);
+			session.beginTransaction();
+			session.persist(meta.prefs);
+			session.getTransaction().commit();
+		}
 	}
 
 	private String calcNextLabel(String label) {
@@ -265,5 +300,25 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		//}
 
 		return nextLabel;
+	}
+	
+	private class ArchiveEventMetadata {
+		
+		public long cdSize;
+		public String emailMessage;
+		public String label;
+		public PreferencesDao prefs;
+		public long maxSize = Integer.parseInt(maxCdSize) * 1024 * 1024;
+		boolean sendMessage = false;
+		HnewsItemsDao currentItem = null;
+		String remoteFile = "";
+
+		public ArchiveEventMetadata(long cdSize, String label, PreferencesDao prefs) {
+			this.cdSize = cdSize;
+			this.label = label;
+			this.prefs = prefs;
+			this.emailMessage = "";			
+		}
+		
 	}
 }

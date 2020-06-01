@@ -72,6 +72,10 @@ public class Jorel2Instance extends Jorel2Root {
 	@Value("${mail.from}")
 	public String mailFromAddress;
 	
+	/** The to address, or addresses, for any Jorel2 emails */
+	@Value("${mail.to}")
+	private String mailToAddress;
+	
 	/** The host address of the smtp server used for sending emails */
 	@Value("${mail.host}")
 	public String mailHostAddress;
@@ -338,6 +342,18 @@ public class Jorel2Instance extends Jorel2Root {
 	}
 	
 	/**
+	 * Exposes the eMail to address as a JMX attribute.
+	 * 
+	 * @return The eMail to address.
+	 */
+	
+	@ManagedAttribute(description="From address for use when sending Jorel2 emails", currencyTimeLimit=15)
+	public String getMailToAddress() {
+		
+		return mailToAddress;
+	}
+	
+	/**
 	 * Exposes the eMail host address as a JMX attribute.
 	 * 
 	 * @return The eMail host address.
@@ -395,7 +411,7 @@ public class Jorel2Instance extends Jorel2Root {
 	public LinkedHashMap<String, String> getHttpFailures() {
 		
 		Map<String, String> sorted = httpFailures.entrySet().stream().sorted(comparingByValue())
-				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 		
 		return (LinkedHashMap<String, String>) sorted;
 	}
