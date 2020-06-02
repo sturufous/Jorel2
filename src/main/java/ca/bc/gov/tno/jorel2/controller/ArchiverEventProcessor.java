@@ -1,6 +1,5 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -23,6 +22,15 @@ import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.EmailUtil;
 
 /**
+ * This event processor selects all records in HNEWS_ITEMS that have not yet been achived and, if the media associated with them is stored externally,
+ * moves the media from the binary root directory to a CD directory in the archiveto directory. The CD directory name is stored in the last_archive_run 
+ * column of the PREFERENCES table, which has the format CD9999. Some media used to be stored in the TNO database, but Jorel2 does not support this 
+ * functionality (it is no longer used).
+ * 
+ * If the contents of the CD directory exceed the number of Megabytes identified by the maxCdSize property, the numeric portion of the CD directory name
+ * is incremented and a new empty directory is created for future archived files. The name of the new CD9999 directory is then stored in the 
+ * last_archive_run column of PREFERENCES for use by future archive events. An email is sent to the distribution list identified by the mail.to property 
+ * listing the names of all CD directories that are ready to be copied to external media. 
  * 
  * @author Stuart Morse
  * @version 0.0.1
@@ -40,30 +48,26 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	FtpDataSource ftpService;
 	
 	/** Root directory into which archived files are copied */
-	@Value("${temparchive}")
-	private String tempArchive;
+	@Value("${archiveto}")
+	private String archiveTo;
 	
 	/** Maximum CD capacity in kilobytes */
 	@Value("${maxCdSize}")
 	private String maxCdSize;
 	
-	/** Rollover period in days, after which CD images should be deleted. */
-	@Value("${rolloverPeriod}")
-	private String rolloverPeriod;
-	
-	/** Location of tno related data on remote server. */
+	/** Location of tno related data on remote ftp server (binary root). */
 	@Value("${ftp.root}")
 	private String ftpRoot;
 	
 	private String sep = System.getProperty("file.separator");
 	
 	/**
+	 * Reads all eligible archive events from the EVENTS table and, if they are runnable today, they are passed to the archiverEvent method.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
-	
 	public Optional<String> processEvents(String eventType, Session session) {
 		
 		EventsDao currentEvent = null;
@@ -92,6 +96,13 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
     	return Optional.of("complete");
 	}
 	
+	/**
+	 * Obtains the CD label from PROPERTIES and loops through all records in HNEWS_ITEMS that are eligible for archive, sending them to
+	 * the archiveFile() method.
+	 * 
+	 * @param currentEvent The current Archiver event being processed.
+	 * @param session The current Hibernate persistence context.
+	 */
 	private void archiverEvent(EventsDao currentEvent, Session session) {
 				
 		try {
@@ -103,9 +114,9 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 					PreferencesDao prefs = preferences.get(0);
 					String lastLabel = prefs.getLastArchiveRun();
 					long cdSize = calcCDFileSize(lastLabel);
-					ArchiveEventMetadata meta = new ArchiveEventMetadata(cdSize, lastLabel, prefs);
+					ArchiveMetadata meta = new ArchiveMetadata(cdSize, lastLabel, prefs);
 					
-					List<Object[]> results = NewsItemsDao.getEligibleForArchive(session);
+					List<Object[]> results = HnewsItemsDao.getEligibleForArchive(session);
 					
 			        for (Object[] fieldSet : results) {
 			        	BigDecimal rsn = (BigDecimal) fieldSet[0];
@@ -114,8 +125,11 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 			        	
 			        	if(ftpService.isConnected()) {
 			        		manageCdFullRollover(meta, session);
-							String archiveDir = tempArchive + sep + meta.label + sep + type + sep;
-			        		archiveFile(rsn, archiveDir, meta, session);
+							String archiveDir = archiveTo + sep + meta.label + sep + type + sep;
+			        		if(!archiveFile(rsn, archiveDir, meta, session)) {
+			        			// The only reason archiveFile() returns false is if disk space is exhausted, so abort event.
+			        			return;
+			        		}
 			        	}
 			        }
 			        
@@ -135,8 +149,25 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		}
 	}
 	
-	private void archiveFile(BigDecimal rsn, String archiveDir, ArchiveEventMetadata meta, Session session) throws IOException, IllegalArgumentException {
+	/**
+	 * Creates the directory structure into which archived files are placed and then archives the media in the binary root identified by the 
+	 * <code>fileName</code> and <code>fullFilePath</code> to the CD directory. The file is downloaded from the ftp.host to the CD directory
+	 * using the <code>FtpDataSource</code> stored in <code>ftpService</code>. If the disk containing the archive directory becomes full, the 
+	 * archive process is aborted.
+	 * 
+	 * @param rsn The key to the HNEWS_ITEMS record to be processed.
+	 * @param archiveDir The directory into which the media associated with the news item should be archived.
+	 * @param meta An object containing multiple data relating to the archive process.
+	 * @param session The current Hibernate persistence context.
+	 * @return True if the operation is successful, false otherwise.
+	 * @throws IOException Thrown if the archive file cannot be created (e.g. it already exists).
+	 * @throws IllegalArgumentException Thrown if the file to be archived contains zero bytes.
+	 */
+	private boolean archiveFile(BigDecimal rsn, String archiveDir, ArchiveMetadata meta, Session session) throws IOException, IllegalArgumentException {
 		
+		boolean success = true;
+
+		// Create target directories if they don't already exist
 		File tempdir = new File(archiveDir);
 		try {
 			if (!tempdir.exists()) {
@@ -152,34 +183,57 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 			HnewsItemsDao currentItem = results.get(0);
 			String fileName = currentItem.getFilename();
 			String filePath = currentItem.getFullfilepath();
+			String tempFilePath = archiveDir + fileName;
 			
 			if(currentItem.getExternalbinary()) {
 				meta.currentItem = currentItem;
-				String tempFilePath = archiveDir + fileName;
 				File tempLog = new File(tempFilePath);
-				if (!tempLog.createNewFile()) {
-					throw new IOException("Creating file " + tempFilePath);
-				} else {
-					meta.remoteFile = ftpRoot + filePath;
-
-					if (ftpService.exists(meta.remoteFile)) {
-						downloadFile(tempFilePath, meta, tempLog, rsn, session);
+				
+				try {
+					if (tempLog.createNewFile()) {
+						meta.remoteFile = ftpRoot + filePath;
+	
+						if (ftpService.exists(meta.remoteFile)) {
+							downloadFile(tempFilePath, meta, tempLog, rsn, session);
+						}
+					} else {
+						throw new IOException("Unable to create file " + tempFilePath + ". Does it already exist?");
 					}
+				} catch (Exception e) {
+					// Assume that any failure reason other than "out of space" is recoverable.
+					if(e.getMessage().indexOf("disk space") > 0 || e.getMessage().indexOf("out of space") > 0 
+					    || e.getMessage().indexOf("not enough space") > 0) {
+						success = false;
+					}
+					decoratedError(INDENT2, "While downloading file: " + tempFilePath, e);
 				}
 			}
 		} else {
 			HibernateException e = new HibernateException("Retrieving the hnews_items record.");
 			decoratedError(INDENT2, "Zero records returned, or unexpected return format.", e);
 		}
+		
+		return success;
 	}
 	
-	private void downloadFile(String tempFilePath, ArchiveEventMetadata meta, File tempLog, BigDecimal rsn, Session session) throws IOException {
+	/**
+	 * Uses the ftpService to download the file <code>meta.remoteFile</code> to the destination file <code>tempFilePath</code>. Once successfully
+	 * archived, this method sets the archived status of the HNEWS_ITEMS record to <code>true</code> and deletes the remote file.
+	 * 
+	 * @param tempFilePath The path of the file into which this binary root file is archived.
+	 * @param meta An object containing multiple data relating to the archive process.
+	 * @param tempLog Abstract representation of the archived file.
+	 * @param rsn Key of the HNEWS_ITEMS record being archived. 
+	 * @param session The current Hibernate persistence context.
+	 * @throws IOException Thrown if the file cannot be downloaded.
+	 */
+	private void downloadFile(String tempFilePath, ArchiveMetadata meta, File tempLog, BigDecimal rsn, Session session) throws IOException {
+		
+		boolean success = true;
 		
 		long fileSize = 0;
 		ftpService.setTypeBinary();
-		if (!ftpService.download(tempFilePath, meta.remoteFile) ) {
-			throw new IOException("Downloading file " + meta.remoteFile + " from server.");
-		} else {
+		if (ftpService.download(tempFilePath, meta.remoteFile)) {
 			if (tempLog.exists()) {
 				fileSize = tempLog.length();
 
@@ -192,6 +246,8 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 					//ftpService.delete(remoteFile);
 				}
 			}
+		} else {
+			throw new IOException("Downloading file " + meta.remoteFile + " from server. FTP error: " + ftpService.getError());
 		}
 	}
 	
@@ -216,7 +272,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		String fileSep = System.getProperty("file.separator");
 		long size = 0;
 
-		File tempdir=new File(tempArchive);
+		File tempdir=new File(archiveTo);
 		try {
 			if (tempdir.exists()) {
 				size = calcDirFileSize( tempdir );
@@ -243,12 +299,12 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		//update tno.hnews_items set archived = 1, archived_to = ? where rsn = ?
 	}
 	
-	private void manageCdFullRollover(ArchiveEventMetadata meta, Session session) {
+	private void manageCdFullRollover(ArchiveMetadata meta, Session session) {
 		
 		String lastLabel = "";
 		
 		if (meta.cdSize > meta.maxSize) {
-			meta.emailMessage = meta.emailMessage + "  " + meta.label + ", ";
+			meta.emailMessage = meta.emailMessage + "  " + meta.label + " ";
 			lastLabel = meta.label;
 			meta.label = calcNextLabel(lastLabel);
 			meta.cdSize = 0;
@@ -263,11 +319,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	}
 
 	private String calcNextLabel(String label) {
-		//*********************************************************************************
-		// Since the event record keeps track of when the event was last executed, the
-		// application preference 'Last Archive Run' is used to keep track of
-		// the label used on the CDR.  Every time this event is executed the
-		// label number is incremented...CD0003 - CD0004 - CD0005 - ...
+
 		String nextLabel = label.toUpperCase();
 		String now = DateUtil.getDateNow();
 		
@@ -293,16 +345,10 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 			nextLabel = now;
 		}
 
-		// Update the application pref
-		//if (frame.isArchiverUpdating()) {
-		//	prefs.setLast_archive_run(nextLabel);
-		//	prefs.update();
-		//}
-
 		return nextLabel;
 	}
 	
-	private class ArchiveEventMetadata {
+	private class ArchiveMetadata {
 		
 		public long cdSize;
 		public String emailMessage;
@@ -313,12 +359,11 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		HnewsItemsDao currentItem = null;
 		String remoteFile = "";
 
-		public ArchiveEventMetadata(long cdSize, String label, PreferencesDao prefs) {
+		public ArchiveMetadata(long cdSize, String label, PreferencesDao prefs) {
 			this.cdSize = cdSize;
 			this.label = label;
 			this.prefs = prefs;
 			this.emailMessage = "";			
 		}
-		
 	}
 }

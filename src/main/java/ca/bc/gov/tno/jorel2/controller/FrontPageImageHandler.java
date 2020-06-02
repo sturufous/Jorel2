@@ -85,17 +85,17 @@ class FrontPageImageHandler extends Jorel2Root {
 					String binaryDir = binaryRootHelper(localDate);
 					String dirTargetName = binaryRoot + sep + binaryDir;
 					if (!binaryDir.equalsIgnoreCase("")) {
-						// Move the file to the new location in directory structure
-						File fileTarget = new File(dirTargetName + sep + jpgFileName);
+						// Move the file to the archive location
+						File archiveTarget = new File(dirTargetName + sep + jpgFileName);
 						
 						try {
-							if (copyFile(c, fileTarget)) {
+							if (copyFile(c, archiveTarget)) {
 								ImageDimensions id = getImageDimensions(c);
 								String wwwTargetName = wwwBinaryRoot + sep + binaryDir + sep;
-								success = createNewsItemImage(sourceRsn, id, wwwTargetName, jpgFileName, session);
+								success = createNewsItemImage(sourceRsn, id, wwwTargetName, jpgFileName, c, session);
 							}
 						} catch (IOException ex) {
-							decoratedError(INDENT1, "Copying from " + c + " to " + fileTarget, ex);
+							decoratedError(INDENT1, "Copying from " + c + " to " + archiveTarget, ex);
 							success = false;
 						}
 					}
@@ -110,7 +110,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	}
 	
 	/**
-	 * Manages the distribution and registration of a front page images for the Infomart.
+	 * Manages the distribution and registration of a front page images for Infomart.
      *
 	 * @param zipFileName Name of zip file to process.
 	 * @param fullFileName Full path name of the zip file.
@@ -256,12 +256,12 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * @param zipFileName Name of the zip file that was extracted earlier.
 	 * @param fileName Name of the image, from the zip file, that's currently being processed.
 	 * @param fmsFile Name of the fms file that relates to this zip file.
-	 * @param tempPath Full path name of temp location for the image file.
+	 * @param archivePath Abstract representation of the full path name of archive location for the image file.
 	 * @param session The current Hibernate persistence context.
 	 * @return Whether the file was successfully copied and the image record created.
 	 */
 	
-	private boolean createNewNiiImage(String zipFileName, String fileName, String fmsFile, File tempPath, Session session) {
+	private boolean createNewNiiImage(String zipFileName, String fileName, String fmsFile, File archivePath, Session session) {
 		
 		boolean success = true;
 		
@@ -285,11 +285,10 @@ class FrontPageImageHandler extends Jorel2Root {
 	
 					String binaryDir = binaryRootHelper(localDate);
 	
-					// BigDecimal sourceRsn, ImageDimensions id, String wwwTargetName, String fileName, Session session
-					if (copyFileToTargetDir(fileName, tempPath, binaryDir)) {
+					if (copyFileToTargetDir(fileName, archivePath, binaryDir)) {
 						String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
-						ImageDimensions id = getImageDimensions(tempPath);
-						success = createNewsItemImage(sourceRsn, id, wwwTargetName, fileName, session);
+						ImageDimensions id = getImageDimensions(archivePath);
+						success = createNewsItemImage(sourceRsn, id, wwwTargetName, fileName, archivePath, session);
 					}
 				} else {
 					success = false;
@@ -439,29 +438,51 @@ class FrontPageImageHandler extends Jorel2Root {
 	}
 	
 	/**
-	 * Creates a new NewsItemImagesDao object with a primary key matching the key of the corresponding NewsItemsDao record.
+	 * Creates a new NewsItemImagesDao object with a primary key matching the key of the corresponding NewsItemsDao record. Also
+	 * copies the image to its web viewable location.
 	 * 
 	 * @param sourceRsn The rsn of the corresponding NewsItemsDao record.
 	 * @param id The ImageDimensions object containing the width and height of the 
 	 * @param wwwTargetName The path of the wwwBinaryRoot directory.
 	 * @param fileName The file name of the associated image.
+	 * @param c Abstract representation of the archive path name.
 	 * @param session The current Hibernate persistence context.
 	 * @return Whether the creation of the record was successful.
 	 */
 	
-	private boolean createNewsItemImage(BigDecimal sourceRsn, ImageDimensions id, String wwwTargetName, String fileName, Session session) {
+	private boolean createNewsItemImage(BigDecimal sourceRsn, ImageDimensions id, String wwwTargetName, String fileName, File c, Session session) {
 		
 		boolean success = true;
 		
 		try {
-			NewsItemImagesDao niiRecord = NewsItemFactory.createNewsItemImage(sourceRsn, wwwTargetName, fileName, id.width, id.height);
+			File avTargetDir = new File(wwwTargetName);
+			File avTargetFile = new File(wwwTargetName + sep + fileName);
 			
-			session.beginTransaction();
-			session.persist(niiRecord);
-			session.getTransaction().commit();
-			success = true;
+			// Create av target directories if they don't already exist
+			try {
+				if (!avTargetDir.exists()) {
+					avTargetDir.mkdirs(); 
+				}
+			} catch (Exception err) { 
+				throw new IOException("Creating av target directory " + avTargetDir, err);
+			}
+			
+			// Copy the source front page image to the av directory for web access and create the news_item_images record
+			if(copyFile(c, avTargetFile)) {
+				NewsItemImagesDao niiRecord = NewsItemFactory.createNewsItemImage(sourceRsn, wwwTargetName, fileName, id.width, id.height);
+				
+				session.beginTransaction();
+				session.persist(niiRecord);
+				session.getTransaction().commit();
+				
+				success = true;
+				c.delete();
+			} else {
+				IOException e = new IOException("Unable to copy " + c + " to " + avTargetFile);
+				decoratedError(INDENT2, "Copying front page image from home directory to avTarget.", e);
+			}
 		} catch (Exception e) {
-			decoratedError(INDENT1, "Creating news item image.", e);
+			decoratedError(INDENT2, "Creating news item image.", e);
 			success = false;
 		}
 		
@@ -470,6 +491,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	
 	/**
 	 * Determines, from the file name, whether the image represented is an A1 (section A page one) image.
+	 * 
 	 * @param zipFileName The name of the zip file from which the image was extracted.
 	 * @param fileName The name of the image being processed.
 	 * @return Whether the image represented by <code>fileName</code> is an A1 image.

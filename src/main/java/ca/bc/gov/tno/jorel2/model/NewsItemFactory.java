@@ -1,6 +1,7 @@
 package ca.bc.gov.tno.jorel2.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Date;
 import com.sun.syndication.feed.synd.SyndEntry;
 
@@ -160,7 +161,7 @@ public class NewsItemFactory extends Jorel2Root {
 		NewsItemsDao newsItem = createNewsItemTemplate();
 				
 		// Assign content of this Rss.Channel.Item to the NewsItemDao object
-		newsItem.setItemDate(pubDate);
+		newsItem.setItemDate(DateUtil.getDateAtMidnight()); //pubDate);
 		newsItem.setItemTime(pubDate);
 		newsItem.setSource(source);
 		newsItem.setTitle(title);
@@ -243,6 +244,7 @@ public class NewsItemFactory extends Jorel2Root {
 		niiRecord.setHeight(BigDecimal.valueOf(height));
 		niiRecord.setImageLoaded(true);
 		niiRecord.setProcessed(false);
+		niiRecord.setOnFrontPage(false);
 		
 		return niiRecord;
 	}

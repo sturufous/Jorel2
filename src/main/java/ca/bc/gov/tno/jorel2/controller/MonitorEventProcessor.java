@@ -294,9 +294,12 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	
 	private boolean frontPageFromJpg(String currentFile, String fileForImport, String definitionName, Session session) {
 		
-		if (definitionName.equalsIgnoreCase(GANDM_ID_STRING)) {
+		boolean success = true;
+		
+		if (definitionName.equalsIgnoreCase(GANDM_XML_ID_STRING)) {
 			// Globe image file
-			return imageHandler.gandmImageHandler(currentFile, fileForImport, session);
+			success = imageHandler.gandmImageHandler(currentFile, fileForImport, session);
+			return success;
 		} else {
 			return true;
 		}
@@ -460,7 +463,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			// Do the import
 			success = switch(importMeta.getType()) {
 				case "freeform" -> importHandler.doFreeFormImport(currentEvent, importMeta, currentFile, in, session);
-				case "xml" -> importHandler.doXmlImport(currentEvent, currentFile, session);
+				case "xml" -> importHandler.doXmlImport(currentEvent, filePath, session);
 				default -> false;
 			};
 			
