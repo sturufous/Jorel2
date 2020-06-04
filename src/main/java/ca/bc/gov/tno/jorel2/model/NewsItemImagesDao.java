@@ -204,6 +204,5 @@ public class NewsItemImagesDao implements java.io.Serializable {
 		session.beginTransaction();
 	    int count = query.executeUpdate();
 		session.getTransaction().commit();
-
 	}
 }

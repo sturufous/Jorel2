@@ -23,9 +23,9 @@ import ca.bc.gov.tno.jorel2.util.EmailUtil;
 
 /**
  * This event processor selects all records in HNEWS_ITEMS that have not yet been achived and, if the media associated with them is stored externally,
- * moves the media from the binary root directory to a CD directory in the archiveto directory. The CD directory name is stored in the last_archive_run 
- * column of the PREFERENCES table, which has the format CD9999. Some media used to be stored in the TNO database, but Jorel2 does not support this 
- * functionality (it is no longer used).
+ * moves the media from the binary root directory to a CD directory in the archiveto directory. The CD directory name is stored in the LAST_ARCHIVE_RUN 
+ * column of the PREFERENCES table, which has the format CD9999. Some media used to be stored as blobs in the TNO database, but Jorel2 does not support 
+ * this functionality (it is no longer used).
  * 
  * If the contents of the CD directory exceed the number of Megabytes identified by the maxCdSize property, the numeric portion of the CD directory name
  * is incremented and a new empty directory is created for future archived files. The name of the new CD9999 directory is then stored in the 
@@ -62,7 +62,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	private String sep = System.getProperty("file.separator");
 	
 	/**
-	 * Reads all eligible archive events from the EVENTS table and, if they are runnable today, they are passed to the archiverEvent method.
+	 * Reads all eligible archive events from the EVENTS table and, if they are runnable today, passes them to the <code>archiverEvent()</code> method.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
@@ -218,7 +218,8 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	
 	/**
 	 * Uses the ftpService to download the file <code>meta.remoteFile</code> to the destination file <code>tempFilePath</code>. Once successfully
-	 * archived, this method sets the archived status of the HNEWS_ITEMS record to <code>true</code> and deletes the remote file.
+	 * archived, this method sets the archived status of the HNEWS_ITEMS record to <code>true</code>, by calling <code>updateArchivedStatus()</code>
+	 * and deletes the remote file.
 	 * 
 	 * @param tempFilePath The path of the file into which this binary root file is archived.
 	 * @param meta An object containing multiple data relating to the archive process.
@@ -252,13 +253,12 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	}
 	
 	/**
-	 * Updates lastFtpRun to the value provided.
+	 * Updates the database record's lastFtpRun to the value provided.
 	 * 
 	 * @param value The value to store in lastFtpRun field of currentEvent.
 	 * @param currentEvent The monitor event currently being processed.
 	 * @param session The current Hibernate persistence context.
 	 */
-	
 	private void updateLastFtpRun(String value, EventsDao currentEvent, Session session) {
 	
 		//Update this record to reflect that it has run and can now be run again
@@ -268,6 +268,13 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		session.getTransaction().commit();
 	}
 	
+	/**
+	 * Forms a directory path by concatenating the properties value <code>archiveto</code> (which is stored in the instance variable
+	 * <code>archiveTo</code>) and calls <code>calcDirFileSize()</code> to retrieve the number of bytes contained in the directory.
+	 * 
+	 * @param label The label of the CD currently being archived to (e.g. CD8769)
+	 * @return The number of bytes contained in the directory.
+	 */
 	private long calcCDFileSize( String label ) {
 		String fileSep = System.getProperty("file.separator");
 		long size = 0;
@@ -282,6 +289,13 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		return size;
 	}
 
+	/**
+	 * Performs a recursive scan of the CD directory identified by <code>dir</code> and returns the aggregated number
+	 * of bytes contained in the directory.
+	 * 
+	 * @param dir Abstract representation of the CD archive directory. 
+	 * @return The number of bytes contained in the directory.
+	 */
 	private long calcDirFileSize(File dir) {
 		long size = 0;
 		File files[] = dir.listFiles();
@@ -295,10 +309,30 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		return size;
 	}
 	
+	/**
+	 * Sets the archivedPath of the historical news items object <code>currentItem</code> to the string passed in <code>archivedPath</code>,
+	 * sets the archived status of that object to <code>true</code> and updates the record.
+	 * 
+	 * @param currentItem The HNEWS_ITEMS record that was just archived.
+	 * @param archivedPath The path to which this items media was archived.
+	 * @param rsn The key of the HNEWS_ITEMS record.
+	 * @param session The current Hibernate persistence context.
+	 */
 	private void updateArchivedStatus(HnewsItemsDao currentItem, String archivedPath, BigDecimal rsn, Session session) {
 		//update tno.hnews_items set archived = 1, archived_to = ? where rsn = ?
 	}
 	
+	/**
+	 * Checks whether, after the most recent download, the contents of the CD archive directory exceeds the value stored in the <code>maxCdSize</code>
+	 * property. If it does, the label of the current CD is added to <code>meta.emailMessage</code> and a new CD label is calculated by calling
+	 * <code>calcNextLabel()</code>. The LAST_ARCHIVE_RUN column of the PREFERENCES record stored in <code>meta.prefs</code> is set to the new label
+	 * and the record is persisted to the TNO database. Each time the contents of a CD directory exceed <code>meta.maxSize</code> bytes the old label
+	 * is appended to <code>meta.emailMessage</code> and, after completion of archive event processing, a message is sent to the distribution list
+	 * notifying that these CD directories are ready to be stored offline.
+	 * 
+	 * @param meta Metadata relating to the current archive event.
+	 * @param session The current Hibernate persistence context.
+	 */
 	private void manageCdFullRollover(ArchiveMetadata meta, Session session) {
 		
 		String lastLabel = "";
@@ -318,6 +352,13 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		}
 	}
 
+	/**
+	 * Given a label of the format "CD9999, this message extracts the numeric portion and increments it by one, returning a
+	 * new label in the same format received.
+	 *
+	 * @param label The label of the current CD archive, which will now be full.
+	 * @return A new label for the next CD to archive.
+	 */
 	private String calcNextLabel(String label) {
 
 		String nextLabel = label.toUpperCase();
@@ -348,6 +389,12 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		return nextLabel;
 	}
 	
+	/**
+	 * Private inner class used to consolidate eight separate data items relating to the current archive event. As the class is private there
+	 * is no need to use getter and setter methods, and all instance variables are public.
+	 * 
+	 * @author StuartM
+	 */
 	private class ArchiveMetadata {
 		
 		public long cdSize;
@@ -355,9 +402,9 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		public String label;
 		public PreferencesDao prefs;
 		public long maxSize = Integer.parseInt(maxCdSize) * 1024 * 1024;
-		boolean sendMessage = false;
-		HnewsItemsDao currentItem = null;
-		String remoteFile = "";
+		public boolean sendMessage = false;
+		public HnewsItemsDao currentItem = null;
+		public String remoteFile = "";
 
 		public ArchiveMetadata(long cdSize, String label, PreferencesDao prefs) {
 			this.cdSize = cdSize;

@@ -121,6 +121,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	boolean infomartImageHandler(String zipFileName, String fullFileName, Session session) {
 		
 		boolean success = true;
+		File importZipFile = new File(fullFileName);
 
 		try {
 			// Only import if the corresponding fms file has been imported already	
@@ -145,12 +146,15 @@ class FrontPageImageHandler extends Jorel2Root {
 							success = createNewNiiImage(zipFileName, fileName, fmsFile, c, session);
 						}
 					}
-
+					
+					importZipFile.delete();
 					NewsItemImagesDao.updateProcessedByImportFile(fmsFile, session);
 				} else {
+					importZipFile.delete();
 					success = false;
 				}
 			} else {
+				importZipFile.delete();
 				success = false;
 			}
 		} catch (Exception ex) {
@@ -286,7 +290,7 @@ class FrontPageImageHandler extends Jorel2Root {
 					String binaryDir = binaryRootHelper(localDate);
 	
 					if (copyFileToTargetDir(fileName, archivePath, binaryDir)) {
-						String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
+						String wwwTargetName = wwwBinaryRoot + sep + binaryDir + sep;
 						ImageDimensions id = getImageDimensions(archivePath);
 						success = createNewsItemImage(sourceRsn, id, wwwTargetName, fileName, archivePath, session);
 					}

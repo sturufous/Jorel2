@@ -131,13 +131,12 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 						}
 					}
 				}
-				
-				decoratedTrace(INDENT2, "Monitor Event: Imported " + numberImported + " Files.");
 			} catch (Exception ex) { 
 				decoratedError(INDENT2, "Processing import file list.", ex);
 			}
 					
 			// If any files imported, then rebuild the index CONTENT_INDEX
+			decoratedTrace(INDENT2, "Monitor Event: Imported " + numberImported + " files for source " + currentEvent.getName());
     		requestReindex(numberImported, session);
 		}
 	}
@@ -166,7 +165,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		boolean notAlreadyImported = imported.size() == 0;
 		
 		if (notAlreadyImported) { // Applies only to news articles
-			verifyDownloadCompletion(f);
+			//verifyDownloadCompletion(f);
 			String suffix = currentFile.substring(currentFile.toLowerCase().lastIndexOf('.') + 1);
 			
 			moveFile = switch(suffix) {
