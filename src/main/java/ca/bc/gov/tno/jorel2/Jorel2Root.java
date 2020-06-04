@@ -49,7 +49,6 @@ public class Jorel2Root {
     protected static final int DB_CONNECTION_TIMEOUT = 3000;
     protected static final String INFOMART_ID_STRING = "infomart";
     protected static final String GANDM_ID_STRING = "Globe and Mail";
-    protected static final String GANDM_XML_ID_STRING = "Globe and Mail XML";
     protected static final String VAN24_ID_STRING = "Vancouver 24 hrs";
     protected static final int URL_READ_TIMEOUT = 10000;
     protected static final int URL_CONNECTION_TIMEOUT = 10000;

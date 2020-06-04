@@ -85,7 +85,7 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	private String eodCategory;
 	private String eodCategoryGroup;
 	private String eodDate;
-	private SourceTypesDao sourceType;
+	//private SourceTypesDao sourceType;
 	public String content;
 
 	public NewsItemsDao() {
@@ -168,15 +168,15 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 		return this.rsn;
 	}
 	
-	@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
-	@JoinColumn(name = "TYPE", insertable = false, updatable = false)
-	public SourceTypesDao getSourceType() {
-		return this.sourceType;
-	}
+	//@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+	//@JoinColumn(name = "TYPE", insertable = false, updatable = false)
+	//public SourceTypesDao getSourceType() {
+	//	return this.sourceType;
+	//}
 	
-	public void setSourceType(SourceTypesDao type) {
-		this.sourceType = type;
-	}
+	//public void setSourceType(SourceTypesDao type) {
+	//	this.sourceType = type;
+	//}
 
 	public void setRsn(BigDecimal rsn) {
 		this.rsn = rsn;

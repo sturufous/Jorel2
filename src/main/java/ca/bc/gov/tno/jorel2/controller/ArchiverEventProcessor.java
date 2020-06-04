@@ -22,8 +22,8 @@ import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.EmailUtil;
 
 /**
- * This event processor selects all records in HNEWS_ITEMS that have not yet been achived and, if the media associated with them is stored externally,
- * moves the media from the binary root directory to a CD directory in the archiveto directory. The CD directory name is stored in the LAST_ARCHIVE_RUN 
+ * This event processor selects all records in HNEWS_ITEMS that have not yet been archived and, if the media associated with them is stored externally,
+ * moves the media from the binary root directory to a CD directory in the archiveTo directory. The CD directory name is stored in the LAST_ARCHIVE_RUN 
  * column of the PREFERENCES table, which has the format CD9999. Some media used to be stored as blobs in the TNO database, but Jorel2 does not support 
  * this functionality (it is no longer used).
  * 
@@ -48,7 +48,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	FtpDataSource ftpService;
 	
 	/** Root directory into which archived files are copied */
-	@Value("${archiveto}")
+	@Value("${archiveTo}")
 	private String archiveTo;
 	
 	/** Maximum CD capacity in kilobytes */
@@ -108,7 +108,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		try {
 			if (ftpService.connect()) {
 				//updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
-				List<PreferencesDao> preferences = PreferencesDao.getPreferencesByRsn(PREFERENCES_RSN, session);
+				List<PreferencesDao> preferences = PreferencesDao.getPreferencesByRsn(BigDecimal.valueOf(0L), session);
 				
 				if (preferences.size() == 1 && preferences.get(0) instanceof PreferencesDao) {
 					PreferencesDao prefs = preferences.get(0);
@@ -269,7 +269,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	}
 	
 	/**
-	 * Forms a directory path by concatenating the properties value <code>archiveto</code> (which is stored in the instance variable
+	 * Forms a directory path by concatenating the properties value <code>archiveTo</code> (which is stored in the instance variable
 	 * <code>archiveTo</code>) and calls <code>calcDirFileSize()</code> to retrieve the number of bytes contained in the directory.
 	 * 
 	 * @param label The label of the CD currently being archived to (e.g. CD8769)

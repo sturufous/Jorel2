@@ -295,7 +295,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		
 		boolean success = true;
 		
-		if (definitionName.equalsIgnoreCase(GANDM_XML_ID_STRING)) {
+		if (definitionName.equalsIgnoreCase("Globe and Mail XML")) {
 			// Globe image file
 			success = imageHandler.gandmImageHandler(currentFile, fileForImport, session);
 			return success;
@@ -548,7 +548,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	private void requestReindex(int filesImported, Session session) {
 		
 		if (filesImported > 0) {
-			SyncIndexDao syncIndexRequest = new SyncIndexDao(new Date(), instance.getInstanceName(), "Monitor event requesting re-index");
+			SyncIndexDao syncIndexRequest = new SyncIndexDao(new Date(), instance.getA2InstanceName(), "Monitor event requesting re-index");
 			session.beginTransaction();
 			session.persist(syncIndexRequest);
 			session.getTransaction().commit();

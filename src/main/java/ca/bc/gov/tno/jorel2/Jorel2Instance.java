@@ -27,7 +27,10 @@ import static java.util.stream.Collectors.*;
 import static java.util.Map.Entry.*;
 
 /**
- * Indicates the process we're running on (e.g. "jorel", "jorelMini3")
+ * Indicates the process we're running on (e.g. "jorel", "jorelMini3"). Control over the order in which JMX attributes are displayed in
+ * VisualVM is achieved by naming related attributes with the same prefix, e.g. getStorageBinaryRoot, getStorageArchiveTo etc. In the case
+ * of important properties, that must be displayed at the top of the dashboard, they are prefixed using a letter of the alphabet followed
+ * by a number, e.g. A1, B4 etc.
  * 
  * @author Stuart Morse
  * @version 0.0.1
@@ -84,6 +87,30 @@ public class Jorel2Instance extends Jorel2Root {
 	@Value("${mail.portNumber}")
 	public String mailPortNumber;
 	
+	/** Cron expression used to schedule thread executions (usually 30 seconds) */
+	@Value("${cron.expression}")
+	public String cronExpression;
+	
+	/** The location where media are stored (e.g. images, audio, video) */
+	@Value("${binaryRoot}")
+	public String binaryRoot;
+	
+	/** The location in the web hierarchy where media a placed for listening/viewing */
+	@Value("${wwwBinaryRoot}")
+	public String wwwRoot;
+	
+	/** The location into which newspaper import files are moved post-processing */
+	@Value("${processedFilesLoc}")
+	public String processedLoc;
+	
+	/** The location into which media are archived (contains CD archive directories with format CD9999) */
+	@Value("${archiveTo}")
+	public String archiveTo;
+	
+	/** The maximum number of bytes an archive directory can hold before rolling over to a new one */
+	@Value("${maxCdSize}")
+	public String maxCdSize;
+	
 	/** Integer version of maxThreadRuntimeString which is exposed as a JMX managed operation */
 	private int maxThreadRuntime = 0;
 	
@@ -114,7 +141,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Name of this Jorel instance", currencyTimeLimit=15)
-	public String getInstanceName() {
+	public String getA2InstanceName() {
 		
 		return instanceName;
 	}
@@ -225,7 +252,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Number of articles added by source", currencyTimeLimit=15)
-	public Map<String, Integer> getArticleCounts() {
+	public Map<String, Integer> getA3ArticleCounts() {
 		
 		return articleCounts;
 	}	
@@ -237,7 +264,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Start time of this instance", currencyTimeLimit=15)
-	public String getStartTime() {
+	public String getA6StartTime() {
 		
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("E, d LLL yyyy HH:mm:ss");
 		String dateMatch = startTime.format(formatter);
@@ -258,6 +285,18 @@ public class Jorel2Instance extends Jorel2Root {
 	}	
 
 	/**
+	 * Exposes <code>cronExpression</code> as a JMX attribute. 
+	 * 
+	 * @return The cronExpression attribute for this instance.
+	 */
+	
+	@ManagedAttribute(description="Cron expression used for thread execution scheduling", currencyTimeLimit=15)
+	public String getCronExpression() {
+		
+		return cronExpression;
+	}	
+
+	/**
 	 * Exposes the length of time this instance has been running as a JMX attribute. This is formatted from a long using this string 
 	 * <code>"%d Days, %d Hours, %02d Minutes, %02d Seconds"</code>.
 	 * 
@@ -265,7 +304,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Run time of this instance", currencyTimeLimit=15)
-	public String getInstanceRunTime() {
+	public String getA7InstanceRunTime() {
 		
 		String instanceRunTime = "";
     	LocalDateTime now = LocalDateTime.now();
@@ -342,15 +381,75 @@ public class Jorel2Instance extends Jorel2Root {
 	}
 	
 	/**
-	 * Exposes the eMail to address as a JMX attribute.
+	 * Exposes the eMail-to address (or addresses) as a JMX attribute.
 	 * 
-	 * @return The eMail to address.
+	 * @return The eMail-to address.
 	 */
 	
-	@ManagedAttribute(description="From address for use when sending Jorel2 emails", currencyTimeLimit=15)
+	@ManagedAttribute(description="To address for use when sending Jorel2 emails", currencyTimeLimit=15)
 	public String getMailToAddress() {
 		
 		return mailToAddress;
+	}
+	
+	/**
+	 * Exposes the binary root path as a JMX attribute.
+	 * 
+	 * @return The binary root path.
+	 */
+	
+	@ManagedAttribute(description="Binary root path in which media are stored", currencyTimeLimit=15)
+	public String getStorageBinaryRoot() {
+		
+		return binaryRoot;
+	}
+	
+	/**
+	 * Exposes the www root path as a JMX attribute.
+	 * 
+	 * @return The www root path.
+	 */
+	
+	@ManagedAttribute(description="The www root path (media root directory within web hierarchy)", currencyTimeLimit=15)
+	public String getStorageWwwRoot() {
+		
+		return wwwRoot;
+	}
+	
+	/**
+	 * Exposes the processedLoc property as a JMX attribute.
+	 * 
+	 * @return The processedLoc property.
+	 */
+	
+	@ManagedAttribute(description="Location into which import files are copied post-processing", currencyTimeLimit=15)
+	public String getStorageProcessedLoc() {
+		
+		return processedLoc;
+	}
+	
+	/**
+	 * Exposes the archiveTo property as a JMX attribute.
+	 * 
+	 * @return The archiveTo property.
+	 */
+	
+	@ManagedAttribute(description="Location into which media files are archived", currencyTimeLimit=15)
+	public String getStorageArchiveTo() {
+		
+		return archiveTo;
+	}
+	
+	/**
+	 * Exposes the maxCdSize property as a JMX attribute.
+	 * 
+	 * @return The maxCdSize property.
+	 */
+	
+	@ManagedAttribute(description="Maximum number of bytes in a CD archive (in K) before rollover to next disk", currencyTimeLimit=15)
+	public String getStorageMaxCdSize() {
+		
+		return maxCdSize;
 	}
 	
 	/**
@@ -446,7 +545,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="DB Connection status - ONLINE or OFFLINE", currencyTimeLimit=15)
-	public String getConnectionStatusStr() {
+	public String getA4ConnectionStatusStr() {
 		
 		return connectionStatus.toString();
 	}
@@ -458,9 +557,9 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Database profile name.", currencyTimeLimit=15)
-	public String getDatabaseProfileName() {
+	public String getA5DatabaseProfileName() {
 		
-		return System.getProperty("dbProfile");
+		return System.getProperty("dbProfile").toUpperCase();
 	}
 	
 	/**
@@ -470,7 +569,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Description of the execution environment.", currencyTimeLimit=15)
-	public String getAaLocalEnvironment() {
+	public String getA1LocalEnvironment() {
 		
 		return localDesc;
 	}
