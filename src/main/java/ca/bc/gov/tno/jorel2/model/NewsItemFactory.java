@@ -161,7 +161,7 @@ public class NewsItemFactory extends Jorel2Root {
 		NewsItemsDao newsItem = createNewsItemTemplate();
 				
 		// Assign content of this Rss.Channel.Item to the NewsItemDao object
-		newsItem.setItemDate(DateUtil.getDateAtMidnight()); //pubDate);
+		newsItem.setItemDate(pubDate);
 		newsItem.setItemTime(pubDate);
 		newsItem.setSource(source);
 		newsItem.setTitle(title);

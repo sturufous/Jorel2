@@ -168,16 +168,6 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 		return this.rsn;
 	}
 	
-	//@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
-	//@JoinColumn(name = "TYPE", insertable = false, updatable = false)
-	//public SourceTypesDao getSourceType() {
-	//	return this.sourceType;
-	//}
-	
-	//public void setSourceType(SourceTypesDao type) {
-	//	this.sourceType = type;
-	//}
-
 	public void setRsn(BigDecimal rsn) {
 		this.rsn = rsn;
 	}

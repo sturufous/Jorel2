@@ -384,7 +384,7 @@ public class NewspaperImportHandler extends Jorel2Root {
 		
 		switch(fieldNumber) {
 			case 1 -> item.setRsn(BigDecimal.valueOf(Long.parseLong(value)));
-			case 2 -> item.setItemDate(DateUtil.getDateAtMidnightByDate(new Date())); //DateUtil.getDateFromYyyyMmDd(value));
+			case 2 -> item.setItemDate(DateUtil.formatFreeFormDate(value));
 			case 3 -> item.setSource(value);
 			case 4 -> item.setItemTime(DateUtil.getDateAtMidnight());
 			case 5 -> item.setSummary(value);

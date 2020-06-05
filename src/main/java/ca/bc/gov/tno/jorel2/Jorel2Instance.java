@@ -509,8 +509,8 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Records times when httpFailures took place, and the url being accessed", currencyTimeLimit=15)
 	public LinkedHashMap<String, String> getHttpFailures() {
 		
-		Map<String, String> sorted = httpFailures.entrySet().stream().sorted(comparingByValue())
-				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+		Map<String, String> sorted = httpFailures.entrySet().stream().sorted(comparingByKey())
+				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
 		
 		return (LinkedHashMap<String, String>) sorted;
 	}

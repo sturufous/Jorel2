@@ -124,6 +124,28 @@ public class DateUtil extends Jorel2Root {
 		return utilDate;
 	}
 	
+	/**
+	 * Takes a date as a MM-dd-yyyy string and converts it into a java.util.Date object.
+	 * 
+	 * @param dateStr The string representation of the date to be converted.
+	 * @return The date corresponding to the input string dateStr
+	 */
+	
+	public static Date getDateFromDashedMmDdYyyy(String dateStr) {
+		
+		// Process the current date using the JDK 1.8 Time API
+		Date utilDate = null;
+		
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat("MM-dd-yyyy");
+			utilDate = formatter.parse(dateStr);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+ 
+		return utilDate;
+	}
+	
 	public static String getTimeNow() {
 		
 		// Process the current date using the JDK 1.8 Time API
@@ -213,6 +235,22 @@ public class DateUtil extends Jorel2Root {
 	public static Date dateFromLocalDate(LocalDate date) {
 		
 		return Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
+	}
+	
+	/**
+	 * Returns a Date() object parsed from one of two date formats. BCNG articles represent the date as MM-DD-YYYY, while
+	 * Informat articles use YYYYMMDD.
+	 * 
+	 * @param dateString The string representation of the date for conversion.
+	 * @return
+	 */
+	public static Date formatFreeFormDate(String dateString) {
+		
+		if(dateString.length() == 10) {
+			return getDateFromDashedMmDdYyyy(dateString);
+		} else {
+			return getDateFromYyyyMmDd(dateString);
+		}
 	}
 	
 	// TODO Convert this to use java.time
