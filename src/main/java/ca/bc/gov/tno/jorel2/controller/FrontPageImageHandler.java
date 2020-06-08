@@ -147,14 +147,14 @@ class FrontPageImageHandler extends Jorel2Root {
 						}
 					}
 					
-					importZipFile.delete();
 					NewsItemImagesDao.updateProcessedByImportFile(fmsFile, session);
 				} else {
-					importZipFile.delete();
+					IOException e = new IOException("Unable to extract " + zipFileName + " to " + zipTarget);
+					decoratedError(INDENT2, "Extracting Informart image.", e);
 					success = false;
 				}
 			} else {
-				importZipFile.delete();
+				decoratedTrace(INDENT2, "Attempting to import image zip file " + zipFileName + " but no matching fms file has been imported.");
 				success = false;
 			}
 		} catch (Exception ex) {

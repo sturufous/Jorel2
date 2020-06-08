@@ -341,7 +341,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 
 		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createNamedQuery("Events_FindEventsByEventType");
-		query.setParameter("process", process.getA2InstanceName());
+		query.setParameter("process", process.getAppInstanceName());
 		query.setParameter("eventtype", eventType);
         List<Object[]> results = query.getResultList();
         
@@ -361,7 +361,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 
 		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createNamedQuery("Events_FindElligibleEventsByEventType");
-		query.setParameter("process", process.getA2InstanceName());
+		query.setParameter("process", process.getAppInstanceName());
 		query.setParameter("eventtype", eventType);
 		query.setParameter("runDate", DateUtil.getDateNow());
         List<Object[]> results = query.getResultList();

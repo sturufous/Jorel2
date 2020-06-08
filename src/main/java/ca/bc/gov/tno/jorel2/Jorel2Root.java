@@ -53,6 +53,7 @@ public class Jorel2Root {
     protected static final int URL_READ_TIMEOUT = 10000;
     protected static final int URL_CONNECTION_TIMEOUT = 10000;
     protected static final BigDecimal PREFERENCES_RSN = BigDecimal.valueOf(0L);
+    protected static final String GANDM_DEFINITION_ID_STRING = "Globe and Mail XML";
     
 	public enum EventType {
 		

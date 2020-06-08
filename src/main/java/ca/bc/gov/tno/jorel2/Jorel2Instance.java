@@ -141,7 +141,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Name of this Jorel instance", currencyTimeLimit=15)
-	public String getA2InstanceName() {
+	public String getAppInstanceName() {
 		
 		return instanceName;
 	}
@@ -252,7 +252,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Number of articles added by source", currencyTimeLimit=15)
-	public Map<String, Integer> getA3ArticleCounts() {
+	public Map<String, Integer> getAppArticleCounts() {
 		
 		return articleCounts;
 	}	
@@ -264,7 +264,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Start time of this instance", currencyTimeLimit=15)
-	public String getA6StartTime() {
+	public String getAppStartTime() {
 		
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("E, d LLL yyyy HH:mm:ss");
 		String dateMatch = startTime.format(formatter);
@@ -304,7 +304,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Run time of this instance", currencyTimeLimit=15)
-	public String getA7InstanceRunTime() {
+	public String getAppInstanceRunTime() {
 		
 		String instanceRunTime = "";
     	LocalDateTime now = LocalDateTime.now();
@@ -545,7 +545,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="DB Connection status - ONLINE or OFFLINE", currencyTimeLimit=15)
-	public String getA4ConnectionStatusStr() {
+	public String getAppConnectionStatusStr() {
 		
 		return connectionStatus.toString();
 	}
@@ -557,7 +557,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Database profile name.", currencyTimeLimit=15)
-	public String getA5DatabaseProfileName() {
+	public String getAppDatabaseProfileName() {
 		
 		return System.getProperty("dbProfile").toUpperCase();
 	}
@@ -569,7 +569,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	
 	@ManagedAttribute(description="Description of the execution environment.", currencyTimeLimit=15)
-	public String getA1LocalEnvironment() {
+	public String getAppA1LocalEnvironment() {
 		
 		return localDesc;
 	}
@@ -649,7 +649,7 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	public void loadPreferences(Session session) {
 		
-		List<PreferencesDao> preferenceList = PreferencesDao.getPreferencesByRsn(BigDecimal.valueOf(0L), session);
+		List<PreferencesDao> preferenceList = PreferencesDao.getPreferencesByRsn(PREFERENCES_RSN, session);
 		
 		if (preferenceList.size() > 0) {
 			preferences = preferenceList.get(0);

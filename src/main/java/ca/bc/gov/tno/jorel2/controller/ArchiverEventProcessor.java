@@ -108,7 +108,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		try {
 			if (ftpService.connect()) {
 				//updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
-				List<PreferencesDao> preferences = PreferencesDao.getPreferencesByRsn(BigDecimal.valueOf(0L), session);
+				List<PreferencesDao> preferences = PreferencesDao.getPreferencesByRsn(PREFERENCES_RSN, session);
 				
 				if (preferences.size() == 1 && preferences.get(0) instanceof PreferencesDao) {
 					PreferencesDao prefs = preferences.get(0);

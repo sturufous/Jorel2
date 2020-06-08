@@ -119,12 +119,12 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 					File f = new File(fileForImport);
 
 					if (fileIsImportFile(f, importFileHours, fileForImport)) {
-						boolean moveFile = false;
+						boolean success = false;
 
-						moveFile = performMediaTypeSwitching(currentEvent, currentFile, fileForImport, f, session);
+						success = performMediaTypeSwitching(currentEvent, currentFile, fileForImport, f, session);
 
 						// Move this file elsewhere
-						if(moveFile)
+						if(success)
 						{
 							numberImported++;
 							//movePaperFile(f, fileSep, moveFilePrefix);
@@ -176,7 +176,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			};
 		} else {
 			moveFile = false;
-		//	if (!definitionName.equalsIgnoreCase("Globe and Mail XML")) {
+		//	if (!definitionName.equalsIgnoreCase(GANDM_DEFINITION_ID_STRING)) {
 				//frame.addJLog(eventLog("DailyFunctions.monitorEvent(): File already processed "+s[i]), true);
 		//		moveFile = true;
 		//		moveFilePrefix = "fap_";
@@ -274,12 +274,19 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	
 	private boolean frontPageFromZip(String currentFile, String fileForImport, String definitionName, Session session) {
 		
+		boolean success = true;
+		
 		if (definitionName.equalsIgnoreCase(INFOMART_ID_STRING)) {
 			//Infomart image zip file
-			return imageHandler.infomartImageHandler(currentFile, fileForImport, session);
+			success = imageHandler.infomartImageHandler(currentFile, fileForImport, session);
+			if (success) {
+				moveFile(currentFile, fileForImport);
+			}
 		} else {
-			return true;
+			skip();
 		}
+		
+		return success;
 	}
 	
 	/** Manages the extraction of front page images from Jpg files. Currently this format is used exclusively by Globe and Mail.
@@ -295,7 +302,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		
 		boolean success = true;
 		
-		if (definitionName.equalsIgnoreCase("Globe and Mail XML")) {
+		if (definitionName.equalsIgnoreCase(GANDM_DEFINITION_ID_STRING)) {
 			// Globe image file
 			success = imageHandler.gandmImageHandler(currentFile, fileForImport, session);
 			return success;
@@ -340,7 +347,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 
 		// globe and mail fudge to add CDATA tags
 		String definitionName = currentEvent.getDefinitionName();
-		if (definitionName.equalsIgnoreCase("Globe and Mail XML") && suffix.equalsIgnoreCase("xml")) {
+		if (definitionName.equalsIgnoreCase(GANDM_DEFINITION_ID_STRING) && suffix.equalsIgnoreCase("xml")) {
 			String content = "";
 			try {
 				FileReader reader = new FileReader(f);
@@ -362,7 +369,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			//moveFile = false; // don't move the G&M files
 		}
 
-		doImport(currentEvent, currentFile, fileForImport, true, session);
+		doImport(currentEvent, currentFile, fileForImport, session);
 		//moveFile = false; // the doimport procedure will have moved this file
 
 		return true;
@@ -380,7 +387,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Whether the operation was successful.
 	 */
 	
-	private boolean doImport(EventsDao currentEvent, String currentFile, String fileForImport, boolean moveFile, Session session) {
+	private boolean doImport(EventsDao currentEvent, String currentFile, String fileForImport, Session session) {
 		String charEncoding = currentEvent.getTitle();
 		boolean success = true;
 		String sourceName = currentEvent.getDefinitionName();
@@ -397,7 +404,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 					in.close();
 				}			
 
-				if (success && moveFile) {
+				if (success) {
 					moveFile(currentFile, fileForImport);
 				}
 			} catch (Exception e) {
@@ -548,7 +555,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	private void requestReindex(int filesImported, Session session) {
 		
 		if (filesImported > 0) {
-			SyncIndexDao syncIndexRequest = new SyncIndexDao(new Date(), instance.getA2InstanceName(), "Monitor event requesting re-index");
+			SyncIndexDao syncIndexRequest = new SyncIndexDao(new Date(), instance.getAppInstanceName(), "Monitor event requesting re-index");
 			session.beginTransaction();
 			session.persist(syncIndexRequest);
 			session.getTransaction().commit();

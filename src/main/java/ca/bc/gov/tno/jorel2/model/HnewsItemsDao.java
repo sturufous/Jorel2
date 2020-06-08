@@ -666,7 +666,6 @@ public class HnewsItemsDao implements java.io.Serializable {
 				" and ((n.expireRule = 0 and FLOOR(sysdate - n.itemDate) > t.days) or (n.expireRule = 1 and FLOOR(sysdate - n.itemDate) > t.special)))) order by n.itemDate";
 
 		Query<Object[]> query = session.createQuery(sqlStmt);
-		query.setMaxResults(5);
         List<Object[]> results = query.getResultList();
         
 		return results;
