@@ -47,6 +47,7 @@ public class Jorel2Instance extends Jorel2Root {
 	Map<String, Long> threadDurations = new ConcurrentHashMap<>();
 	Map<String, Integer> articleCounts = new ConcurrentHashMap<>();
 	Map<String, Integer> wordCounts = new HashMap<>();
+	String lastInterruptionKey = "";
 	
 	/** Keeps track of date and time of database connection interruptions, i.e., entering offline mode */
 	private ConcurrentHashMap<String, String> databaseInterruptions = new ConcurrentHashMap<>();
@@ -496,7 +497,19 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	public void addDatabaseInterruption(String threadName) {
 		
-		databaseInterruptions.put(DateUtil.getTimeNow(), threadName);
+		String interruptionTime = DateUtil.getTimeNow();
+		databaseInterruptions.put(interruptionTime, "In progress");
+		lastInterruptionKey = interruptionTime;
+	}
+	
+	/**
+	 * Replaces the existing value of an in-progress database outage (the string "In progress.") with the duration of the outage in seconds.
+	 * This method is called when the connection to the database is restored.
+	 */
+	public void logDbOutageDuration() {
+		
+		long seconds = DateUtil.secondsSinceTime(lastInterruptionKey);
+		databaseInterruptions.replace(lastInterruptionKey, "Duration: " + seconds + " seconds");
 	}
 	
 	/**

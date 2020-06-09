@@ -21,6 +21,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.
@@ -104,7 +105,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
     	Session session = sessionFactory.get().openSession();
     	LocalDateTime startTime = null;
-    	//instance.loadPreferences(session);
 				
 		startTime = logThreadStartup();
 		
@@ -116,6 +116,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     			if (isConnectionLive(session)) {
     		        instance.setConnectionStatus(ConnectionStatus.ONLINE);        				
         			decoratedTrace(INDENT1, "Connection to TNO database is back online.");
+        			instance.logDbOutageDuration();
         			postProcessOfflineEvents(session);
     			} else {
     				decoratedTrace(INDENT1, "Connection to TNO database is still offline.");
@@ -129,6 +130,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     	}
     	
     	logThreadCompletion(startTime);
+    	System.out.println("DB interruptions: " + instance.getDatabaseInterruptions());
 	}
 	
 	/**

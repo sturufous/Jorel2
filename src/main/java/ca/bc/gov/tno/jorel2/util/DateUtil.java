@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
@@ -222,6 +223,16 @@ public class DateUtil extends Jorel2Root {
 		LocalDate localDate = LocalDate.parse(dateString, formatter);
 		
 		return localDate;
+	}
+	
+	public static long secondsSinceTime(String timeString) {
+		
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy, HH:mm:ss");
+		LocalDateTime then = LocalDateTime.parse(timeString, formatter);
+		LocalDateTime now = LocalDateTime.now();
+		long seconds = ChronoUnit.SECONDS.between(then, now);
+		
+		return seconds;
 	}
 	
 	public static String localDateToTnoDateFormat(LocalDate date) {
