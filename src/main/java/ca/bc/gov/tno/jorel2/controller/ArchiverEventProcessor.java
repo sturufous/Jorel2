@@ -7,6 +7,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,17 +49,9 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	@Inject
 	FtpDataSource ftpService;
 	
-	/** Root directory into which archived files are copied */
-	@Value("${archiveTo}")
-	private String archiveTo;
-	
-	/** Maximum CD capacity in kilobytes */
-	@Value("${maxCdSize}")
-	private String maxCdSize;
-	
-	/** Location of tno related data on remote ftp server (binary root). */
-	@Value("${ftp.root}")
-	private String ftpRoot;
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration config;
 	
 	private String sep = System.getProperty("file.separator");
 	
@@ -125,7 +119,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 			        	
 			        	if(ftpService.isConnected()) {
 			        		manageCdFullRollover(meta, session);
-							String archiveDir = archiveTo + sep + meta.label + sep + type + sep;
+							String archiveDir = config.getString("archiveTo") + sep + meta.label + sep + type + sep;
 			        		if(!archiveFile(rsn, archiveDir, meta, session)) {
 			        			// The only reason archiveFile() returns false is if disk space is exhausted, so abort event.
 			        			return;
@@ -191,7 +185,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 				
 				try {
 					if (tempLog.createNewFile()) {
-						meta.remoteFile = ftpRoot + filePath;
+						meta.remoteFile = config.getString("binaryRoot") + filePath;
 	
 						if (ftpService.exists(meta.remoteFile)) {
 							downloadFile(tempFilePath, meta, tempLog, rsn, session);
@@ -279,7 +273,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		String fileSep = System.getProperty("file.separator");
 		long size = 0;
 
-		File tempdir=new File(archiveTo);
+		File tempdir=new File(config.getString("archiveTo"));
 		try {
 			if (tempdir.exists()) {
 				size = calcDirFileSize( tempdir );
@@ -401,7 +395,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 		public String emailMessage;
 		public String label;
 		public PreferencesDao prefs;
-		public long maxSize = Integer.parseInt(maxCdSize) * 1024 * 1024;
+		public long maxSize = config.getLong("maxCdSize") * 1024 * 1024;
 		public boolean sendMessage = false;
 		public HnewsItemsDao currentItem = null;
 		public String remoteFile = "";

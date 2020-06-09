@@ -5,6 +5,13 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
+
+import java.io.File;
+
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.EnableMBeanExport;
@@ -26,6 +33,15 @@ import ca.bc.gov.tno.jorel2.controller.FifoThreadQueueScheduler;
 @PropertySource(value = "file:properties/jorel.properties")
 @ComponentScan("ca.bc.gov.tno.jorel2")
 public class Jorel2Configuration extends Jorel2Root {
+	
+	@Bean
+	public PropertiesConfiguration propertiesConfiguration() throws ConfigurationException {
+	    String filePath = "properties/jorel.properties";
+	    PropertiesConfiguration configuration = new PropertiesConfiguration(
+	      new File(filePath));
+	    configuration.setReloadingStrategy(new FileChangedReloadingStrategy());
+	    return configuration;
+	}
 	
 	/**
 	 * Instantiate the QuoteExtractor, the object that isolates quotes and their speakers from RSS based news items. Initialization of

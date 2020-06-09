@@ -3,6 +3,9 @@ package ca.bc.gov.tno.jorel2.model;
 import java.io.*;
 import java.util.Vector;
 
+import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 // FTP
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
@@ -17,26 +20,10 @@ import com.jcraft.jsch.Session;
 @Service
 public class FtpDataSource {
 	
-	/** The name of the FTP server to connect to, e.g., alfredo.tno.gov.bc.ca */
-	@Value("${ftp.host}")
-	String host;
-	
-	/** The user name to use when connecting to the FTP server */
-	@Value("${ftp.userName}")
-	String userName;
-	
-	/** The password to use when connecting to the FTP server */
-	@Value("${ftp.password}")
-	String password;
-	
-	/** Indicates whether this FTP connection should be secure or not */
-	@Value("${ftp.secure}")
-	String secureFlag;
-	
-	/** Indicates whether this FTP connection is active or passive */
-	@Value("${ftp.type}")
-	String type;
-	
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration config;
+		
 	String ftpError;
 	
 	// FTP
@@ -52,14 +39,14 @@ public class FtpDataSource {
 
 	public boolean connect() {
 		
-		secure = secureFlag.contentEquals("yes");
+		secure = config.getString("secure").contentEquals("yes");
 		if (secure) {
 			JSch jsch=new JSch();
 
 			try {
 				// create session
-				session=jsch.getSession(userName, host, 22);
-				session.setPassword(password);
+				session=jsch.getSession(config.getString("ftp.userName"), config.getString("ftp.host"), 22);
+				session.setPassword(config.getString("ftp.password"));
 
 				// configure : do not do strict host checking
 				java.util.Hashtable<String,String> config = new java.util.Hashtable<>();
@@ -77,13 +64,13 @@ public class FtpDataSource {
 		} else {
 			try {
 				ftp = new FTPClient();
-				ftp.connect(host);
+				ftp.connect(config.getString("ftp.host"));
 				int reply = ftp.getReplyCode();
 				if (!FTPReply.isPositiveCompletion(reply) ) {
 					setError("jorelFTP.connect(): Cannot connect to FTP server");
 					return false;
 				} else {
-					if (! ftp.login(userName, password) ) {
+					if (! ftp.login(config.getString("ftp.userName"), config.getString("ftp.password"))) {
 						setError("jorelFTP.connect(): Cannot connect to FTP server");
 						return false;
 					}

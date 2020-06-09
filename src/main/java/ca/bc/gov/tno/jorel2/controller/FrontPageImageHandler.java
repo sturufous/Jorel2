@@ -18,6 +18,9 @@ import java.util.zip.ZipInputStream;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -40,13 +43,9 @@ import ca.bc.gov.tno.jorel2.util.DateUtil;
 @Service
 class FrontPageImageHandler extends Jorel2Root {
 	
-	/** Full pathname of binary root directory */
-	@Value("${binaryRoot}")
-	private String binaryRoot;
-	
-	/** Web root used in constructing path to audio-video files (a key in NEWS_ITEM_IMAGES) */
-	@Value("${wwwBinaryRoot}")
-	private String wwwBinaryRoot;
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration config;
 	
 	/** Platform dependent file separator character */
 	private String sep = System.getProperty("file.separator");
@@ -83,7 +82,7 @@ class FrontPageImageHandler extends Jorel2Root {
 
 					// Determine location in directory structure based on date
 					String binaryDir = binaryRootHelper(localDate);
-					String dirTargetName = binaryRoot + sep + binaryDir;
+					String dirTargetName = config.getString("binaryRoot") + sep + binaryDir;
 					if (!binaryDir.equalsIgnoreCase("")) {
 						// Move the file to the archive location
 						File archiveTarget = new File(dirTargetName + sep + jpgFileName);
@@ -91,7 +90,7 @@ class FrontPageImageHandler extends Jorel2Root {
 						try {
 							if (copyFile(c, archiveTarget)) {
 								ImageDimensions id = getImageDimensions(c);
-								String wwwTargetName = wwwBinaryRoot + sep + binaryDir + sep;
+								String wwwTargetName = config.getString("wwwBinaryRoot") + sep + binaryDir + sep;
 								success = createNewsItemImage(sourceRsn, id, wwwTargetName, jpgFileName, c, session);
 							}
 						} catch (IOException ex) {
@@ -241,7 +240,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			String binaryDir = binaryRootHelper(itemDate);
 	
 			if (copyFileToTargetDir(fileName, tempPath, binaryDir)) {
-				String wwwTargetName = wwwBinaryRoot + binaryDir + sep;
+				String wwwTargetName = config.getString("wwwBinaryRoot") + binaryDir + sep;
 				ImageDimensions id = getImageDimensions(tempPath);
 				success = updateNewsItemImage(niiRecord, id, wwwTargetName, session);
 			}
@@ -290,7 +289,7 @@ class FrontPageImageHandler extends Jorel2Root {
 					String binaryDir = binaryRootHelper(localDate);
 	
 					if (copyFileToTargetDir(fileName, archivePath, binaryDir)) {
-						String wwwTargetName = wwwBinaryRoot + sep + binaryDir + sep;
+						String wwwTargetName = config.getString("wwwBinaryRoot") + sep + binaryDir + sep;
 						ImageDimensions id = getImageDimensions(archivePath);
 						success = createNewsItemImage(sourceRsn, id, wwwTargetName, fileName, archivePath, session);
 					}
@@ -354,7 +353,7 @@ class FrontPageImageHandler extends Jorel2Root {
 		// Move the file to the new location in directory structure
 		if (success) {
 	
-			File fileTarget = new File(binaryRoot + sep + binaryDir + sep + fileName);
+			File fileTarget = new File(config.getString("binaryRoot") + sep + binaryDir + sep + fileName);
 			
 			try {
 				success = copyFile(tempPath, fileTarget);
@@ -550,11 +549,11 @@ class FrontPageImageHandler extends Jorel2Root {
 		String dirTargetName = String.format("%04d%s%02d%s%02d", itemYear, sep, itemMonth, sep, itemDay);
 		//String wwwTargetName = frame.getWWWBinaryRoot()+itemYear+sep+itemMonthString+sep+itemDayString+sep;
 
-		File dirTarget = new File(binaryRoot + sep + dirTargetName);
+		File dirTarget = new File(config.getString("binaryRoot") + sep + dirTargetName);
 		if (!dirTarget.isDirectory()) {
 			try {
 				if (!(dirTarget.mkdirs())) {
-					IOException e = new IOException("Could not create directory " + binaryRoot + dirTargetName);
+					IOException e = new IOException("Could not create directory " + config.getString("binaryRoot") + dirTargetName);
 					decoratedError(INDENT1, "Creating new image directory.", e);
 					dirTargetName = "";
 				}
@@ -675,7 +674,7 @@ class FrontPageImageHandler extends Jorel2Root {
 		
 		boolean success = true;
 		
-		String dirTargetName = binaryRoot + sep + binaryDir;
+		String dirTargetName = config.getString("binaryRoot") + sep + binaryDir;
 		if (binaryDir.equalsIgnoreCase("")) {
 			success = false;
 		}

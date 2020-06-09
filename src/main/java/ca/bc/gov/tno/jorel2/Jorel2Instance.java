@@ -13,6 +13,9 @@ import java.util.OptionalDouble;
 import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jmx.export.annotation.ManagedResource;
@@ -60,60 +63,9 @@ public class Jorel2Instance extends Jorel2Root {
 	
 	LocalDateTime startTime = null;
 
-	/** Description of the execution platform */
-	@Value("${localDesc}")
-	public String localDesc;
-	
-	/** The name of the current instance */
-	@Value("${instanceName}")
-	public String instanceName;
-	
-	/** The maximum time a thread can run before the VM exits */
-	@Value("${maxThreadRuntime}")
-	public String maxThreadRuntimeString;
-	
-	/** The from address of any Jorel2 emails */
-	@Value("${mail.from}")
-	public String mailFromAddress;
-	
-	/** The to address, or addresses, for any Jorel2 emails */
-	@Value("${mail.to}")
-	private String mailToAddress;
-	
-	/** The host address of the smtp server used for sending emails */
-	@Value("${mail.host}")
-	public String mailHostAddress;
-	
-	/** The port of the smtp server used for sending emails */
-	@Value("${mail.portNumber}")
-	public String mailPortNumber;
-	
-	/** Cron expression used to schedule thread executions (usually 30 seconds) */
-	@Value("${cron.expression}")
-	public String cronExpression;
-	
-	/** The location where media are stored (e.g. images, audio, video) */
-	@Value("${binaryRoot}")
-	public String binaryRoot;
-	
-	/** The location in the web hierarchy where media a placed for listening/viewing */
-	@Value("${wwwBinaryRoot}")
-	public String wwwRoot;
-	
-	/** The location into which newspaper import files are moved post-processing */
-	@Value("${processedFilesLoc}")
-	public String processedLoc;
-	
-	/** The location into which media are archived (contains CD archive directories with format CD9999) */
-	@Value("${archiveTo}")
-	public String archiveTo;
-	
-	/** The maximum number of bytes an archive directory can hold before rolling over to a new one */
-	@Value("${maxCdSize}")
-	public String maxCdSize;
-	
-	/** Integer version of maxThreadRuntimeString which is exposed as a JMX managed operation */
-	private int maxThreadRuntime = 0;
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration config;
 	
 	/** Allows charting of individual run times in VisualVM */
 	private long lastDuration = 0;
@@ -130,11 +82,6 @@ public class Jorel2Instance extends Jorel2Root {
 		startTime = LocalDateTime.now();
 	}
 	
-	@PostConstruct
-	public void init() {
-		maxThreadRuntime = Integer.valueOf(maxThreadRuntimeString);
-	}
-	
 	/**
 	 * Expose the name of the instance this execution is running on.
 	 * 
@@ -144,7 +91,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Name of this Jorel instance", currencyTimeLimit=15)
 	public String getAppInstanceName() {
 		
-		return instanceName;
+		return config.getString("instanceName");
 	}
 	
 	/**
@@ -159,7 +106,7 @@ public class Jorel2Instance extends Jorel2Root {
 	})
 	public void setInstanceName(String instanceName) {
 		
-		this.instanceName = instanceName;
+		config.setProperty("instanceName", instanceName);
 	}
 	
 	/**
@@ -294,7 +241,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Cron expression used for thread execution scheduling", currencyTimeLimit=15)
 	public String getCronExpression() {
 		
-		return cronExpression;
+		return config.getString("cronExpression");
 	}	
 
 	/**
@@ -325,7 +272,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Max thread run time of this instance", currencyTimeLimit=15)
 	public int getMaxThreadRuntime() {
 		
-		return maxThreadRuntime;
+		return config.getInt("maxThreadRuntime");
 	}	
 	
 	/**
@@ -340,7 +287,7 @@ public class Jorel2Instance extends Jorel2Root {
 	})
 	public void setMaxThreadruntime(int maxThreadRuntime) {
 		
-		this.maxThreadRuntime = maxThreadRuntime;
+		config.setProperty("maxThreadRuntime", maxThreadRuntime);
 	}
 	
 	/**
@@ -378,7 +325,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="From address for use when sending Jorel2 emails", currencyTimeLimit=15)
 	public String getMailFromAddress() {
 		
-		return mailFromAddress;
+		return config.getString("mail.from");
 	}
 	
 	/**
@@ -390,7 +337,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="To address for use when sending Jorel2 emails", currencyTimeLimit=15)
 	public String getMailToAddress() {
 		
-		return mailToAddress;
+		return config.getString("mail.to");
 	}
 	
 	/**
@@ -402,7 +349,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Binary root path in which media are stored", currencyTimeLimit=15)
 	public String getStorageBinaryRoot() {
 		
-		return binaryRoot;
+		return config.getString("binaryRoot");
 	}
 	
 	/**
@@ -414,7 +361,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="The www root path (media root directory within web hierarchy)", currencyTimeLimit=15)
 	public String getStorageWwwRoot() {
 		
-		return wwwRoot;
+		return config.getString("wwwBinaryRoot");
 	}
 	
 	/**
@@ -426,7 +373,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Location into which import files are copied post-processing", currencyTimeLimit=15)
 	public String getStorageProcessedLoc() {
 		
-		return processedLoc;
+		return config.getString("processedFilesLoc");
 	}
 	
 	/**
@@ -438,7 +385,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Location into which media files are archived", currencyTimeLimit=15)
 	public String getStorageArchiveTo() {
 		
-		return archiveTo;
+		return config.getString("archiveTo");
 	}
 	
 	/**
@@ -450,7 +397,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Maximum number of bytes in a CD archive (in K) before rollover to next disk", currencyTimeLimit=15)
 	public String getStorageMaxCdSize() {
 		
-		return maxCdSize;
+		return config.getString("maxCdSize");
 	}
 	
 	/**
@@ -462,7 +409,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Host address for use when sending Jorel2 emails", currencyTimeLimit=15)
 	public String getMailHostAddress() {
 		
-		return mailHostAddress;
+		return config.getString("mail.host");
 	}
 	
 	/**
@@ -474,7 +421,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Number of quote extractor words by type", currencyTimeLimit=15)
 	public String getMailPortNumber() {
 		
-		return mailPortNumber;
+		return config.getString("mail.portNumber");
 	}
 	
 	/**
@@ -584,7 +531,7 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="Description of the execution environment.", currencyTimeLimit=15)
 	public String getAppA1LocalEnvironment() {
 		
-		return localDesc;
+		return config.getString("localDesc");
 	}
 	
 	/**

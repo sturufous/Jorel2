@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
@@ -28,30 +30,10 @@ import org.hibernate.cfg.Configuration;
 @Profile("prod")
 final class ProdDataSourceConfig extends DataSourceConfig {
 
-	/** The system name to use in connecting to the database, e.g., vongole.tno.gov.bc.ca */
-	@Value("${prod.dbSystemName}")
-	private String systemName;
-	
-	/** The port number used in connecting to the database, e.g., 1521 */
-	@Value("${prod.dbPort}")
-	private String port;
-	
-	/** The sid used in connecting to the database, e.g., tnotst02 */
-	@Value("${prod.dbSid}")
-	private String sid;
-	
-	/** The user name used in connecting to the database */
-	@Value("${prod.dbUserName}")
-	private String userId;
-	
-	/** The password used in connecting to the database */
-	@Value("${prod.dbPassword}")
-	private String userPw;
-	
-	/** The Hibernate dialect to use in communicating with the database */
-	@Value("${prod.dbDialect}")	
-	private String dialect;
-	
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration c;
+		
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	private Jorel2Instance instance;
@@ -73,7 +55,8 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 			try {
 				logger.debug("Getting production Hibernate session factory.");
 							
-				Properties settings = populateSettings(systemName, port, sid, userId, userPw, dialect);
+				Properties settings = populateSettings(c.getString("prod.dbSystemName"), c.getString("prod.dbPort"), c.getString("prod.dbSid"), 
+						c.getString("prod.dbUserName"), c.getString("prod.dbPassword"), c.getString("prod.dbDialect"));
 		        Configuration config = registerEntities();
 		        config.setProperties(settings);
 		        
@@ -97,14 +80,5 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 	private void shutDown() {
 		
 		sessionFactoryOptional.get().close();
-	}
-	
-	/** 
-	 * Provides access to the name of the system that this configuration is communicating with 
-	 * @return The system name.
-	 */
-	public String getSystemName() {
-		
-		return systemName;
 	}
 }

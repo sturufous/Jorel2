@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,13 +35,9 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 	@Inject
 	Jorel2Instance instance;
 	
-	/** Full pathname of binary root directory */
-	@Value("${binaryRoot}")
-	private String startDirectory;
-	
-	/** Web root used in constructing path to audio-video files (a key in NEWS_ITEM_IMAGES) */
-	@Value("${wwwBinaryRoot}")
-	private String wwwBinaryRoot;
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration config;
 	
 	/**
 	 * Process all eligible CleanBinaryRootEventProcessor event records from the EVENTS table. 
@@ -123,7 +121,7 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 						sub = sub.replaceAll("#m#",itemMonthString);
 						sub = sub.replaceAll("#d#",itemDayString);
 	
-						String path = startDirectory + "/" + sub;
+						String path = config.getString("binaryRoot") + "/" + sub;
 			    		decoratedTrace(INDENT2, "Begin clean binary directory: " + path);
 	
 						recurseBinaryRoot(path, justLogit, session);
@@ -173,8 +171,8 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 				if (file.getName().endsWith(".jpg")) {
 
 					String avpath = filePath;
-					if (avpath.startsWith(startDirectory)) {
-						avpath = wwwBinaryRoot + avpath.substring(startDirectory.length());
+					if (avpath.startsWith(config.getString("binaryRoot"))) {
+						avpath = config.getString("wwwBinaryRoot") + avpath.substring(config.getString("binaryRoot").length());
 					}
 					
 					if (avpath.endsWith(file.getName())) {

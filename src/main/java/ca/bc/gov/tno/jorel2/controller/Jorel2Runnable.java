@@ -130,7 +130,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     	}
     	
     	logThreadCompletion(startTime);
-    	System.out.println("DB interruptions: " + instance.getDatabaseInterruptions());
 	}
 	
 	/**

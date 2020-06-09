@@ -13,6 +13,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -46,13 +48,9 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	@Inject
 	private NewspaperImportHandler importHandler;
 	
-	/** Maximum age of files for import in hours */
-	@Value("${importFileHours}")
-	private String importFileHoursStr;
-	
-	/** Directory to which processed files should be moved */
-	@Value("${processedFilesLoc}")
-	private String processedFilesLoc;
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration config;
 	
 	private String sep = System.getProperty("file.separator");
 
@@ -111,7 +109,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			String definitionName = currentEvent.getDefinitionName();
 
 			try {
-				int importFileHours = Integer.valueOf(importFileHoursStr);
+				int importFileHours = Integer.valueOf(config.getString("importFileHours"));
 
 				for (String currentFile : dir.list()) {
 					
@@ -505,7 +503,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		
 		// Move this file elsewhere
 		String newFileName="";
-		String moveTo = processedFilesLoc;
+		String moveTo = config.getString("processedFilesLoc");
 		
 		newFileName = moveTo.endsWith(sep) ? moveTo + currentFile : moveTo + sep + currentFile;
 

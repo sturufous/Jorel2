@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -28,30 +30,6 @@ import org.hibernate.cfg.Configuration;
 @Component
 @Profile("dev")
 final class DevDataSourceConfig extends DataSourceConfig {
-
-	/** The system name to use in connecting to the database, e.g., vongole.tno.gov.bc.ca */
-	@Value("${dev.dbSystemName}")
-	private String systemName;
-	
-	/** The port number used in connecting to the database, e.g., 1521 */
-	@Value("${dev.dbPort}")
-	private String port;
-	
-	/** The sid used in connecting to the database, e.g., tnotst02 */
-	@Value("${dev.dbSid}")
-	private String sid;
-	
-	/** The user name used in connecting to the database */
-	@Value("${dev.dbUserName}")
-	private String userId;
-	
-	/** The password used in connecting to the database */
-	@Value("${dev.dbPassword}")
-	private String userPw;
-	
-	/** The Hibernate dialect to use in communicating with the database */
-	@Value("${dev.dbDialect}")	
-	private String dialect;
 	
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
@@ -59,6 +37,10 @@ final class DevDataSourceConfig extends DataSourceConfig {
 	
 	/** Cached SessionFactory used to create a new session for each Jorel2Runnable thread */
 	private Optional<SessionFactory> sessionFactoryOptional = Optional.empty();
+	
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration c;
 	
 	/**
 	 * This method initializes the Hibernate framework for use throughout the execution of this Jorel2 invocation. It creates a properties object
@@ -75,7 +57,8 @@ final class DevDataSourceConfig extends DataSourceConfig {
 			try {
 				logger.debug("Getting development Hibernate session factory.");
 							
-				Properties settings = populateSettings(systemName, port, sid, userId, userPw, dialect);
+				Properties settings = populateSettings(c.getString("dev.dbSystemName"), c.getString("dev.dbPort"), c.getString("dev.dbSid"), 
+						c.getString("dev.dbUserName"), c.getString("dev.dbPassword"), c.getString("dev.dbDialect"));
 		        Configuration config = registerEntities();
 		        config.setProperties(settings);
 		        
