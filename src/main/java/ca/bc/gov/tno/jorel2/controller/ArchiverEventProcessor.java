@@ -7,18 +7,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
-
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FtpDataSource;
 import ca.bc.gov.tno.jorel2.model.HnewsItemsDao;
-import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.EmailUtil;
@@ -185,7 +182,8 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 				
 				try {
 					if (tempLog.createNewFile()) {
-						meta.remoteFile = config.getString("binaryRoot") + filePath;
+						// 
+						meta.remoteFile = config.getString("ftp.root") + filePath;
 	
 						if (ftpService.exists(meta.remoteFile)) {
 							downloadFile(tempFilePath, meta, tempLog, rsn, session);

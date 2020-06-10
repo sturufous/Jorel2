@@ -6,6 +6,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
@@ -53,6 +55,12 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	/** Used to cycle through the thread names Jorel2Thread-0, -1 and -2. A maximum of three threads can run concurrently. */
 	private volatile int threadCounter = 3;
 	
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration config;
+	
+	private String cronExpression = "";
+
 	/**
 	 * Adds the initial three threads and their associated runnable objects to the <code>threadQueue</code>. This is done <code>PostConstruct</code>
 	 * so it is guaranteed to finish prior to the first execution of the <code>@Scheduled run()</code> method.
@@ -61,6 +69,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	public void init() {
 		
 		threadQueue = new ArrayBlockingQueue<>(THREAD_POOL_SIZE);
+		cronExpression = config.getString("cron.expression");
 		for (int count=0; count < THREAD_POOL_SIZE; count++) {
 			
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
@@ -78,7 +87,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	 * <code>ArrayBlockingQueue</code>'s <code>poll(long timeout, TimeUnit unit)</code> method which will timeout after <code>maxThreadRuntime</code>
 	 * seconds. In this case an error is logged and the VM will shut down.
 	 */
-	@Scheduled(cron = "${cron.expression}")
+	@Scheduled(cron = "0/30 * * * * ?") // When testing is finished, uncomment @PropertySource(value = "file:properties/jorel.properties")
 	public void run() {
 		try {
 			Thread currentThread = threadQueue.poll(instance.getMaxThreadRuntime(), TimeUnit.SECONDS);

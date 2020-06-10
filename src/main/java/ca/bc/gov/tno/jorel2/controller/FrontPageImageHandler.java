@@ -240,7 +240,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			String binaryDir = binaryRootHelper(itemDate);
 	
 			if (copyFileToTargetDir(fileName, tempPath, binaryDir)) {
-				String wwwTargetName = config.getString("wwwBinaryRoot") + binaryDir + sep;
+				String wwwTargetName = config.getString("wwwBinaryRoot") + sep + binaryDir + sep;
 				ImageDimensions id = getImageDimensions(tempPath);
 				success = updateNewsItemImage(niiRecord, id, wwwTargetName, session);
 			}

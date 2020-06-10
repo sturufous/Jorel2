@@ -499,7 +499,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	
 	private boolean moveFile(String currentFile, String fileForImport) {
 		
-		boolean success;
+		boolean success = true;
 		
 		// Move this file elsewhere
 		String newFileName="";
@@ -522,7 +522,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			}
 		}
 		
-		return false;
+		return success;
 	}
 	
 	/**

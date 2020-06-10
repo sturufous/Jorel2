@@ -39,7 +39,7 @@ public class FtpDataSource {
 
 	public boolean connect() {
 		
-		secure = config.getString("secure").contentEquals("yes");
+		secure = config.getString("ftp.secure").contentEquals("yes");
 		if (secure) {
 			JSch jsch=new JSch();
 

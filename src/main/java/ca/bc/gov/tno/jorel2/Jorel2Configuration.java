@@ -30,13 +30,28 @@ import ca.bc.gov.tno.jorel2.controller.FifoThreadQueueScheduler;
 @Configuration
 @EnableScheduling
 @EnableMBeanExport
-@PropertySource(value = "file:properties/jorel.properties")
+//@PropertySource(value = "file:properties/jorel.properties")
 @ComponentScan("ca.bc.gov.tno.jorel2")
 public class Jorel2Configuration extends Jorel2Root {
 	
+	/**
+	 * Creates an Apache Commons PropertiesConfiguration bean which loads the contents of jorel.properties and continually monitors it
+	 * for changes. If changes occur, the new property values are reloaded for use by subsequent events. The following properties will be
+	 * updated on the fly, along with the others, but because they are only used once when Jorel2 is launched these changes will not take
+	 * effect until Jorel2 is restarted:
+	 * 
+	 * <ul>
+	 * <li>All properties relating to the dev and prod database connections</li>
+	 * <li>The cron expression that describes the thread execution schedule</li>
+	 * </ul>
+	 * 
+	 * @return
+	 * @throws ConfigurationException
+	 */
 	@Bean
 	public PropertiesConfiguration propertiesConfiguration() throws ConfigurationException {
 	    String filePath = "properties/jorel.properties";
+	    String cronExpression = "";
 	    PropertiesConfiguration configuration = new PropertiesConfiguration(
 	      new File(filePath));
 	    configuration.setReloadingStrategy(new FileChangedReloadingStrategy());
