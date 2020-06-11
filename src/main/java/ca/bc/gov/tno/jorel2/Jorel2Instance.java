@@ -1,7 +1,6 @@
 package ca.bc.gov.tno.jorel2;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -12,12 +11,9 @@ import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jmx.export.annotation.ManagedResource;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
@@ -434,7 +430,18 @@ public class Jorel2Instance extends Jorel2Root {
 	@ManagedAttribute(description="To address for use when sending Jorel2 emails", currencyTimeLimit=15)
 	public String getMailToAddress() {
 		
-		return config.getString("mail.to");
+		String[] distributionList = config.getStringArray("mail.to");
+		String listCommaDelimited = "";
+		
+		for(int idx=0; idx < distributionList.length; idx++) {
+			if(idx < distributionList.length - 1) {
+				listCommaDelimited = listCommaDelimited + distributionList[idx] + ",";
+			} else {
+				listCommaDelimited = listCommaDelimited + distributionList[idx];
+			}
+					
+		}
+		return listCommaDelimited;
 	}
 	
 	/**
@@ -479,6 +486,17 @@ public class Jorel2Instance extends Jorel2Root {
 	public String getStorageBinaryRoot() {
 		
 		return config.getString("binaryRoot");
+	}
+	
+	/**
+	 * Exposes the importFileHours property as a JMX attribute.
+	 * 
+	 * @return The importFileHours property.
+	 */
+	@ManagedAttribute(description="The maximum time, in seconds, since last-modified before import files are rejected", currencyTimeLimit=15)
+	public String getStorageImportFileHours() {
+		
+		return config.getString("importFileHours");
 	}
 	
 	/**

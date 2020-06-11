@@ -80,6 +80,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private ArchiverEventProcessor archiverEventProcessor;
 	
+	/** PlSql Event processor service */
+	@Inject
+    private ExpireEventProcessor expireEventProcessor;
+	
 	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	private Jorel2Instance instance;
@@ -169,6 +173,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case SYNC -> syncEventProcessor.processEvents(eventTypeName, session);
 	        		case PLSQL -> plSqlEventProcessor.processEvents(eventTypeName, session);
 	        		case ARCHIVER -> archiverEventProcessor.processEvents(eventTypeName, session);
+	        		case EXPIRE -> expireEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }

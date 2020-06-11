@@ -59,14 +59,14 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        		
+	        		cleanBinaryRootEvent(currentEvent, session);
+	        		
 	        		// Update the lastFtpRun to today's date to prevent CleanBinaryRoot event from running again until tomorrow.
 	        		String currentDate = DateUtil.getDateNow();
 	        		currentEvent.setLastFtpRun(currentDate);
 	        		session.beginTransaction();
 	        		session.persist(currentEvent);
 	        		session.getTransaction().commit();
-	        		
-	        		cleanBinaryRootEvent(currentEvent, session);
 	        	}
 	        }
     	} 

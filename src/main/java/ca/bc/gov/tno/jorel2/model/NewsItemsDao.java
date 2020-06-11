@@ -719,4 +719,26 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
         
 		return results;
 	}
+	
+	/**
+	 * Get the full broadcast news item records that have expired. 
+	 * 
+	 * @param session The current Hibernate persistence context
+	 * @return A list containing all the records that meet the expiry criteria.
+	 */
+	public static List<NewsItemsDao> getExpiredFullBroadcasts(BigDecimal retainDays, Session session) {
+		
+		String sqlStmt = "from NewsItemsDao n where n.expireRule = 3 and n.itemDate < (sysdate - :retainDays) and n.type <> 'CC News'";
+
+		Query<NewsItemsDao> query = session.createQuery(sqlStmt, NewsItemsDao.class);
+		query.setParameter("retainDays", retainDays);
+        List<NewsItemsDao> results = query.getResultList();
+        
+		return results;
+	}
+	
+	public static void deleteRecordByRsn(BigDecimal rsn, Session session) {
+		
+	}
+
 }

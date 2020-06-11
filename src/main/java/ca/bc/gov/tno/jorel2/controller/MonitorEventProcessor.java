@@ -16,14 +16,12 @@ import javax.inject.Inject;
 
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FilesImportedDao;
 import ca.bc.gov.tno.jorel2.model.ImportDefinitionsDao;
-import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
@@ -99,13 +97,13 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		String startTimeStr = currentEvent.getStartTime() == null ? "00:00:00" : currentEvent.getStartTime();
 		LocalDateTime now = LocalDateTime.now();
 		String startHoursMinutes = startTimeStr.substring(0, 5);
-		String nowHoursMinutes = "02:30"; // String.format("%02d:%02d", now.getHour(), now.getMinute());
+		String nowHoursMinutes = String.format("%02d:%02d", now.getHour(), now.getMinute());
 		int numberImported = 0; 
 		
 		String dirName = currentEvent.getFileName();
 		File dir = new File(currentEvent.getFileName());
 		
-		if (nowHoursMinutes.equals(startHoursMinutes) && dir.isDirectory()) {
+		if ((nowHoursMinutes.compareTo(startHoursMinutes) >= 0) && dir.isDirectory()) {
 			String definitionName = currentEvent.getDefinitionName();
 
 			try {
@@ -153,9 +151,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	@SuppressWarnings("preview")
 	private boolean performMediaTypeSwitching(EventsDao currentEvent, String currentFile, String fileForImport, File f, Session session) {
 		// Make sure the file is completely downloaded
-		boolean moveFile = false;
-		String moveFilePrefix = "";
-		PreferencesDao preferences = instance.getPreferences(); // Not currently used
+		boolean success = false;
 		String definitionName = currentEvent.getDefinitionName();
 
 		// Make sure this file has not already been imported
@@ -166,22 +162,17 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			//verifyDownloadCompletion(f);
 			String suffix = currentFile.substring(currentFile.toLowerCase().lastIndexOf('.') + 1);
 			
-			moveFile = switch(suffix) {
+			success = switch(suffix) {
 				case "zip" -> frontPageFromZip(currentFile, fileForImport, definitionName, session);
 				case "jpg" -> frontPageFromJpg(currentFile, fileForImport, definitionName, session);
 				case "pdf" -> frontPageFromPdf(currentFile, fileForImport, definitionName, session);
 				default -> processNewsItem(currentEvent, currentFile, fileForImport, f, suffix, session);
 			};
 		} else {
-			moveFile = false;
-		//	if (!definitionName.equalsIgnoreCase(GANDM_DEFINITION_ID_STRING)) {
-				//frame.addJLog(eventLog("DailyFunctions.monitorEvent(): File already processed "+s[i]), true);
-		//		moveFile = true;
-		//		moveFilePrefix = "fap_";
-		//	}
+			success = false;
 		}
 		
-		return moveFile;
+		return success;
 	}
 	
 	/**
