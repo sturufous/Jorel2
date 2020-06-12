@@ -670,4 +670,34 @@ public class HnewsItemsDao implements java.io.Serializable {
         
 		return results;
 	}
+	
+	/**
+	 * Get expired historical news items. 
+	 * 
+	 * @param sourceType The type of source for which news items should be retrieved.
+	 * @param retainDays The number of days before the news item expires.
+	 * @param session The current Hibernate persistence context.
+	 * @return A list containing all the records that meet the expiry criteria.
+	 */
+	public static List<HnewsItemsDao> getExpiredItems(String sourceType, String tvSources, BigDecimal retainDays, BigDecimal expireRule, Session session) {
+		
+		String sqlStmt = "";
+		Query<HnewsItemsDao> query = null; 
+		
+		if(sourceType.equalsIgnoreCase("TV News")) {
+			sqlStmt = "from HnewsItemsDao where type = 'TV News' and source not in (:TVSources) and itemDate < (sysdate - :retainDays) and expireRule = :expiryRule and archived = 0";
+			query = session.createQuery(sqlStmt, HnewsItemsDao.class);
+			query.setParameter("TVSources", tvSources);
+		} else {
+			sqlStmt = "from HnewsItemsDao where type = :sourceType and itemDate < (sysdate - :retainDays) and expireRule = :expiryRule and archived = 0";
+			query = session.createQuery(sqlStmt, HnewsItemsDao.class);
+			query.setParameter("sourceType", sourceType);
+		};
+
+		query.setParameter("retainDays", retainDays);
+		query.setParameter("expiryRule", expireRule);
+        List<HnewsItemsDao> results = query.getResultList();
+        
+		return results;
+	}
 }

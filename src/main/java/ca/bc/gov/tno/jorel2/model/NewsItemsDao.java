@@ -723,7 +723,8 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	/**
 	 * Get the full broadcast news item records that have expired. 
 	 * 
-	 * @param session The current Hibernate persistence context
+	 * @param retainDays The number of days before the broadcast expires.
+	 * @param session The current Hibernate persistence context.
 	 * @return A list containing all the records that meet the expiry criteria.
 	 */
 	public static List<NewsItemsDao> getExpiredFullBroadcasts(BigDecimal retainDays, Session session) {
@@ -732,6 +733,36 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 
 		Query<NewsItemsDao> query = session.createQuery(sqlStmt, NewsItemsDao.class);
 		query.setParameter("retainDays", retainDays);
+        List<NewsItemsDao> results = query.getResultList();
+        
+		return results;
+	}
+	
+	/**
+	 * Get expired news items. 
+	 * 
+	 * @param sourceType The type of source for which news items should be retrieved.
+	 * @param retainDays The number of days before the news item expires.
+	 * @param session The current Hibernate persistence context.
+	 * @return A list containing all the records that meet the expiry criteria.
+	 */
+	public static List<NewsItemsDao> getExpiredItems(String sourceType, String tvSources, BigDecimal retainDays, BigDecimal expireRule, Session session) {
+		
+		String sqlStmt = "";
+		Query<NewsItemsDao> query = null; 
+		
+		if(sourceType.equalsIgnoreCase("TV News")) {
+			sqlStmt = "from NewsItemsDao where type = 'TV News' and source not in (:TVSources) and itemDate < (sysdate - :retainDays) and expireRule = :expiryRule and archived = 0";
+			query = session.createQuery(sqlStmt, NewsItemsDao.class);
+			query.setParameter("TVSources", tvSources);
+		} else {
+			sqlStmt = "from NewsItemsDao where type = :sourceType and itemDate < (sysdate - :retainDays) and expireRule = :expiryRule and archived = 0";
+			query = session.createQuery(sqlStmt, NewsItemsDao.class);
+			query.setParameter("sourceType", sourceType);
+		};
+
+		query.setParameter("retainDays", retainDays);
+		query.setParameter("expiryRule", expireRule);
         List<NewsItemsDao> results = query.getResultList();
         
 		return results;

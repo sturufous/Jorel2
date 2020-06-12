@@ -493,5 +493,22 @@ public class SourcesDao implements java.io.Serializable {
         
 		return results;
 	}
+			
+	/**
+	 * Get a list of sources that never expire and are archived by the Archiver event.
+	 * 
+	 * @param session The current Hibernate persistence context
+	 * @return A list of SourcesDao records for sources that never expire.
+	 */
+	public static List<SourcesDao> getNonExpiringSources(Session session) {
+		
+		String sqlStmt = "from SourcesDao where tvarchive = 1";
+
+		Query<SourcesDao> query = session.createQuery(sqlStmt, SourcesDao.class);
+        List<SourcesDao> results = query.getResultList();
+        
+		return results;
+	}
+			
 
 }
