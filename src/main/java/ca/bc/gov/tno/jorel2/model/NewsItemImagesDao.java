@@ -205,4 +205,23 @@ public class NewsItemImagesDao implements java.io.Serializable {
 	    int count = query.executeUpdate();
 		session.getTransaction().commit();
 	}
+	
+	/**
+	 * Get the NEWS_ITEM_IMAGES records that are older than today's date minus retainDays.
+	 *
+	 * @param retainDays The number of days to keep news item images.
+	 * @param session The current Hibernate persistence context
+	 * @return A list of expired image records.
+	 */
+	public static List<NewsItemImagesDao> getExpiringImages(BigDecimal retainDays, Session session) {
+		
+		String sqlStmt = "from NewsItemImagesDao where itemRsn in (select rsn from NewsItemsDao where expireRule = 0 and itemDate < (sysdate - :retainDays)) or " +
+				"itemRsn in (select rsn from HnewsItemsDao where expireRule = 0 and itemDate < (sysdate - :retainDays))";
+		
+		Query<NewsItemImagesDao> query = session.createQuery(sqlStmt, NewsItemImagesDao.class);
+		query.setParameter("retainDays", retainDays);
+        List<NewsItemImagesDao> results = query.getResultList();
+        
+        return results;
+	}
 }

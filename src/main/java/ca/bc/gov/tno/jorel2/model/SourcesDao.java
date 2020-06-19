@@ -510,5 +510,19 @@ public class SourcesDao implements java.io.Serializable {
 		return results;
 	}
 			
+	/**
+	 * Get a list of sources that expire.
+	 * 
+	 * @param session The current Hibernate persistence context
+	 * @return A list of SourcesDao records for sources that expire.
+	 */
+	public static List<SourcesDao> getExpiringSources(Session session) {
+		
+		String sqlStmt = "from SourcesDao where expireDays > 0";
 
+		Query<SourcesDao> query = session.createQuery(sqlStmt, SourcesDao.class);
+        List<SourcesDao> results = query.getResultList();
+        
+		return results;
+	}
 }

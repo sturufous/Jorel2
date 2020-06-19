@@ -151,7 +151,7 @@ public class DateUtil extends Jorel2Root {
 		
 		// Process the current date using the JDK 1.8 Time API
 		LocalDateTime now = LocalDateTime.now();
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy, hh:mm:ss");
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy, HH:mm:ss");
 		String dateMatch = now.format(formatter);
 		
 		return dateMatch;		

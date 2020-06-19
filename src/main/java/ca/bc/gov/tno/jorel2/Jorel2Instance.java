@@ -222,13 +222,6 @@ public class Jorel2Instance extends Jorel2Root {
 		return databaseInterruptions;
 	}
 	
-	/* # Ftp settings used by Archiver event
-	ftp.host=alfredo.tno.gov.bc.ca
-	ftp.password=vgXjRUkTG9LEmGXk
-	ftp.userName=stmorse
-	ftp.type=passive
-	ftp.secure=yes */
-	
 	/**
 	 * Exposes the ftp host as a JMX attribute.
 	 * 
@@ -486,6 +479,17 @@ public class Jorel2Instance extends Jorel2Root {
 	public String getStorageBinaryRoot() {
 		
 		return config.getString("binaryRoot");
+	}
+	
+	/**
+	 * Exposes the ftp root path as a JMX attribute.
+	 * 
+	 * @return The ftp root path.
+	 */
+	@ManagedAttribute(description="Ftp root path in which media are stored", currencyTimeLimit=15)
+	public String getStorageFtpRoot() {
+		
+		return config.getString("ftp.root");
 	}
 	
 	/**

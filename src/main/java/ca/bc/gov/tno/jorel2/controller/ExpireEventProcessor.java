@@ -4,6 +4,8 @@ package ca.bc.gov.tno.jorel2.controller;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.HnewsItemsDao;
+import ca.bc.gov.tno.jorel2.model.NewsItemImagesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.model.SourceTypesDao;
@@ -87,9 +90,12 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			if (preferences.size() == 1 && preferences.get(0) instanceof PreferencesDao) {
 				PreferencesDao prefs = preferences.get(0);
 				BigDecimal retainDays = prefs.getRetainFullBroadcast();
+				BigDecimal retainImages = prefs.getRetainImages();
 				
 				//deleteFullBroadcasts(retainDays, session);
-				clearExpiringSourceTypes(retainDays, session);
+				//clearExpiringSourceTypes(session);
+				//clearExpiringSources(session);
+				findAndClearExpiringImages(retainImages, session);
 			}
 		}
 	}
@@ -103,40 +109,49 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	 */
 	private void deleteFullBroadcasts(BigDecimal retainDays, Session session) {
 
-		List<NewsItemsDao> expiredItems = NewsItemsDao.getExpiredFullBroadcasts(retainDays, session);
 		long deletedCounter = 0;
 		long missingCounter = 0;
 		
 		decoratedTrace(INDENT2, "Deleting expired full broadcasts.");
 
 		// delete each expired full broadcast
-		for(NewsItemsDao item : expiredItems) {
-
-			BigDecimal rsn = item.getRsn();
-
-			boolean externalbinary = item.getExternalbinary();
-			if (externalbinary) {
-
-				String filename = item.getFullfilepath();
-
-				if (filename == null) filename = "null";
-				filename = config.getString("binaryRoot") + sep + filename;
-				File delFile = new File(filename);
-				if (delFile.exists()) {
-					if (!delFile.delete()) {
-						IOException e = new IOException("Unable to delete file: " + filename);
-						decoratedError(INDENT2, "Deleting full broadcast items.", e);
+		try {
+			List<NewsItemsDao> expiredItems = NewsItemsDao.getExpiredFullBroadcasts(retainDays, session);
+			session.beginTransaction();
+			for(NewsItemsDao item : expiredItems) {
+	
+				BigDecimal rsn = item.getRsn();
+	
+				boolean externalbinary = item.getExternalbinary();
+				if (externalbinary) {
+	
+					String filename = item.getFullfilepath();
+	
+					if (filename == null) filename = "null";
+					filename = config.getString("binaryRoot") + sep + filename;
+					File delFile = new File(filename);
+					if (delFile.exists()) {
+						if (!delFile.delete()) {
+							IOException e = new IOException("Unable to delete file: " + filename);
+							decoratedError(INDENT2, "Deleting full broadcast items.", e);
+						} else {
+							NewsItemsDao.deleteRecord(item, session);
+							deletedCounter++;
+						}
 					} else {
-						session.beginTransaction();
-						item.deleteRecordByRsn(rsn, session);
-						session.getTransaction().commit();
-						deletedCounter++;
+						decoratedTrace(INDENT2, "The file " + filename + " is not in BinaryRoot.");
+						missingCounter++;
 					}
-				} else {
-					decoratedTrace(INDENT2, "The file " + filename + " is not in BinaryRoot.");
-					missingCounter++;
 				}
 			}
+			session.getTransaction().commit();
+			
+			if(expiredItems.size() > 0) {
+				decoratedTrace(INDENT2, "Expire full broadcasts: " + deletedCounter + " deleted, " + missingCounter + " missing.");
+			}
+		} catch (Exception ex) {
+			decoratedError(INDENT2, "Deleting full broadcasts.", ex);
+			session.getTransaction().rollback();
 		}
 	}
 	
@@ -147,21 +162,21 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @param retainDays Do not process any news items newer than today's date minus retainDays.
 	 * @param session The current Hibernate persistence context.
 	 */
-	private void clearExpiringSourceTypes(BigDecimal retainDays, Session session) {
+	private void clearExpiringSourceTypes(Session session) {
 		
 		String sType = "";
 		String TVSources = "";
-		List<SourceTypesDao> sourceTypes = SourceTypesDao.getExpiringSourceTypes(session);
-		
-		// Get a list of sources that do not expire and are archived by the archiver
-		TVSources = getNonExpiringSourceTypes(session);
 		decoratedTrace(INDENT2, "Expiring items - ignoring these sources " + TVSources);
 
 		// loop through source types
 		try {
+			List<SourceTypesDao> sourceTypes = SourceTypesDao.getExpiringSourceTypes(session);
+			
+			// Get a list of sources that do not expire and are archived by the archiver
+			TVSources = getNonExpiringSourceTypes(session);
+
 			for(SourceTypesDao sourceType : sourceTypes) {
-				//BigDecimal days = sourceType.getDays();
-				BigDecimal days = BigDecimal.valueOf(0L); // For testing
+				BigDecimal days = sourceType.getDays();
 				BigDecimal specialdays = sourceType.getSpecial();
 				BigDecimal expireRule = null;
 				sType = sourceType.getType();
@@ -169,16 +184,43 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				// loop through regular expire items
 				expireRule = BigDecimal.valueOf(0L);
 				List<NewsItemsDao> newsItems = NewsItemsDao.getExpiredItems(sType, TVSources, days, expireRule, session);
-				//List<HnewsItemsDao> hNewsItems = HnewsItemsDao.getExpiredItems(sType, TVSources, days, 0, session);
+				List<HnewsItemsDao> hNewsItems = HnewsItemsDao.getExpiredItems(sType, TVSources, days, expireRule, session);
 				deleteBinaryThenArchive(newsItems, sType, "Regular", session);
+				deleteBinaryThenArchiveHistorical(hNewsItems, sType, "Regular", session);
 				
 				// Loop through special expire items
 				expireRule = BigDecimal.valueOf(1L);
 				newsItems = NewsItemsDao.getExpiredItems(sType, TVSources, specialdays, expireRule, session);
+				hNewsItems = HnewsItemsDao.getExpiredItems(sType, TVSources, specialdays, expireRule, session);
 				deleteBinaryThenArchive(newsItems, sType, "Special", session);
+				deleteBinaryThenArchiveHistorical(hNewsItems, sType, "Special", session);
 			}
 		} catch (Exception ex) {
 			decoratedError(INDENT2, "Processing source types for expiry.", ex);
+		}
+	}
+	
+	/**
+	 * Loops through all expiring sources calling <code>deleteBinaryAndNewsItem()</code> for each source.
+	 * 
+	 * @param session The current Hibernate persistence context.
+	 */
+	private void clearExpiringSources(Session session) {
+		
+		try {
+			List<SourcesDao> expiringSources = SourcesDao.getExpiringSources(session);
+			
+			for (SourcesDao currentSource : expiringSources) {
+				BigDecimal days = currentSource.getExpireDays();
+				String source = currentSource.getSource();
+	
+				List<NewsItemsDao> newsItems = NewsItemsDao.getExpiredItems(source, days, session);
+				List<HnewsItemsDao> hNewsItems = HnewsItemsDao.getExpiredItems(source, days, session);
+				deleteBinaryAndNewsItem(newsItems, source, session);
+				deleteBinaryAndNewsItemHistorical(hNewsItems, source, session);
+			}
+		} catch (Exception ex) {
+			decoratedError(INDENT2, "Processing sources for expiry.", ex);
 		}
 	}
 	
@@ -194,8 +236,9 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 		
 		String TVSources = "";
 		
-		List<SourcesDao> sources = SourcesDao.getNonExpiringSources(session);
 		try {
+			List<SourcesDao> sources = SourcesDao.getNonExpiringSources(session);
+			
 			for(SourcesDao source : sources) {
 				String thisSource = source.getSource();
 				if (thisSource != null) {
@@ -225,33 +268,38 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 		long deletedCounter = 0;
 		long missingCounter = 0;
 		
-		for(NewsItemsDao item : newsItems) {
-			BigDecimal delRSN = item.getRsn();
-
-			String filename = item.getFullfilepath();
-
-			if (filename == null) filename = "null";
-			filename = config.getString("binaryRoot") + sep + filename;
-			File delFile = new File(filename);
-			if (delFile.exists()) {
-				if (!delFile.delete()) {
-					IOException e = new IOException("Unable to delete file: " + filename);
-					decoratedError(INDENT2, "Deleting and archiving by source type.", e);
+		try {
+			session.beginTransaction();
+			for(NewsItemsDao item : newsItems) {
+				String filename = item.getFullfilepath();
+	
+				if (filename == null) filename = "null";
+				filename = config.getString("binaryRoot") + sep + filename;
+				File delFile = new File(filename);
+				if (delFile.exists()) {
+					if (!delFile.delete()) {
+						IOException e = new IOException("Unable to delete file: " + filename);
+						decoratedError(INDENT2, "Deleting and archiving by source type.", e);
+					} else {
+						item.setArchived(true);
+						item.setArchivedTo(" ");
+						session.persist(item);
+						deletedCounter++;
+					}
 				} else {
-					/*session.beginTransaction();
-					item.setArchived(true);
-					item.setArchivedTo(" ");
-					session.persist(item);
-					session.getTransaction().commit();*/
-					deletedCounter++;
+					decoratedTrace(INDENT2, "Expire " + expirePolicy + ": The file " + filename + " is not in BinaryRoot.");
+					missingCounter++;
 				}
-			} else {
-				decoratedTrace(INDENT2, "Expire " + expirePolicy + ": The file " + filename + " is not in BinaryRoot.");
-				missingCounter++;
 			}
+			session.getTransaction().commit();
+		} catch (Exception ex) {
+			decoratedError(INDENT2, "Deleting and archiving news items for expired source types.", ex);
+			session.getTransaction().rollback();
 		}
 		
-		decoratedTrace(INDENT2, "Expire " + expirePolicy + ": " + sourceType + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		if(newsItems.size() > 0) {
+			decoratedTrace(INDENT2, "Expire " + expirePolicy + ": " + sourceType + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		}
 	}
 	
 	/**
@@ -267,36 +315,152 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 		long deletedCounter = 0;
 		long missingCounter = 0;
 		
-		for(HnewsItemsDao item : hnewsItems) {
-			BigDecimal delRSN = item.getRsn();
-
-			String filename = item.getFullfilepath();
-
-			if (filename == null) filename = "null";
-			filename = config.getString("binaryRoot") + sep + filename;
-			File delFile = new File(filename);
-			if (delFile.exists()) {
-				if (!delFile.delete()) {
-					IOException e = new IOException("Unable to delete file: " + filename);
-					decoratedError(INDENT2, "Deleting and archiving by source type.", e);
+		try {
+			session.beginTransaction();
+			for(HnewsItemsDao item : hnewsItems) {
+				String filename = item.getFullfilepath();
+	
+				if (filename == null) filename = "null";
+				filename = config.getString("binaryRoot") + sep + filename;
+				File delFile = new File(filename);
+				if (delFile.exists()) {
+					if (!delFile.delete()) {
+						IOException e = new IOException("Unable to delete file: " + filename);
+						decoratedError(INDENT2, "Deleting and archiving by source type.", e);
+					} else {
+						item.setArchived(true);
+						item.setArchivedTo(" ");
+						session.persist(item);
+						deletedCounter++;
+					}
 				} else {
-					/*session.beginTransaction();
-					item.setArchived(true);
-					item.setArchivedTo(" ");
-					session.persist(item);
-					session.getTransaction().commit();*/
-					deletedCounter++;
+					decoratedTrace(INDENT2, "Expire " + expirePolicy + ": The file " + filename + " is not in BinaryRoot.");
+					missingCounter++;
 				}
-			} else {
-				decoratedTrace(INDENT2, "Expire " + expirePolicy + ": The file " + filename + " is not in BinaryRoot.");
-				missingCounter++;
 			}
+			session.getTransaction().commit();
+		} catch (Exception ex) {
+			decoratedError(INDENT2, "Deleting and archiving historical news items for expired source types.", ex);
+			session.getTransaction().rollback();
 		}
 		
-		decoratedTrace(INDENT2, "Expire " + expirePolicy + ": " + sourceType + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		if (hnewsItems.size() > 0) {
+			decoratedTrace(INDENT2, "Expire " + expirePolicy + ": " + sourceType + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		}
 	}
 
 	
+	/**
+	 * Iterates through all entries in <code>newsItems</code> deleting binaries identified by the item's <code>fullfilepath</code> column and the
+	 * news item record.
+	 * 
+	 * @param newsItems The list of NewsItemsDao objects to process.
+	 * @param source The source associates with the list of news items (used for logging only).
+	 * @param session The current Hibernate persistence context.
+	 */
+	private void deleteBinaryAndNewsItem(List<NewsItemsDao> newsItems, String source, Session session) {
+		long deletedCounter = 0;
+		long missingCounter = 0;
+		
+		try {
+			session.beginTransaction();
+			for(NewsItemsDao item : newsItems) {
+				String filename = item.getFullfilepath();
+	
+				if (filename == null) filename = "null";
+				filename = config.getString("binaryRoot") + sep + filename;
+				File delFile = new File(filename);
+				if (delFile.exists()) {
+					if (!delFile.delete()) {
+						IOException e = new IOException("Unable to delete file: " + filename);
+						decoratedError(INDENT2, "Deleting and archiving for source: " + source, e);
+					} else {
+						NewsItemsDao.deleteRecord(item, session);
+						deletedCounter++;
+					}
+				} else {
+					decoratedTrace(INDENT2, "Expire: The file " + filename + " is not in BinaryRoot.");
+					missingCounter++;
+				}
+			}
+			
+			session.getTransaction().commit();
+		} catch (Exception ex) {
+			decoratedError(INDENT2, "Deleting binary and news items by source: " + source, ex);
+			session.getTransaction().rollback();
+		}
+		
+		if(newsItems.size() > 0) {
+			decoratedTrace(INDENT2, "Expire: " + source + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		}
+	}
+	
+	/**
+	 * Iterates through all entries in <code>hnewsItems</code> deleting binaries identified by the item's <code>fullfilepath</code> column and the
+	 * news item record.
+	 * 
+	 * @param newsItems The list of HnewsItemsDao objects to process.
+	 * @param sourceType The sourceType associates with the list of news items (used for logging only).
+	 * @param expirePolicy Contains the value Regular or Special (used for logging only).
+	 * @param session The current Hibernate persistence context.
+	 */
+	private void deleteBinaryAndNewsItemHistorical(List<HnewsItemsDao> hnewsItems, String source, Session session) {
+		long deletedCounter = 0;
+		long missingCounter = 0;
+		
+		try {
+			session.beginTransaction();
+			for(HnewsItemsDao item : hnewsItems) {
+				String filename = item.getFullfilepath();
+	
+				if (filename == null) filename = "null";
+				filename = config.getString("binaryRoot") + sep + filename;
+				File delFile = new File(filename);
+				if (delFile.exists()) {
+					if (!delFile.delete()) {
+						IOException e = new IOException("Unable to delete file: " + filename);
+						decoratedError(INDENT2, "Deleting and archiving for source: " + source, e);
+					} else {
+						HnewsItemsDao.deleteRecord(item, session);
+						deletedCounter++;
+					}
+				} else {
+					decoratedTrace(INDENT2, "Expire: The file " + filename + " is not in BinaryRoot.");
+					missingCounter++;
+				}
+			}
+			session.getTransaction().commit();
+		} catch (Exception ex) {
+			decoratedError(INDENT2, "Deleting binary and news items for source: " + source, ex);
+			session.getTransaction().rollback();
+		}
+
+		if(hnewsItems.size() > 0) {
+			decoratedTrace(INDENT2, "Expire: " + source + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		}
+	}
+	
+	private void findAndClearExpiringImages(BigDecimal retainImages, Session session) {
+		long deletedCounter = 0;
+		
+		try {
+			List<NewsItemImagesDao> imagesToDelete = NewsItemImagesDao.getExpiringImages(retainImages, session);
+			/* while (niiRS.next()) {
+				long iRSN = niiRS.getLong(1);
+				long iItem_RSN = niiRS.getLong(2);
+				String path = niiRS.getString(3);
+				String file_name = niiRS.getString(4);
+				newsitems.deleteImage(iRSN, iItem_RSN, path, file_name);
+				deletedCounter++;
+			}
+			frame.addJLog(eventLog("Images expired: " + deletedCounter), true);
+			try { if (niiRS != null) niiRS.close(); } catch (SQLException err) {;}*/
+		} catch (Exception ex) {
+			//frame.addJLog(eventLog("DailyFunctions.expireEvent(): Exception "+ex.getMessage()), true);
+		}
+
+	}
+
 	/**
 	 * Updates lastFtpRun to the value provided.
 	 * 

@@ -672,7 +672,7 @@ public class HnewsItemsDao implements java.io.Serializable {
 	}
 	
 	/**
-	 * Get expired historical news items. 
+	 * Get expired news items for ExpireEventProcessor.clearExpiringSourceTypes().
 	 * 
 	 * @param sourceType The type of source for which news items should be retrieved.
 	 * @param retainDays The number of days before the news item expires.
@@ -699,5 +699,36 @@ public class HnewsItemsDao implements java.io.Serializable {
         List<HnewsItemsDao> results = query.getResultList();
         
 		return results;
+	}
+	
+	/**
+	 * Get expired items for ExpireEventProcessor.clearExpiringSources(). 
+	 * 
+	 * @param session The current Hibernate persistence context.
+	 * @return A list containing all the records that meet the expiry criteria.
+	 */
+	public static List<HnewsItemsDao> getExpiredItems(String source, BigDecimal days, Session session) {
+		
+		String sqlStmt = "from HnewsItemsDao where source = :source and itemDate < (sysdate - :days) and expireRule = 0 and archived = 0";
+
+		Query<HnewsItemsDao> query = session.createQuery(sqlStmt, HnewsItemsDao.class);
+		query.setParameter("source", source);
+		query.setParameter("days", days);
+        List<HnewsItemsDao> results = query.getResultList();
+        
+		return results;
+	}
+	
+	/**
+	 * Delete the record corresponding with the object <code>item</code>.
+	 * 
+	 * @param item The object representing the item in the NewsItems table to be deleted.
+	 * @param session The current Hibernate persistence context.
+	 */
+	public static void deleteRecord(HnewsItemsDao item, Session session) {
+		
+		session.remove(item);
+		session.flush();
+		session.clear();
 	}
 }
