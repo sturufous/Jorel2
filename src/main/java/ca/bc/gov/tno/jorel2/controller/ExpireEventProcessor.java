@@ -379,7 +379,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 						deletedCounter++;
 					}
 				} else {
-					decoratedTrace(INDENT2, "Expire: The file " + filename + " is not in BinaryRoot.");
+					decoratedTrace(INDENT2, "Expire binary and item: The file " + filename + " is not in BinaryRoot.");
 					missingCounter++;
 				}
 			}
@@ -391,7 +391,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 		}
 		
 		if(newsItems.size() > 0) {
-			decoratedTrace(INDENT2, "Expire: " + source + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
+			decoratedTrace(INDENT2, "Expire news item: " + source + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
 		}
 	}
 	
@@ -425,7 +425,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 						deletedCounter++;
 					}
 				} else {
-					decoratedTrace(INDENT2, "Expire: The file " + filename + " is not in BinaryRoot.");
+					decoratedTrace(INDENT2, "Expire binary and item: The file " + filename + " is not in BinaryRoot.");
 					missingCounter++;
 				}
 			}
@@ -436,33 +436,65 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 		}
 
 		if(hnewsItems.size() > 0) {
-			decoratedTrace(INDENT2, "Expire: " + source + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
+			decoratedTrace(INDENT2, "Expire binary and item: " + source + " - " + deletedCounter + " deleted, " + missingCounter + " missing.");
 		}
 	}
 	
+	/**
+	 * Find all NewsItemImagesDao records with associated NewsItemsDao or HnewsItemsDao records and delete the binary from storage and the
+	 * item from the NewsItemImages table.
+	 * 
+	 * @param retainImages How many days to retain the images (stored in preferences.retain_images).
+	 * @param session The current Hibernate persistence context.
+	 */
 	private void findAndClearExpiringImages(BigDecimal retainImages, Session session) {
 		long deletedCounter = 0;
+		long missingCounter = 0;
+		List<NewsItemImagesDao> imagesToDelete = NewsItemImagesDao.getExpiringImages(retainImages, session);
 		
 		try {
-			List<NewsItemImagesDao> imagesToDelete = NewsItemImagesDao.getExpiringImages(retainImages, session);
-			/* while (niiRS.next()) {
-				long iRSN = niiRS.getLong(1);
-				long iItem_RSN = niiRS.getLong(2);
-				String path = niiRS.getString(3);
-				String file_name = niiRS.getString(4);
-				newsitems.deleteImage(iRSN, iItem_RSN, path, file_name);
-				deletedCounter++;
+			
+			session.beginTransaction();
+			for (NewsItemImagesDao itemImage : imagesToDelete) {
+				List<NewsItemImagesDao> shared = NewsItemImagesDao.getSharedImages(itemImage, session);
+				
+				if(shared.size() == 0) { // There are no other item image records that share this binary
+					String path = itemImage.getBinaryPath();
+					String fileName = itemImage.getFileName();
+					
+					if (path.startsWith(config.getString("wwwBinaryRoot"))) {
+						path = config.getString("binaryRoot") + path.substring(config.getString("wwwBinaryRoot").length());
+					}
+					
+					File delFile = new File(path + fileName);
+					if (delFile.exists()) {
+						if (!delFile.delete()) {
+							IOException e = new IOException("Unable to delete file: " + path + fileName);
+							decoratedError(INDENT2, "Finding and clearing expired images.", e);
+						} else {
+							NewsItemImagesDao.deleteRecord(itemImage, session);
+							deletedCounter++;
+						}
+					} else {
+						decoratedTrace(INDENT2, "Expire images: The file " + fileName + " is not in BinaryRoot.");
+						missingCounter++;
+					}
+				}
 			}
-			frame.addJLog(eventLog("Images expired: " + deletedCounter), true);
-			try { if (niiRS != null) niiRS.close(); } catch (SQLException err) {;}*/
+			
+			session.getTransaction().commit();
 		} catch (Exception ex) {
-			//frame.addJLog(eventLog("DailyFunctions.expireEvent(): Exception "+ex.getMessage()), true);
+			decoratedError(INDENT2, "Finding and clearing expiring images.", ex);
+			session.getTransaction().rollback();
 		}
-
+		
+		if(imagesToDelete.size() > 0) {
+			decoratedTrace(INDENT2, "Expire images: " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		}
 	}
 
 	/**
-	 * Updates lastFtpRun to the value provided.
+	 * Updates lastFtpRun of the current event to the value provided.
 	 * 
 	 * @param value The value to store in lastFtpRun field of currentEvent.
 	 * @param currentEvent The monitor event currently being processed.

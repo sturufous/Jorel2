@@ -224,4 +224,37 @@ public class NewsItemImagesDao implements java.io.Serializable {
         
         return results;
 	}
+	
+	/**
+	 * Get the list of news item image records that share the same binary on disk that is identified by the parameter <code>itemImage</code>.
+	 *
+	 * @param itemImage The item image that we want to delete if not shared.
+	 * @param session The current Hibernate persistence context
+	 * @return A list of item images that share the same binary as <code>itemImage</code>.
+	 */
+	public static List<NewsItemImagesDao> getSharedImages(NewsItemImagesDao itemImage, Session session) {
+		
+		String sqlStmt = "from NewsItemImagesDao where binaryPath = :binaryPath and fileName = :fileName and itemRsn <> :itemRsn";
+		
+		Query<NewsItemImagesDao> query = session.createQuery(sqlStmt, NewsItemImagesDao.class);
+		query.setParameter("binaryPath", itemImage.getBinaryPath());
+		query.setParameter("fileName", itemImage.getFileName());
+		query.setParameter("itemRsn", itemImage.getItemRsn());
+        List<NewsItemImagesDao> results = query.getResultList();
+        
+        return results;
+	}
+	
+	/**
+	 * Delete the record corresponding with the object <code>item</code>.
+	 * 
+	 * @param item The object representing the item in the NewsItemImages table to be deleted.
+	 * @param session The current Hibernate persistence context.
+	 */
+	public static void deleteRecord(NewsItemImagesDao item, Session session) {
+		
+		session.remove(item);
+		session.flush();
+		session.clear();
+	}
 }
