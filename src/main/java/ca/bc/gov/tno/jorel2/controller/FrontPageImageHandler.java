@@ -165,7 +165,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	}
 	
 	/**
-	 * Manages the distribution and registration of a front page images for the van24. Partially implemented and untested. This functionality 
+	 * Manages the distribution and registration of a front page images for van24. Partially implemented and untested. This functionality 
 	 * is not currently needed as the Van24 is no longer available.
      *
 	 * @param pdfFileName Name of zip file to process.
@@ -309,7 +309,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	
 	/**
 	 * Determines whether a zip file has already been imported by looking for a record in the FILES_IMPORTED table. If there is no record
-	 * for and fms file with the same name as the zip file then check for the existence of a cor file.
+	 * for an fms file with the same name as the zip file then check for the existence of a cor file.
 	 * 
 	 * @param zipFileName The name of a zip file in the import directory for the current event.
 	 * @param session The current Hibernate persistence context.

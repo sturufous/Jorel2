@@ -4,6 +4,8 @@ package ca.bc.gov.tno.jorel2.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Date;
+import java.util.List;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -133,5 +135,36 @@ public class SourcePaperImagesDao implements java.io.Serializable {
 		session.beginTransaction();
 	    int count = query.executeUpdate();
 		session.getTransaction().commit();
+	}
+	
+	/**
+	 * Get the SOURCE_PAPER_IMAGES records that are older than today's date minus retainDays.
+	 *
+	 * @param retainDays The number of days to keep source paper images.
+	 * @param session The current Hibernate persistence context
+	 * @return A list of expired image records.
+	 */
+	public static List<SourcePaperImagesDao> getExpiringImages(BigDecimal retainDays, Session session) {
+		
+		String sqlStmt = "from SourcePaperImagesDao where paperDate < (sysdate - :retainDays)";
+		
+		Query<SourcePaperImagesDao> query = session.createQuery(sqlStmt, SourcePaperImagesDao.class);
+		query.setParameter("retainDays", retainDays);
+        List<SourcePaperImagesDao> results = query.getResultList();
+        
+        return results;
+	}
+	
+	/**
+	 * Delete the record corresponding with the object <code>item</code>.
+	 * 
+	 * @param item The object representing the item in the SourcePaperImages table to be deleted.
+	 * @param session The current Hibernate persistence context.
+	 */
+	public static void deleteRecord(SourcePaperImagesDao item, Session session) {
+		
+		session.remove(item);
+		session.flush();
+		session.clear();
 	}
 }

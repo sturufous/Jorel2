@@ -22,6 +22,7 @@ import ca.bc.gov.tno.jorel2.model.HnewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemImagesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
+import ca.bc.gov.tno.jorel2.model.SourcePaperImagesDao;
 import ca.bc.gov.tno.jorel2.model.SourceTypesDao;
 import ca.bc.gov.tno.jorel2.model.SourcesDao;
 
@@ -95,7 +96,8 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				//deleteFullBroadcasts(retainDays, session);
 				//clearExpiringSourceTypes(session);
 				//clearExpiringSources(session);
-				findAndClearExpiringImages(retainImages, session);
+				//findAndClearExpiringImages(retainImages, session);
+				findAndClearExpiringSourceImages(retainImages, session);
 			}
 		}
 	}
@@ -479,6 +481,55 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 						decoratedTrace(INDENT2, "Expire images: The file " + fileName + " is not in BinaryRoot.");
 						missingCounter++;
 					}
+				}
+			}
+			
+			session.getTransaction().commit();
+		} catch (Exception ex) {
+			decoratedError(INDENT2, "Finding and clearing expiring images.", ex);
+			session.getTransaction().rollback();
+		}
+		
+		if(imagesToDelete.size() > 0) {
+			decoratedTrace(INDENT2, "Expire images: " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		}
+	}
+	
+	/**
+	 * Find all SourceItemImagesDao records with associated NewsItemsDao or HnewsItemsDao records and delete the binary from storage and the
+	 * item from the SourceItemImages table.
+	 * 
+	 * @param retainImages How many days to retain the images (stored in preferences.retain_images).
+	 * @param session The current Hibernate persistence context.
+	 */
+	private void findAndClearExpiringSourceImages(BigDecimal retainImages, Session session) {
+		long deletedCounter = 0;
+		long missingCounter = 0;
+		List<SourcePaperImagesDao> imagesToDelete = SourcePaperImagesDao.getExpiringImages(retainImages, session);
+		
+		try {
+			
+			session.beginTransaction();
+			for (SourcePaperImagesDao itemImage : imagesToDelete) {
+				String path = itemImage.getBinaryPath();
+				String fileName = itemImage.getFileName();
+				
+				if (path.startsWith(config.getString("wwwBinaryRoot"))) {
+					path = config.getString("binaryRoot") + path.substring(config.getString("wwwBinaryRoot").length());
+				}
+				
+				File delFile = new File(path + fileName);
+				if (delFile.exists()) {
+					if (!delFile.delete()) {
+						IOException e = new IOException("Unable to delete file: " + path + fileName);
+						decoratedError(INDENT2, "Finding and clearing expired images.", e);
+					} else {
+						SourcePaperImagesDao.deleteRecord(itemImage, session);
+						deletedCounter++;
+					}
+				} else {
+					decoratedTrace(INDENT2, "Expire images: The file " + fileName + " is not in BinaryRoot.");
+					missingCounter++;
 				}
 			}
 			
