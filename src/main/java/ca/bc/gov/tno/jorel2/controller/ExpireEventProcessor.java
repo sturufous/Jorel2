@@ -25,9 +25,10 @@ import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.model.SourcePaperImagesDao;
 import ca.bc.gov.tno.jorel2.model.SourceTypesDao;
 import ca.bc.gov.tno.jorel2.model.SourcesDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
- * Imposes several different expiration policies on records in the NEWS_ITEMS and HNEWS_ITEMS tables. 
+ * Imposes several different expiration policies on records in the NEWS_ITEMS, HNEWS_ITEMS tables and their supporing image tables. 
  * 
  * @author Stuart Morse
  * @version 0.0.1
@@ -65,7 +66,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        
 	        		expireEvent(currentEvent, session);
-	        		//updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);	        		
+	        		updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);	        		
 	        	}
 	        }
 	        
@@ -78,6 +79,22 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
     	return Optional.of("complete");
 	}
 	
+	/**
+	 * Ensures that the start time for executing the Expire event has been passed, and maintains control over the expiration process
+	 * by calling the following methods in order:
+	 * 
+	 * <ol>
+	 * <li>deleteFullBroadcasts()</li>
+	 * <li>clearExpiringSourceTypes()</li>
+	 * <li>clearExpiringSources()</li>
+	 * <li>clearExpiringImages()</li>
+	 * <li>clearExpiringSourceImages()</li>
+	 * <li>clearOrphanedImages()</li>
+	 * </ol>
+	 * 
+	 * @param currentEvent The event against which the six methods above should be called.
+	 * @param session The current Hibernate persistence context.
+	 */
 	private void expireEvent(EventsDao currentEvent, Session session) {
 		
 		String startTimeStr = currentEvent.getStartTime() == null ? "00:00:00" : currentEvent.getStartTime();
@@ -93,18 +110,18 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				BigDecimal retainDays = prefs.getRetainFullBroadcast();
 				BigDecimal retainImages = prefs.getRetainImages();
 				
-				//deleteFullBroadcasts(retainDays, session);
-				//clearExpiringSourceTypes(session);
-				//clearExpiringSources(session);
-				//clearExpiringImages(retainImages, session);
-				//clearExpiringSourceImages(retainImages, session);
+				deleteFullBroadcasts(retainDays, session);
+				clearExpiringSourceTypes(session);
+				clearExpiringSources(session);
+				clearExpiringImages(retainImages, session);
+				clearExpiringSourceImages(retainImages, session);
 				clearOrphanedImages(session);
 			}
 		}
 	}
 	
 	/**
-	 * Delete binary root files identified by the <code>fullpathname</code> of each news item returned by <code>getExpiredFullBroadcasts()</code>
+	 * Deletes binary root files identified by the <code>fullpathname</code> of each news item returned by <code>getExpiredFullBroadcasts()</code>
 	 * and then deletes the news item.
 	 *  
 	 * @param retainDays Do not process any news items newer than today's date minus retainDays.
@@ -160,7 +177,8 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	
 	/**
 	 * Loops through all expiring source types calling <code>deleteBinaryThenArchive()</code> for each source type. Media sources that qualify for 
-	 * archiving using the Archiver event are skipped if the source type is <code>TV News</code>. 
+	 * archiving using the Archiver event are skipped if the source type is <code>TV News</code>. This method does not delete NewsItemsDao or
+	 * HnewsItemsDao objects, it merely sets their Archived columns to <code>true</code>.
 	 * 
 	 * @param retainDays Do not process any news items newer than today's date minus retainDays.
 	 * @param session The current Hibernate persistence context.
@@ -546,10 +564,9 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	}
 	
 	/**
-	 * Find all SourceItemImagesDao records with associated NewsItemsDao or HnewsItemsDao records and delete the binary from storage and the
-	 * item from the SourceItemImages table.
+	 * Find all NewsItemImagesDao records with no associated NewsItemsDao or HnewsItemsDao records and delete the binary from storage and the
+	 * item from the NewsItemImagesDao table.
 	 * 
-	 * @param retainImages How many days to retain the images (stored in preferences.retain_images).
 	 * @param session The current Hibernate persistence context.
 	 */
 	private void clearOrphanedImages(Session session) {

@@ -46,7 +46,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private RssEventProcessor rssEventProcessor;
 	
-	/** RSS Event processor service */
+	/** Syndication Event processor service */
 	@Inject
     private SyndicationEventProcessor syndicationEventProcessor;
 	
@@ -78,13 +78,17 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private PlSqlEventProcessor plSqlEventProcessor;
 	
-	/** PlSql Event processor service */
+	/** Archiver Event processor service */
 	@Inject
     private ArchiverEventProcessor archiverEventProcessor;
 	
-	/** PlSql Event processor service */
+	/** Expire Event processor service */
 	@Inject
     private ExpireEventProcessor expireEventProcessor;
+	
+	/** Expire Event processor service */
+	@Inject
+    private Expire3gpEventProcessor expire3gpEventProcessor;
 	
 	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
@@ -176,6 +180,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case PLSQL -> plSqlEventProcessor.processEvents(eventTypeName, session);
 	        		case ARCHIVER -> archiverEventProcessor.processEvents(eventTypeName, session);
 	        		case EXPIRE -> expireEventProcessor.processEvents(eventTypeName, session);
+	        		case EXPIRE3GP -> expire3gpEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }
