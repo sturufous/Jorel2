@@ -96,8 +96,9 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				//deleteFullBroadcasts(retainDays, session);
 				//clearExpiringSourceTypes(session);
 				//clearExpiringSources(session);
-				//findAndClearExpiringImages(retainImages, session);
-				findAndClearExpiringSourceImages(retainImages, session);
+				//clearExpiringImages(retainImages, session);
+				//clearExpiringSourceImages(retainImages, session);
+				clearOrphanedImages(session);
 			}
 		}
 	}
@@ -449,7 +450,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @param retainImages How many days to retain the images (stored in preferences.retain_images).
 	 * @param session The current Hibernate persistence context.
 	 */
-	private void findAndClearExpiringImages(BigDecimal retainImages, Session session) {
+	private void clearExpiringImages(BigDecimal retainImages, Session session) {
 		long deletedCounter = 0;
 		long missingCounter = 0;
 		List<NewsItemImagesDao> imagesToDelete = NewsItemImagesDao.getExpiringImages(retainImages, session);
@@ -502,7 +503,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @param retainImages How many days to retain the images (stored in preferences.retain_images).
 	 * @param session The current Hibernate persistence context.
 	 */
-	private void findAndClearExpiringSourceImages(BigDecimal retainImages, Session session) {
+	private void clearExpiringSourceImages(BigDecimal retainImages, Session session) {
 		long deletedCounter = 0;
 		long missingCounter = 0;
 		List<SourcePaperImagesDao> imagesToDelete = SourcePaperImagesDao.getExpiringImages(retainImages, session);
@@ -522,25 +523,75 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				if (delFile.exists()) {
 					if (!delFile.delete()) {
 						IOException e = new IOException("Unable to delete file: " + path + fileName);
-						decoratedError(INDENT2, "Finding and clearing expired images.", e);
+						decoratedError(INDENT2, "Finding and clearing expired source images.", e);
 					} else {
 						SourcePaperImagesDao.deleteRecord(itemImage, session);
 						deletedCounter++;
 					}
 				} else {
-					decoratedTrace(INDENT2, "Expire images: The file " + fileName + " is not in BinaryRoot.");
+					decoratedTrace(INDENT2, "Expire source images: The file " + fileName + " is not in BinaryRoot.");
 					missingCounter++;
 				}
 			}
 			
 			session.getTransaction().commit();
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Finding and clearing expiring images.", ex);
+			decoratedError(INDENT2, "Finding and clearing expiring source images.", ex);
 			session.getTransaction().rollback();
 		}
 		
 		if(imagesToDelete.size() > 0) {
-			decoratedTrace(INDENT2, "Expire images: " + deletedCounter + " deleted, " + missingCounter + " missing.");
+			decoratedTrace(INDENT2, "Expire source images: " + deletedCounter + " deleted, " + missingCounter + " missing.");
+		}
+	}
+	
+	/**
+	 * Find all SourceItemImagesDao records with associated NewsItemsDao or HnewsItemsDao records and delete the binary from storage and the
+	 * item from the SourceItemImages table.
+	 * 
+	 * @param retainImages How many days to retain the images (stored in preferences.retain_images).
+	 * @param session The current Hibernate persistence context.
+	 */
+	private void clearOrphanedImages(Session session) {
+		long deletedCounter = 0;
+		long missingCounter = 0;
+		List<Object[]> imagesToDelete = NewsItemImagesDao.getOrphanedImages(session);
+		
+		try {
+			
+			session.beginTransaction();
+			for (Object[] entityPair : imagesToDelete) {
+				NewsItemImagesDao itemImage = (NewsItemImagesDao) entityPair[0];
+				String path = itemImage.getBinaryPath();
+				String fileName = itemImage.getFileName();
+				
+				if (path.startsWith(config.getString("wwwBinaryRoot"))) {
+					path = config.getString("binaryRoot") + path.substring(config.getString("wwwBinaryRoot").length());
+				}
+				
+				File delFile = new File(path + fileName);
+				if (delFile.exists()) {
+					if (!delFile.delete()) {
+						IOException e = new IOException("Unable to delete file: " + path + fileName);
+						decoratedError(INDENT2, "Finding and clearing orphaned images.", e);
+					} else {
+						NewsItemImagesDao.deleteRecord(itemImage, session);
+						deletedCounter++;
+					}
+				} else {
+					decoratedTrace(INDENT2, "Expire orphaned images: The file " + fileName + " is not in BinaryRoot.");
+					missingCounter++;
+				}
+			}
+			
+			session.getTransaction().commit();
+		} catch (Exception ex) {
+			decoratedError(INDENT2, "Finding and clearing orphaned images.", ex);
+			session.getTransaction().rollback();
+		}
+		
+		if(imagesToDelete.size() > 0) {
+			decoratedTrace(INDENT2, "Expire orphaned images: " + deletedCounter + " deleted, " + missingCounter + " missing.");
 		}
 	}
 

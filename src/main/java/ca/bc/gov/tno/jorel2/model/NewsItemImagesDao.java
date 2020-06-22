@@ -246,6 +246,27 @@ public class NewsItemImagesDao implements java.io.Serializable {
 	}
 	
 	/**
+	 * Get the NEWS_ITEM_IMAGES record(s) matching the fileName.
+	 *
+	 * @param fileName The fileName to match.
+	 * @param avPath The path to the web directory for the image.
+	 * @param session The current Hibernate persistence context
+	 * @return The record(s) matching fileName
+	 */
+	public static List<Object[]> getOrphanedImages(Session session) {
+		
+		String sqlStmt = "from NewsItemImagesDao i " + 
+				"left outer join NewsItemsDao n on i.itemRsn = n.rsn " + 
+				"left outer join HnewsItemsDao h on i.itemRsn = h.rsn " + 
+				"where n.rsn is NULL and h.rsn is NULL";
+		
+		Query<Object[]> query = session.createQuery(sqlStmt);
+        List<Object[]> results = query.getResultList();
+        
+        return results;
+	}
+	
+	/**
 	 * Delete the record corresponding with the object <code>item</code>.
 	 * 
 	 * @param item The object representing the item in the NewsItemImages table to be deleted.
