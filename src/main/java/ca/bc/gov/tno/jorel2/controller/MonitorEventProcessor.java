@@ -148,7 +148,6 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Boolean indicating whether the file should be moved.
 	 */
 	
-	@SuppressWarnings("preview")
 	private boolean performMediaTypeSwitching(EventsDao currentEvent, String currentFile, String fileForImport, File f, Session session) {
 		// Make sure the file is completely downloaded
 		boolean success = false;

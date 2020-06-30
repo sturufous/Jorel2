@@ -212,14 +212,17 @@ public class Jorel2Instance extends Jorel2Root {
 	}
 	
 	/**
-	 * Exposes the list of database interruptions that took place during this run cycle.
+	 * Exposes a sorted list of database interruptions that took place during this run cycle.
 	 * 
 	 * @return The list of database interruptions.
 	 */
 	@ManagedAttribute(description="Records times when database interruptions took place", currencyTimeLimit=15)
-	public ConcurrentHashMap<String, String> getDatabaseInterruptions() {
+	public LinkedHashMap<String, String> getDatabaseInterruptions() {
 		
-		return databaseInterruptions;
+		Map<String, String> sorted = databaseInterruptions.entrySet().stream().sorted(comparingByKey())
+				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+		
+		return (LinkedHashMap<String, String>) sorted;
 	}
 	
 	/**

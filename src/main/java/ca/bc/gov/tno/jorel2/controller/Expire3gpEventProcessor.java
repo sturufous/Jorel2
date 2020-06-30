@@ -30,7 +30,10 @@ import ca.bc.gov.tno.jorel2.model.SourcesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
- *  
+ *  Performs a cleanup of the 3gp and mp3 files in the binaryroot directory. Retrieves the <code>daysago</code> value (age of the files at which cleanup
+ *  should start) from the event's <code>source</code> field, and the fudge value (number of days of files to be cleaned) from the <code>fileName</code>
+ *  field. Loops through binaryroot directories of the form <code>yyyy/mm/dd</code> removing elligible files from directories for dates between today's
+ *  date minues daysago and today's date minus (daysago + fudge).
  * 
  * @author Stuart Morse
  * @version 0.0.1
@@ -50,7 +53,8 @@ public class Expire3gpEventProcessor extends Jorel2Root implements EventProcesso
 	private String sep = System.getProperty("file.separator");
 	
 	/**
-	 * This event expires both full broadcasts and news items of expiring source types.
+	 * Loop through all expire3gp events assigned to this instance of Jorel2. After processing, the last_ftp_run column is set to the current date
+	 * to ensure this event only runs once per day.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
@@ -82,6 +86,7 @@ public class Expire3gpEventProcessor extends Jorel2Root implements EventProcesso
 	}
 	
 	/**
+	 * If the start time of this event has passed then perform cleanup of the directories identified by the daysago and fudge values. 
 	 * 
 	 * @param currentEvent The event against which the six methods above should be called.
 	 * @param session The current Hibernate persistence context.

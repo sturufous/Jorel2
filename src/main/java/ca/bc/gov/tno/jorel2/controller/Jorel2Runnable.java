@@ -1,7 +1,10 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.sql.CallableStatement;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -17,6 +20,7 @@ import javax.persistence.PersistenceException;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.jdbc.ReturningWork;
 import org.springframework.core.env.Environment;
 
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
@@ -90,6 +94,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private Expire3gpEventProcessor expire3gpEventProcessor;
 	
+	/** Autorun Event processor service */
+	@Inject
+    private AutorunEventProcessor autorunEventProcessor;
+	
 	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	private Jorel2Instance instance;
@@ -149,7 +157,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	 * 
 	 * @param session Current Hibernate persistence context.
 	 */
-	@SuppressWarnings("preview")
 	private void processOnlineEvents(Session session) {
 		
         Map<EventType, String> eventMap = new HashMap<>();
@@ -181,6 +188,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case ARCHIVER -> archiverEventProcessor.processEvents(eventTypeName, session);
 	        		case EXPIRE -> expireEventProcessor.processEvents(eventTypeName, session);
 	        		case EXPIRE3GP -> expire3gpEventProcessor.processEvents(eventTypeName, session);
+	        		case AUTORUN -> autorunEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }
