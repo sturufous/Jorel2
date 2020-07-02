@@ -40,8 +40,6 @@ public abstract class DataSourceConfig extends Jorel2Root {
         config.addAnnotatedClass(EventsDao.class);
         config.addAnnotatedClass(EventTypesDao.class);
         config.addAnnotatedClass(NewsItemsDao.class);
-        config.addAnnotatedClass(IssuesDao.class);
-        config.addAnnotatedClass(NewsItemIssuesDao.class);
         config.addAnnotatedClass(WordsDao.class);
         config.addAnnotatedClass(NewsItemQuotesDao.class);
         config.addAnnotatedClass(PagewatchersDao.class);
@@ -55,6 +53,10 @@ public abstract class DataSourceConfig extends Jorel2Root {
         config.addAnnotatedClass(SyncIndexDao.class);
         config.addAnnotatedClass(HnewsItemsDao.class);
         config.addAnnotatedClass(SourceTypesDao.class);
+        config.addAnnotatedClass(JorelDao.class);
+        config.addAnnotatedClass(SavedEmailAlertsDao.class);
+        config.addAnnotatedClass(AlertTriggerDao.class);
+        config.addAnnotatedClass(PublishedPartsDao.class);
         
         return config;
 	}

@@ -3,15 +3,27 @@ package ca.bc.gov.tno.jorel2.util;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.StringTokenizer;
+
+import javax.inject.Inject;
+import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+
+import org.apache.commons.configuration.PropertiesConfiguration;
+
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.PagewatchersDao;
 
 public class EmailUtil extends Jorel2Root {
+	
+	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
+	@Inject
+	public PropertiesConfiguration config;
 	
 	/**
 	 * Sends an email message informing the recipient list that the web site in question has been modified since the last
@@ -107,6 +119,40 @@ public class EmailUtil extends Jorel2Root {
 		message += changes + "<br>\n<br>\n";
 
 		return message;
+	}
+	
+	public String sendAlertEmail(String hostAddress, String portNumber, String username, String recipients, String subject, String message){
+		
+		boolean debug = false;
+		String result = "";
+
+		Session session = getEmailSession(config.getString("mail.host"), config.getString("mail.portNumber"));
+		session.setDebug(false);
+		try {
+			if (recipients == null) {
+				logger.error("Attempting to send alert email.", new IllegalStateException("The email recipients list is null."));
+			} else {
+				ArrayList<InternetAddress> addresses = new ArrayList<>();
+				String[] emailRecipients = recipients.split(",");
+				
+				for (String emailAddress : emailRecipients) {
+					addresses.add(new InternetAddress(emailAddress));
+				}
+				
+				MimeMessage msg = new MimeMessage(session);
+				msg.setFrom(new InternetAddress(config.getString("mail.from")));
+				msg.setRecipients(Message.RecipientType.TO, (Address[]) addresses.toArray());
+				msg.setSubject(subject);
+				msg.setText(message);
+				msg.setHeader("Content-Type", "text/html");// charset=\"UTF-8\"");
+	
+				Transport.send(msg); 
+			}
+		} catch (MessagingException e) {
+			logger.error("Attempting to send pagewatcher email.", e);
+		}
+		
+		return result;
 	}
 	
 	/**

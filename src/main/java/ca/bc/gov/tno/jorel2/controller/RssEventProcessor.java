@@ -25,7 +25,6 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.JaxbUnmarshallerFactory;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
-import ca.bc.gov.tno.jorel2.model.ArticleFilter;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
@@ -227,58 +226,5 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		}
 		
 		return rssContent;
-	}
-	
-	/**
-	 * Allows filters to be set up in a generic manner. This is a placeholder method created during a rewrite of
-	 * functionality that proved to be obsolete. It is retained in case this functionality is required in future.
-	 * The initial (unfinished) implementation of filters uses a table to detect RSS items to be flagged, and
-	 * a flagger table to indicate to Otis that the article should be flagged with relation to the filter.
-	 * <p>
-	 * Hibernate classes that provide filtering capabilities implement the <code>ArticleFilter</code> interface
-	 * allowing them to receive generic treatment by the <code>insertfilters</code> method.
-	 * 
-	 * @param item The news item to be filtered.
-	 * @param filterTable Tables used to determine the phrases on which to filter.
-	 * @param flaggerTable Table to write records to indicating that the current item matches the filter.
-	 * @param session The Hibernate session being used by this thread.
-	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private void insertfilters(Rss.Channel.Item item, Class filterTable, Class flaggerTable, Session session) {
-		
-		int hits = 0;
-		String content = item.getEncoded() == null ? item.getDescription() : item.getEncoded();
-		
-		try {
-			Method filter = filterTable.getMethod("getEnabledRecordList", Session.class);
-			
-			// First argument of invoke() is null because getEnabledRecordList() is a static method.
-			List<ArticleFilter> results = (List<ArticleFilter>) filter.invoke(null, session);
-			
-			for (ArticleFilter stringList : results) {
-				String[] caseInsensitive = stringList.getWords().split(",");
-				String[] caseSensitive = stringList.getWordsCaseSensitive().split(",");
-				
-				for (String phrase : caseInsensitive) {
-					phrase = phrase.toLowerCase();
-					if (content.indexOf(phrase) >= 0) {
-						hits++;
-					}		
-				}
-				
-				for (String phrase : caseSensitive) {
-					if (content.indexOf(phrase) >= 0) {
-						hits++;
-					}		
-				}
-				
-				if (hits > 0) {
-				}
-			}
-		}
-		catch (Exception e) {
-			logger.error("Running static method getEnabledRecordList() on Method Object.", e);
-		}
-		
 	}
 }

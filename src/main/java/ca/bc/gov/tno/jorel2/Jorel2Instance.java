@@ -555,7 +555,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @param threadName The name of the current thread.
 	 */
-	public void addDatabaseInterruption(String threadName) {
+	public void addDatabaseInterruption() {
 		
 		String interruptionTime = DateUtil.getTimeNow();
 		databaseInterruptions.put(interruptionTime, "In progress");

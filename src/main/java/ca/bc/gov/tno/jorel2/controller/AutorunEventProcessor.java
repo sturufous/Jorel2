@@ -22,8 +22,6 @@ import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
 
 /**
- * Manages the retrieval and processing of various RSS feeds using JAXB objects in the
- * ca.bc.gov.tno.jorel2.jaxb package and its sub-packages.
  * 
  * @author Stuart Morse
  * @version 0.0.1
@@ -37,8 +35,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 	Jorel2Instance instance;
 	
 	/**
-	 * Process all eligible RSS event records from the TNO_EVENTS table.  The goal is that separate threads can process different RSS events. An earlier 
-	 * version of this code added the synchronized modifier
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
@@ -83,6 +79,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 	
 	private void processFilters(Session session) {
-		List<EventTypesDao> res = DbUtil.runSql("select * from EVENT_TYPES", session);
+		ResultSet res = DbUtil.runSql("select * from EVENT_TYPES", session);
 	}
 }

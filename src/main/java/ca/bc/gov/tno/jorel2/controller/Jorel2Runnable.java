@@ -28,6 +28,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
+import ca.bc.gov.tno.jorel2.util.DbUtil;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.
@@ -97,6 +98,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	/** Autorun Event processor service */
 	@Inject
     private AutorunEventProcessor autorunEventProcessor;
+	
+	/** Autorun Event processor service */
+	@Inject
+    private AlertEventProcessor alertEventProcessor;
 	
 	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
@@ -189,6 +194,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case EXPIRE -> expireEventProcessor.processEvents(eventTypeName, session);
 	        		case EXPIRE3GP -> expire3gpEventProcessor.processEvents(eventTypeName, session);
 	        		case AUTORUN -> autorunEventProcessor.processEvents(eventTypeName, session);
+	        		case ALERT -> alertEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }
@@ -196,7 +202,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		catch (PersistenceException e) {
 	    	logger.error("In main event processing loop. Going offline.", e);
 	    	instance.setConnectionStatus(ConnectionStatus.OFFLINE);
-	    	instance.addDatabaseInterruption(Thread.currentThread().getName());
+	    	instance.addDatabaseInterruption();
 	    }
         
         session.close();

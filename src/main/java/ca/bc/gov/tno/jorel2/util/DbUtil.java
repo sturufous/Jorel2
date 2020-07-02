@@ -31,30 +31,22 @@ public class DbUtil {
 		session.getTransaction().commit();
 	}
 	
-	public static List<EventTypesDao> runSql(String query, Session session) {
+	public static ResultSet runSql(String query, Session session) {
 		
-       List<EventTypesDao> eTypes = session.doReturningWork(new ReturningWork<List<EventTypesDao>>() {
+       ResultSet results = session.doReturningWork(new ReturningWork<ResultSet>() {
             
-            public List<EventTypesDao> execute(Connection connection) throws SQLException {
+            public ResultSet execute(Connection connection) throws SQLException {
  
-                List<EventTypesDao> typeList = new ArrayList<EventTypesDao>();
-            	EventTypesDao e = null;
+            	ResultSet rs = null;
+            	
                 PreparedStatement cstmt= null;
-                try {
-                    cstmt = connection.prepareStatement(query);
- 
-                    ResultSet rs = cstmt.executeQuery();
-                    while(rs.next()) {
-                        e = new EventTypesDao(rs.getBigDecimal(1), rs.getNString(2), rs.getString(3));
-                        typeList.add(e);
-                    }
-                } finally {
-                    cstmt.close();
-                }
-                return typeList;
+                cstmt = connection.prepareStatement(query);
+                rs = cstmt.executeQuery();
+                
+                return rs;
             }
         });
        
-       return eTypes;
+       return results;
 	}
 }
