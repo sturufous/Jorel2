@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.sql.Clob;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -125,10 +126,9 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 	 * @param session The current Hibernate persistence context
 	 * @return The published part that matches the name.
 	 */
-	public static String getPublishedPartByName(String name, String deflt, Session session) {
+	public static void getPublishedPartByName(String name, String deflt, String keyStr, Map parts, Session session) {
 		
 		String sqlStmt = "from PublishedPartsDao where name=:name";
-		String result = "";
 		
 		Query<PublishedPartsDao> query = session.createQuery(sqlStmt, PublishedPartsDao.class);
 		query.setParameter("name", name);
@@ -138,15 +138,15 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
         	Clob clob = results.get(0).getContent();
             long len;
 			try {
+				String result = "";
 				len = clob.length();
 	            result = clob.getSubString(1, (int) len);
+	            parts.put(keyStr, result);
 			} catch (SQLException e) {
 				decoratedError(INDENT2, "Extracting Clob cotent.", e);
 			}
         } else {
-        	result = deflt;
+        	parts.put(keyStr, deflt);
         }
-        
-        return result;
 	}
 }

@@ -5,11 +5,17 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Vector;
+
 import javax.inject.Inject;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
+
+import com.vdurmont.emoji.EmojiParser;
 
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
@@ -19,6 +25,7 @@ import ca.bc.gov.tno.jorel2.model.JorelDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
+import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 import static ca.bc.gov.tno.jorel2.model.PublishedPartsDao.getPublishedPartByName;
 
@@ -84,37 +91,26 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 			List<BigDecimal> rsnList = NewsItemsDao.getAlertItemRsns(session);
 			
 			if(rsnList.size() > 0) {
-				String partStr = getPublishedPartByName("V35ALERTSEMAIL", "<html>The Following (<**num**>) story(s) were added to TNO: <br><**story_links**></html>", session);
-				String partLineStr = getPublishedPartByName("V35ALERTSEMAILLINE", "<A HREF = \"<**httphost**>command=showstory&rsn=<**rsn**>\"><**title**></A><**images**><br>", session);
-				String requestTranscriptLink = getPublishedPartByName("REQUEST_TRANSCRIPT_ALERT_LINK", "", session);
-				String partSingleStr = getPublishedPartByName("V35ALERTSEMAILSINGLE", "<A HREF = \"<**httphost**>command=showstory&rsn=<**rsn**>\"><**title**></A><br>", session);
-				String partSingleSubjStr = getPublishedPartByName("V7ALERTSEMAILSINGLESUBJECT", "<**source**>: <**stitle**><**tone**>", session);
-				String transcriptEmoji = getPublishedPartByName("V10ALERTSTRANSCRIPTEMOJI", ":page_facing_up:", session);
-				String tonePos = getPublishedPartByName("V61TONEPOSITIVE", " tone5x", session);
-				String toneNeu = getPublishedPartByName("V61TONENEUTRAL", " tone0x", session);
-				String toneNeg = getPublishedPartByName("V61TONENEGATIVE", " tone-5x", session);
-				String tonePosEmoji = getPublishedPartByName("V13TONEPOSEMOJI", ":thumbsup:", session);
-				String toneNeuEmoji = getPublishedPartByName("V13TONENEUEMOJI", ":point_right::point_left:", session);
-				String toneNegEmoji = getPublishedPartByName("V13TONENEGEMOJI", ":thumbsdown:", session);
-				String typeTag = getPublishedPartByName("V61TYPETAG", " typex<**type**>", session);
-				String tos = getPublishedPartByName("V61TOS", TOS_MSG, session);
-				String tosScrum = getPublishedPartByName("V61TOS_SCRUM", "This e-mail is a service provided by the Public Affairs Bureau and is only intended for the original addressee.", session);
-				String visualTone = getPublishedPartByName("V81TONE", "", session);
-				String visualToneSmall = getPublishedPartByName("V81TONESMALL", "", session);
+				Vector myEmailVector = new Vector(5,10);
+				Vector singletonEmailVector = new Vector(5,10);
+				String emailMessage = null;
 				
-				if(!showEmoji) {
+				Map<String, String> parts = loadPublishedParts(session);
+				
+				
+				/*if(!showEmoji) {
 					tonePosEmoji = "";
 					toneNeuEmoji = "";
 					toneNegEmoji = "";
-				}
+				}*/
 				
-				//The varaibles used to store the news_item fields
-				String rsn, item_date, source="", item_time, summary, title="", type, string1, string2, string3, string4;
+				//The variables used to store the news_item fields
+				String rsn, itemDate, source="", itemTime, summary, title="", type, string1, string2, string3, string4;
 				String string5, string6, string7, string8, string9, contenttype, series, common_call, webpath;
 				String previousTitle = "~";
 				String previousSource = "~";
 				int tone = 0;
-				boolean null_tone = false;
+				boolean nullTone = false;
 
 				int messageCounter = 0;
 				String sqlWhere = "";
@@ -125,7 +121,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				 * Because the SQL_WHERE column of ALERTS uses native PL/SQL statements and not Hibernate HQL syntax, we have to bypass the ORM
 				 * and retrieve a java.sql.ResultSet object for each query using the Hibernate session's doReturningWork() method. An alternative 
 				 * would be to create an SQL to HQL translator, but that is not within the scope of this rewrite. This approach is used throughout 
-				 *  this handler for consistency. 
+				 * this handler for consistency. 
 				 */
 				
 				String activeAlertQuery = "select u.first_name, u.last_name, u.user_name, u.email_address, a.rsn, a.alert_name, a.sql_where, u.cp, u.core, u.scrums, u.social_media,u.rsn,u.view_tone from users u, alerts a " +
@@ -134,9 +130,48 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				ResultSet alertRS = DbUtil.runSql(activeAlertQuery, session);
 				
 				try {
+					String previousSqlWhere = ".?.";
+
 					while(alertRS.next()) {
-						String first = alertRS.getString(1);
-						String last = alertRS.getString(2);
+						String userName = alertRS.getString(3);
+						String userEmail = alertRS.getString(4);
+						alertRsn = alertRS.getLong(5);
+						alertName = alertRS.getString(6);
+						if (alertName == null) alertName = "?";
+						sqlWhere = alertRS.getString(7);
+						if (sqlWhere == null) sqlWhere = "";
+						boolean cp = alertRS.getBoolean(8);
+						boolean core = alertRS.getBoolean(9);
+						boolean scrums = alertRS.getBoolean(10);
+						boolean socialMedia = alertRS.getBoolean(11);
+						long userRsn = alertRS.getLong(12);
+						boolean view_tone = alertRS.getBoolean(13);
+						
+						sqlWhere = appendSqlWhereForSource(cp, scrums, socialMedia, sqlWhere);
+						
+						if (sqlWhere.length() != 0) sqlWhere = sqlWhere + " and ";
+						sqlWhere = sqlWhere + "n.rsn = t.item_rsn(+) and t.user_rsn(+) = 0 and n.source = s.source(+)";
+
+						emailMessage = "News Records found for alert: " + alertRS.getString(6) + " [ ";
+
+						// is it the very same sql where clause as the previous alert
+						// if so, use the same result as the previous alert....
+						if (sqlWhere.equals(previousSqlWhere)) {
+							emailMessage = emailMessage + " ditto ";
+
+							// Deal with any 'single' emails for CP News and Transcripts
+							for (int kk=0; kk < singletonEmailVector.size(); kk++) {
+								EmailMessage em = (EmailMessage) singletonEmailVector.elementAt(kk);
+								if (em != null) {
+									String alertRSN = alertRS.getString(5);
+									String u = alertRS.getString(3);                     	// user name
+									String r = userEmail;              			       	// recipients
+									if (r==null) r = "";
+
+									myEmailVector.addElement( new EmailMessage(alertRSN,u,r,em.getSubject(),em.getMessage(),em.getRSNList(),em.getToneEmoji(),view_tone) );
+								}
+							}
+						}
 					}
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
@@ -146,6 +181,59 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				int i = 1;
 			}
 		}
+	}
+	
+	/**
+	 * Appends a conditional statement to SqlWhere that filters out records from 'CP News', 'Scrum' and 'Social Media' if their
+	 * corresponding boolean variables are set to false.
+	 * 
+	 * @param cp Should this alert report on CP News items
+	 * @param scrums Should this alert report on Scrums
+	 * @param socialMedia Should this alert report on Social Media
+	 * @param sqlWhere SQL statement to append to
+	 * @return SQL statement with filter conditions appended
+	 */
+	private String appendSqlWhereForSource(boolean cp, boolean scrums, boolean socialMedia, String sqlWhere) {
+				
+		if (!cp) {
+			if (sqlWhere.length() != 0) sqlWhere = sqlWhere + " and ";
+			sqlWhere = sqlWhere + " n.type <> 'CP News'";
+		}
+		if (!scrums) {
+			if (sqlWhere.length() != 0) sqlWhere = sqlWhere + " and ";
+			sqlWhere = sqlWhere + " n.type <> 'Scrum'";
+		}
+		if (!(socialMedia)) {
+			if (sqlWhere.length() != 0) sqlWhere = sqlWhere + " and ";
+			sqlWhere = sqlWhere + " n.type <> 'Social Media'";
+		}
+		
+		return sqlWhere;
+	}
+	
+	private Map<String, String> loadPublishedParts(Session session) {
+		
+		Map<String, String> parts = new HashMap<>();
+		
+		getPublishedPartByName("V35ALERTSEMAIL", V35ALERTSEMAIL_DFLT, "partStr", parts, session);
+		getPublishedPartByName("V35ALERTSEMAILLINE", V35ALERTSEMAILLINE_DFLT, "partLineStr", parts, session);
+		getPublishedPartByName("REQUEST_TRANSCRIPT_ALERT_LINK", REQUEST_TRANSCRIPT_DFLT, "requestTranscriptLink", parts, session);
+		getPublishedPartByName("V35ALERTSEMAILSINGLE", V35ALERTSEMAILSINGLE_DFLT, "partSingleStr", parts, session);
+		getPublishedPartByName("V7ALERTSEMAILSINGLESUBJECT", "<**source**>: <**stitle**><**tone**>", "partSingleSubjStr", parts, session);
+		getPublishedPartByName("V10ALERTSTRANSCRIPTEMOJI", ":page_facing_up:", "transcriptEmoji", parts, session);
+		getPublishedPartByName("V61TONEPOSITIVE", " tone5x",  "tonePos", parts, session);
+		getPublishedPartByName("V61TONENEUTRAL", " tone0x", "toneNeu", parts, session);
+		getPublishedPartByName("V61TONENEGATIVE", " tone-5x", "toneNeg", parts, session);
+		getPublishedPartByName("V13TONEPOSEMOJI", ":thumbsup:", "tonePosEmoji", parts, session);
+		getPublishedPartByName("V13TONENEUEMOJI", ":point_right::point_left:", "toneNeuEmoji", parts, session);
+		getPublishedPartByName("V13TONENEGEMOJI", ":thumbsdown:", "toneNegEmoji", parts, session);
+		getPublishedPartByName("V61TYPETAG", " typex<**type**>", "typeTag", parts, session);
+		getPublishedPartByName("V61TOS", TOS_MSG_DFLT, "tos", parts, session);
+		getPublishedPartByName("V61TOS_SCRUM", V61TOS_SCRUM_DFLT, "tosScrum", parts, session);
+		getPublishedPartByName("V81TONE", "", "visualTone", parts, session);
+		getPublishedPartByName("V81TONESMALL", "", "visualToneSmall", parts, session);
+		
+		return parts;
 	}
 	
 	/* private boolean retry_saved_email_alert(Frame1 f, jorelEmail jMail, dbAlert alertObj, OracleConnection conn) {
@@ -230,4 +318,60 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 		}
 		return smtp_is_ok;
 	} */
+	
+	private class EmailMessage {
+		String alertRSN;
+		String username;
+		String recipients;
+		String bccRecipients;
+		String subject;
+		String message;
+		String itemRsnList; // string list of news item RSNs - used to compare alerts to see if they are equal
+		String alertRsnList; // string list of alert RSNs - used to update the last run date in the alerts
+		String tone_emoji;
+		boolean view_tone;
+		
+		private EmailMessage(String rsn, String u, String r, String s, String m, String rl, String te, boolean vt) {
+			alertRSN=rsn;
+			username=u;
+			recipients=r;
+			subject = StringUtil.removeCRLF(s);
+			message=m;
+			itemRsnList=rl;
+			bccRecipients="";
+			alertRsnList="";
+			tone_emoji=te;
+			view_tone=vt;
+			addBCC(r);
+			addAlertRSN(rsn);
+		}
+		
+		private String getAlertRSN() { return alertRSN; }
+		private String getUsername() { return username; }
+		private String getRecipients() { return recipients; }
+		private String getSubject() { return subject; }
+		private String getToneEmoji() { return tone_emoji; }
+		private boolean getViewTone() { return view_tone; }
+		private String getMessage() { return message; }
+		private String getBCCRecipients() { return bccRecipients; }
+		private String getRSNList() { return itemRsnList; }
+		
+		private String getAlertRSNList() { return alertRsnList; }
+	
+		private void addBCC(String r) {
+			if (bccRecipients.length() == 0) {
+				bccRecipients = r;
+			} else {
+				bccRecipients = bccRecipients+"~"+r;
+			}
+		}
+		
+		private void addAlertRSN(String rsn) {
+			if (alertRsnList.length()==0) {
+				alertRsnList = rsn;
+			} else {
+				alertRsnList = alertRsnList+","+rsn;
+			}
+		}
+	}
 }

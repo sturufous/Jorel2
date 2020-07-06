@@ -17,6 +17,9 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
  */
 public class StringUtil extends Jorel2Root {
 	
+	static final char cr = '\015';
+	static final char lf = '\012';
+	
 	/**
 	 * This method substitutes various html tags and entities with values that display correctly in news item content in Otis.
 	 * removeHTML was inherited from Jorel1.
@@ -440,5 +443,21 @@ public class StringUtil extends Jorel2Root {
 		}
 		
 		return buffer.toString();
+	}
+	
+	public static String removeCRLF(String s) {
+		StringBuilder sb = new StringBuilder(s);
+		int i = 0;
+		while (i < sb.length()) {
+			if (sb.charAt(i) == cr) {
+				sb.deleteCharAt(i);
+			} else {
+				if (sb.charAt(i) == lf)
+					sb.deleteCharAt(i);
+				else
+					i++;
+			}
+		}
+		return sb.toString();
 	}
 }
