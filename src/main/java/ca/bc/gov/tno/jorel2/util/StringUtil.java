@@ -460,4 +460,37 @@ public class StringUtil extends Jorel2Root {
 		}
 		return sb.toString();
 	}
+	
+	public static String exchange(String src, String chrs, String data) {
+		StringBuilder sb = new StringBuilder();
+		int p = 0;
+		int i = 0;
+		int startTag = 0;
+		String srcLC = src.toLowerCase();
+
+		while ((startTag = srcLC.indexOf(chrs, p)) != -1) {
+			p = startTag;
+			sb.append(src.substring(i, p));
+			p += chrs.length();
+			sb.append(data);
+			i = p;
+		}
+		sb.append(src.substring(p));
+		return sb.toString();
+	}
+
+	public static String firstreplacement(String s, String o, String n) {
+
+		String org = s;
+		String result = s;
+
+		int i = org.indexOf(o);
+		if (i != -1) {
+			result = org.substring(0,i);
+			result = result + n;
+			result = result + org.substring(i + o.length());
+			org = result;
+		}
+		return result;
+	}
 }

@@ -79,6 +79,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 	
 	private void processFilters(Session session) {
-		ResultSet res = DbUtil.runSql("select * from EVENT_TYPES", session);
+		//ResultSet res = DbUtil.runSql("select * from EVENT_TYPES", session);
 	}
 }

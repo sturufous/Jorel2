@@ -551,6 +551,17 @@ public class Jorel2Instance extends Jorel2Root {
 	}
 	
 	/**
+	 * Exposes the httphost property as a JMX attribute.
+	 * 
+	 * @return The httphost property.
+	 */
+	@ManagedAttribute(description="URL to the Otis Servlet", currencyTimeLimit=15)
+	public String getAppHttpHost() {
+		
+		return config.getString("httphost");
+	}
+	
+	/**
 	 * Adds an entry to the databaseInterruptions Map to record the interruption.
 	 * 
 	 * @param threadName The name of the current thread.

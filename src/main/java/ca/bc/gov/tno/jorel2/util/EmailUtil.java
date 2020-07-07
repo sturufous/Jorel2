@@ -121,7 +121,7 @@ public class EmailUtil extends Jorel2Root {
 		return message;
 	}
 	
-	public String sendAlertEmail(String hostAddress, String portNumber, String username, String recipients, String subject, String message){
+	public static String sendAlertEmail(String hostAddress, String portNumber, String username, String recipients, String subject, String message){
 		
 		boolean debug = false;
 		String result = "";

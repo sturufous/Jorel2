@@ -787,19 +787,25 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	}
 	
 	/**
-	 * Get all news items with their alert flag set to true. 
+	 * Get the rsns for all news items with their alert flag set to true as a comma delimited list. 
 	 * 
 	 * @param session The current Hibernate persistence context.
 	 * @return A list containing all the records that meet the selection criteria.
 	 */
-	public static List<BigDecimal> getAlertItemRsns(Session session) {
+	public static String getAlertItemRsns(Session session) {
 		
+		String rsnList = "";
 		String sqlStmt = "select rsn from NewsItemsDao where alert = 1";
 
 		Query<BigDecimal> query = session.createQuery(sqlStmt, BigDecimal.class);
         List<BigDecimal> results = query.getResultList();
         
-		return results;
+        if (results.size() > 0) {
+        	rsnList = results.toString().replace("[", "");
+        	rsnList = rsnList.replace("]", "");
+        }
+        
+		return rsnList;
 	}
 	
 	/**

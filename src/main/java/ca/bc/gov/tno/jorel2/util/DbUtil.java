@@ -31,7 +31,7 @@ public class DbUtil {
 		session.getTransaction().commit();
 	}
 	
-	public static ResultSet runSql(String query, Session session) {
+	public static ResultSet runSql(String query, Session session) throws SQLException {
 		
        ResultSet results = session.doReturningWork(new ReturningWork<ResultSet>() {
             
