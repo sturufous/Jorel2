@@ -74,5 +74,20 @@ public class AlertTriggerDao implements java.io.Serializable {
 		
         return count;
 	}
+	
+	/**
+	 * Delete all records in the ALERT_TRIGGER table.
+	 * 
+	 * @param session The current Hibernate persistence context.
+	 */
+	public static void deleteAllRecords(Session session) {
+		
+		String sqlStmt = "delete from AlertTriggerDao";
+		
+		session.beginTransaction();
+		Query<SyncIndexDao> syncQuery = session.createQuery(sqlStmt);
+		syncQuery.executeUpdate();
+		session.getTransaction().commit();
+	}
 
 }

@@ -9,6 +9,7 @@ import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import java.util.Vector;
 
 import javax.inject.Inject;
 import org.hibernate.Session;
+import org.hibernate.query.Query;
 import org.springframework.stereotype.Service;
 
 import com.vdurmont.emoji.EmojiParser;
@@ -25,10 +27,13 @@ import com.vdurmont.emoji.EmojiParser;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.AlertTriggerDao;
+import ca.bc.gov.tno.jorel2.model.AutoRunDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.JorelDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
+import ca.bc.gov.tno.jorel2.model.SavedEmailAlertsDao;
+import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
 import ca.bc.gov.tno.jorel2.util.Base64Util;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
 import ca.bc.gov.tno.jorel2.util.EmailUtil;
@@ -100,7 +105,10 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 		Boolean showEmoji = prefs.size() == 0 ? Boolean.valueOf(true) : prefs.get(0).getShowEmoji();
 		
 		
+		boolean clearTrigger = false;
 		if(triggerCount > 0) {
+			clearTrigger = true;
+			retrySavedEmailAlerts(session);
 			String rsnList = NewsItemsDao.getAlertItemRsns(session);
 			
 			if(rsnList.length() > 0) {
@@ -127,6 +135,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				String emailLines = null;
 				String rsnInThisAlert = null;
 				String emailAddress = null;
+				String rsnAlertedList = "";
 								
 				try {
 					String previousSqlWhere = ".?.";
@@ -175,7 +184,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 									String r = userEmail;              		// recipients
 									if (r==null) r = "";
 
-									myEmailVector.addElement( new EmailMessage(alertRSN,u,r,em.getSubject(),em.getMessage(),em.getRSNList(),em.getToneEmoji(),view_tone) );
+									myEmailVector.addElement( new EmailMessage(alertRSN,u,r,em.getSubject(),em.getMessage(),em.getRsnList(),em.getToneEmoji(),view_tone) );
 								}
 							}
 						} else {
@@ -186,7 +195,6 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 							rsnInThisAlert = "";
 							singletonEmailVector.clear();
 							String errorLineStr = "ERROR: There is an error in your alert named: <**alert_name**><br><**sql_where**><br><**exception**><br>";
-							String rsnAlertedList = "";
 							
 							String itemQuery = "select n.rsn,n.source,n.title,n.string5,n.type,n.text,n.string6,n.item_date,to_char(n.item_time,'hh24:mi:ss'),n.transcript,t.tone,s.common_call,n.webpath " +
 							"from news_items n, users_tones t, sources s where n.rsn in (" + rsnList + ") " + sqlWhere + " order by n.rsn";
@@ -207,9 +215,9 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 
 								previousSqlWhere = ".?.";
 								emailLine = errorLineStr;
-								emailLine = StringUtil.exchange(emailLine,"<**alert_name**>", alertName);
-								emailLine = StringUtil.exchange(emailLine,"<**sql_where**>", sqlWhere);
-								emailLine = StringUtil.exchange(emailLine,"<**exception**>", exceptionString);
+								emailLine = StringUtil.replace(emailLine,"<**alert_name**>", alertName);
+								emailLine = StringUtil.replace(emailLine,"<**sql_where**>", sqlWhere);
+								emailLine = StringUtil.replace(emailLine,"<**exception**>", exceptionString);
 
 								emailLines = emailLines + emailLine;
 								emailLine = "";
@@ -268,7 +276,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 											int l = (int) cl.length();
 											text = cl.getSubString(1, l).replace( (char) 0,
 													(char) 32);
-											text = StringUtil.exchange(text, "|", "<p>");
+											text = StringUtil.replace(text, "|", "<p>");
 										}
 
 										String transcript = "";
@@ -277,56 +285,56 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 											int l = (int) cl2.length();
 											transcript = cl2.getSubString(1, l).replace( (char) 0,
 													(char) 32);
-											transcript = StringUtil.exchange(transcript, "|", "<p>");
+											transcript = StringUtil.replace(transcript, "|", "<p>");
 										}
 
 										if (string5.length() <= 0) string5 = string6;
 
 										// cloak email - populate all the possible values they may want displayed in each email line
 										emailLine = parts.get("partSingleStr");
-										emailLine = StringUtil.exchange(emailLine, "<**httphost**>", httpHost); //Always Present
-										emailLine = StringUtil.exchange(emailLine, "<**rsn**>", rsn); //Always Present
-										emailLine = StringUtil.exchange(emailLine, "<**source**>", source);
+										emailLine = StringUtil.replace(emailLine, "<**httphost**>", httpHost); //Always Present
+										emailLine = StringUtil.replace(emailLine, "<**rsn**>", rsn); //Always Present
+										emailLine = StringUtil.replace(emailLine, "<**source**>", source);
 										if (title.indexOf(";") > 0) {
-											emailLine = StringUtil.exchange(emailLine, "<**title**>", StringUtil.firstreplacement(title, ";", "<br>"));
+											emailLine = StringUtil.replace(emailLine, "<**title**>", StringUtil.firstreplacement(title, ";", "<br>"));
 										}
 										else {
-											emailLine = StringUtil.exchange(emailLine, "<**title**>", title);
+											emailLine = StringUtil.replace(emailLine, "<**title**>", title);
 										}
-										emailLine = StringUtil.exchange(emailLine, "<**string5**>", string5);
-										emailLine = StringUtil.exchange(emailLine, "<**item_date**>", itemDate);
-										emailLine = StringUtil.exchange(emailLine, "<**item_time**>", itemTime);
+										emailLine = StringUtil.replace(emailLine, "<**string5**>", string5);
+										emailLine = StringUtil.replace(emailLine, "<**item_date**>", itemDate);
+										emailLine = StringUtil.replace(emailLine, "<**item_time**>", itemTime);
 										if (string5.length() > 0) {
 											if (string5.equals(source)) {
-												emailLine = StringUtil.exchange(emailLine, "<**series**>", ""); // same as source - surpress
+												emailLine = StringUtil.replace(emailLine, "<**series**>", ""); // same as source - surpress
 											} else {
-												emailLine = StringUtil.exchange(emailLine, "<**series**>", string5);
+												emailLine = StringUtil.replace(emailLine, "<**series**>", string5);
 											}
 										}
 										else {
-											emailLine = StringUtil.exchange(emailLine, "<**series**>", ""); // no series
+											emailLine = StringUtil.replace(emailLine, "<**series**>", ""); // no series
 										}
-										emailLine = StringUtil.exchange(emailLine, "<**quoted**>", quotedNames);
+										emailLine = StringUtil.replace(emailLine, "<**quoted**>", quotedNames);
 
 										/*
 										 * Transcript stuff
 										 */
 										String rtUrl = "";
 										String transcript_icon = "";
-										emailLine = StringUtil.exchange(emailLine, "<**content**>", text);
-										emailLine = StringUtil.exchange(emailLine, "<**transcript**>", transcript);
+										emailLine = StringUtil.replace(emailLine, "<**content**>", text);
+										emailLine = StringUtil.replace(emailLine, "<**transcript**>", transcript);
 										if (transcript.trim().equals("")) {
-											emailLine = StringUtil.exchange(emailLine, "<**transcript/content**>", text);
+											emailLine = StringUtil.replace(emailLine, "<**transcript/content**>", text);
 											
 											// no transcript, put request transcript link onto alert message
 											if ( (type.equals("TV News")) | (type.equals("Radio News")) | (type.equals("Talk Radio")) )
 											{
-												rtUrl = StringUtil.exchange(parts.get("requestTranscriptLink"), "<**httphost**>", httpHost);
+												rtUrl = StringUtil.replace(parts.get("requestTranscriptLink"), "<**httphost**>", httpHost);
 
 												String key = rsn+","+Long.toString(userRsn)+","+instance.getMailHostAddress() + "," + userEmail + "," + userName;
 												key = Base64Util.encode(key);
 
-												rtUrl = StringUtil.exchange(rtUrl, "<**key**>", key);
+												rtUrl = StringUtil.replace(rtUrl, "<**key**>", key);
 												
 												String exclTheseSources = excludeTranscriptRequest;
 												if(exclTheseSources.indexOf(source.toLowerCase()) > -1) rtUrl = "";
@@ -334,67 +342,67 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 											}
 										
 										} else {
-											emailLine = StringUtil.exchange(emailLine, "<**transcript/content**>", transcript);
+											emailLine = StringUtil.replace(emailLine, "<**transcript/content**>", transcript);
 											transcript_icon = parts.get("transcript_emoji");
 										}
-										emailLine = StringUtil.exchange(emailLine, "<**request_transcript**>", rtUrl);
+										emailLine = StringUtil.replace(emailLine, "<**request_transcript**>", rtUrl);
 
 										// tone		
 										String subjecttone = ""; // tone as it appears in the subject line
 										String toneIcon = "";
 										if (!nullTone) {
-											String vt = StringUtil.exchange(parts.get("visualTone"), "<**number**>", ""+Math.round(tone));
+											String vt = StringUtil.replace(parts.get("visualTone"), "<**number**>", ""+Math.round(tone));
 											String vts = parts.get("visualToneSmall");
 											if (tone<=-1) {
-												emailLine = StringUtil.exchange(emailLine, "<**tone**>", parts.get("toneNeg"));
-												vt = StringUtil.exchange(vt, "<**color**>", "red");
-												vts = StringUtil.exchange(vts, "<**color**>", "red");
+												emailLine = StringUtil.replace(emailLine, "<**tone**>", parts.get("toneNeg"));
+												vt = StringUtil.replace(vt, "<**color**>", "red");
+												vts = StringUtil.replace(vts, "<**color**>", "red");
 												subjecttone = "      "+Math.round(tone);
 												toneIcon = parts.get("toneNegEmoji");
 											} else if (tone>=1) {
-												emailLine = StringUtil.exchange(emailLine, "<**tone**>", parts.get("tonePos"));
-												vt = StringUtil.exchange(vt, "<**color**>", "green");
-												vts = StringUtil.exchange(vts, "<**color**>", "green");
+												emailLine = StringUtil.replace(emailLine, "<**tone**>", parts.get("tonePos"));
+												vt = StringUtil.replace(vt, "<**color**>", "green");
+												vts = StringUtil.replace(vts, "<**color**>", "green");
 												subjecttone = "       +"+Math.round(tone);
 												toneIcon = parts.get("tonePosEmoji");
 											} else {
-												emailLine = StringUtil.exchange(emailLine, "<**tone**>", parts.get("toneNeu"));
-												vt = StringUtil.exchange(vt, "<**color**>", "gray");
-												vts = StringUtil.exchange(vts, "<**color**>", "gray");
+												emailLine = StringUtil.replace(emailLine, "<**tone**>", parts.get("toneNeu"));
+												vt = StringUtil.replace(vt, "<**color**>", "gray");
+												vts = StringUtil.replace(vts, "<**color**>", "gray");
 												subjecttone = "       0";
 												toneIcon = parts.get("toneNeuEmoji");
 											}
-											emailLine = StringUtil.exchange(emailLine, "<**visualtone**>", vt);
-											emailLine = StringUtil.exchange(emailLine, "<**visualtonesmall**>", vts);
+											emailLine = StringUtil.replace(emailLine, "<**visualtone**>", vt);
+											emailLine = StringUtil.replace(emailLine, "<**visualtonesmall**>", vts);
 										} else {
-											emailLine = StringUtil.exchange(emailLine, "<**tone**>", "");
-											emailLine = StringUtil.exchange(emailLine, "<**visualtone**>", "");
-											emailLine = StringUtil.exchange(emailLine, "<**visualtonesmall**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**tone**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**visualtone**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**visualtonesmall**>", "");
 										}
 
 										// transcript flag
 										if (type.equalsIgnoreCase("transcript")) {
-											emailLine = StringUtil.exchange(emailLine, "<**typetag**>", StringUtil.exchange(parts.get("typeTag"), "<**type**>", type.toLowerCase().replace(' ', '_')));
+											emailLine = StringUtil.replace(emailLine, "<**typetag**>", StringUtil.replace(parts.get("typeTag"), "<**type**>", type.toLowerCase().replace(' ', '_')));
 											transcript_icon = parts.get("transcriptEmoji");
 										} else {
-											emailLine = StringUtil.exchange(emailLine, "<**typetag**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**typetag**>", "");
 										}
 
 										// terms of service
 										if (type.equalsIgnoreCase("scrum")) {
-											emailLine = StringUtil.exchange(emailLine, "<**terms_of_service**>", parts.get("tosScrum"));
+											emailLine = StringUtil.replace(emailLine, "<**terms_of_service**>", parts.get("tosScrum"));
 										} else {
-											emailLine = StringUtil.exchange(emailLine, "<**terms_of_service**>", parts.get("tos"));
+											emailLine = StringUtil.replace(emailLine, "<**terms_of_service**>", parts.get("tos"));
 										}
 
-										emailLine = StringUtil.exchange(emailLine, "<**source_encoded**>", sourceEncoded ) ;
-										emailLine = StringUtil.exchange(emailLine, "<**type_encoded**>", typeEncoded ) ;
-										emailLine = StringUtil.exchange(emailLine, "<**string6_encoded**>", string6Encoded ) ;
+										emailLine = StringUtil.replace(emailLine, "<**source_encoded**>", sourceEncoded ) ;
+										emailLine = StringUtil.replace(emailLine, "<**type_encoded**>", typeEncoded ) ;
+										emailLine = StringUtil.replace(emailLine, "<**string6_encoded**>", string6Encoded ) ;
 
 										// common call
-										emailLine = StringUtil.exchange(emailLine, "<**commoncall**>", commonCall);
+										emailLine = StringUtil.replace(emailLine, "<**commoncall**>", commonCall);
 										
-										emailLine = StringUtil.exchange(emailLine, "<**webpath**>", webpath);
+										emailLine = StringUtil.replace(emailLine, "<**webpath**>", webpath);
 
 										// save new EmailMessage object
 										String alertRSN = alertRS.getString(5);
@@ -406,11 +414,11 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 										if (stitle.length() > 100) stitle = stitle.substring(0, 95) + "...";
 
 										String s = parts.get("partSingleSubjStr");
-										s = StringUtil.exchange(s, "<**title**>", title ) ;
-										s = StringUtil.exchange(s, "<**stitle**>", stitle ) ;
-										s = StringUtil.exchange(s, "<**source**>", source ) ;
-										s = StringUtil.exchange(s, "<**tone**>", subjecttone ) ;
-										s = StringUtil.exchange(s, "<**transcript_emoji**>", transcript_icon ) ;
+										s = StringUtil.replace(s, "<**title**>", title ) ;
+										s = StringUtil.replace(s, "<**stitle**>", stitle ) ;
+										s = StringUtil.replace(s, "<**source**>", source ) ;
+										s = StringUtil.replace(s, "<**tone**>", subjecttone ) ;
+										s = StringUtil.replace(s, "<**transcript_emoji**>", transcript_icon ) ;
 										String new_subject = EmojiParser.parseToUnicode(s);
 
 										myEmailVector.addElement(new EmailMessage(alertRSN, u, r, new_subject, emailLine, rsn, toneIcon, view_tone));
@@ -426,84 +434,84 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 												int l = (int) cl.length();
 												text = cl.getSubString(1, l).replace( (char) 0,
 														(char) 32);
-												text = StringUtil.exchange(text, "|", "<p>");
+												text = StringUtil.replace(text, "|", "<p>");
 												text = "<br>"+text+"<br>";
 											}
 										}
 
 										//populate all the possible values they may want displayed in each email line
 										emailLine = parts.get("partLineStr");
-										emailLine = StringUtil.exchange(emailLine, "<**httphost**>", httpHost); //Always Present
-										emailLine = StringUtil.exchange(emailLine, "<**rsn**>", rsn); //Always Present
-										emailLine = StringUtil.exchange(emailLine, "<**source**>", source);
+										emailLine = StringUtil.replace(emailLine, "<**httphost**>", httpHost); //Always Present
+										emailLine = StringUtil.replace(emailLine, "<**rsn**>", rsn); //Always Present
+										emailLine = StringUtil.replace(emailLine, "<**source**>", source);
 										if (title.indexOf(";") > 0) {
-											emailLine = StringUtil.exchange(emailLine, "<**title**>", StringUtil.firstreplacement(title, ";", "<br>"));
+											emailLine = StringUtil.replace(emailLine, "<**title**>", StringUtil.firstreplacement(title, ";", "<br>"));
 										}
 										else {
-											emailLine = StringUtil.exchange(emailLine, "<**title**>", title);
+											emailLine = StringUtil.replace(emailLine, "<**title**>", title);
 										}
-										emailLine = StringUtil.exchange(emailLine, "<**string5**>", string5);
-										emailLine = StringUtil.exchange(emailLine, "<**item_date**>", itemDate);
-										emailLine = StringUtil.exchange(emailLine, "<**item_time**>", itemTime);
+										emailLine = StringUtil.replace(emailLine, "<**string5**>", string5);
+										emailLine = StringUtil.replace(emailLine, "<**item_date**>", itemDate);
+										emailLine = StringUtil.replace(emailLine, "<**item_time**>", itemTime);
 										if (string5.length() > 0) {
-											emailLine = StringUtil.exchange(emailLine, "<**series**>", string5);
+											emailLine = StringUtil.replace(emailLine, "<**series**>", string5);
 										}
 										else {
-											emailLine = StringUtil.exchange(emailLine, "<**series**>", source);
+											emailLine = StringUtil.replace(emailLine, "<**series**>", source);
 										}
 
 										// social media items only
-										emailLine = StringUtil.exchange(emailLine, "<**content**>", text);
+										emailLine = StringUtil.replace(emailLine, "<**content**>", text);
 
 										// tone		
 										String tone_icon = "";
 										if (!nullTone) {
-											String vt = StringUtil.exchange(parts.get("visualTone"), "<**number**>", ""+Math.round(tone));
+											String vt = StringUtil.replace(parts.get("visualTone"), "<**number**>", ""+Math.round(tone));
 											String vts = parts.get("visualToneSmall");
 											if (tone<=-1) {
-												emailLine = StringUtil.exchange(emailLine, "<**tone**>", parts.get("toneNeg"));
-												vt = StringUtil.exchange(vt, "<**color**>", "red");
-												vts = StringUtil.exchange(vts, "<**color**>", "red");
+												emailLine = StringUtil.replace(emailLine, "<**tone**>", parts.get("toneNeg"));
+												vt = StringUtil.replace(vt, "<**color**>", "red");
+												vts = StringUtil.replace(vts, "<**color**>", "red");
 											} else if (tone>=1) {
-												emailLine = StringUtil.exchange(emailLine, "<**tone**>", parts.get("tonePos"));
-												vt = StringUtil.exchange(vt, "<**color**>", "green");
-												vts = StringUtil.exchange(vts, "<**color**>", "green");
+												emailLine = StringUtil.replace(emailLine, "<**tone**>", parts.get("tonePos"));
+												vt = StringUtil.replace(vt, "<**color**>", "green");
+												vts = StringUtil.replace(vts, "<**color**>", "green");
 											} else {
-												emailLine = StringUtil.exchange(emailLine, "<**tone**>", parts.get("toneNeu"));
-												vt = StringUtil.exchange(vt, "<**color**>", "gray");
-												vts = StringUtil.exchange(vts, "<**color**>", "gray");
+												emailLine = StringUtil.replace(emailLine, "<**tone**>", parts.get("toneNeu"));
+												vt = StringUtil.replace(vt, "<**color**>", "gray");
+												vts = StringUtil.replace(vts, "<**color**>", "gray");
 											}
-											emailLine = StringUtil.exchange(emailLine, "<**visualtone**>", vt);
-											emailLine = StringUtil.exchange(emailLine, "<**visualtonesmall**>", vts);
-											emailLine = StringUtil.exchange(emailLine, "<**tone_emoji**>", tone_icon);
+											emailLine = StringUtil.replace(emailLine, "<**visualtone**>", vt);
+											emailLine = StringUtil.replace(emailLine, "<**visualtonesmall**>", vts);
+											emailLine = StringUtil.replace(emailLine, "<**tone_emoji**>", tone_icon);
 										} else {
-											emailLine = StringUtil.exchange(emailLine, "<**tone**>", "");
-											emailLine = StringUtil.exchange(emailLine, "<**visualtone**>", "");
-											emailLine = StringUtil.exchange(emailLine, "<**visualtonesmall**>", "");
-											emailLine = StringUtil.exchange(emailLine, "<**tone_emoji**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**tone**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**visualtone**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**visualtonesmall**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**tone_emoji**>", "");
 										}
 
 										// transcript flag
 										if (type.equalsIgnoreCase("transcript")) {
-											emailLine = StringUtil.exchange(emailLine, "<**typetag**>", StringUtil.exchange(parts.get("typeTag"), "<**type**>", type.toLowerCase().replace(' ', '_')));
+											emailLine = StringUtil.replace(emailLine, "<**typetag**>", StringUtil.replace(parts.get("typeTag"), "<**type**>", type.toLowerCase().replace(' ', '_')));
 										} else {
-											emailLine = StringUtil.exchange(emailLine, "<**typetag**>", "");
+											emailLine = StringUtil.replace(emailLine, "<**typetag**>", "");
 										}
 
-										emailLine = StringUtil.exchange(emailLine, "<**source_encoded**>", sourceEncoded ) ;
-										emailLine = StringUtil.exchange(emailLine, "<**type_encoded**>", typeEncoded ) ;
-										emailLine = StringUtil.exchange(emailLine, "<**string6_encoded**>", string6Encoded ) ;
+										emailLine = StringUtil.replace(emailLine, "<**source_encoded**>", sourceEncoded ) ;
+										emailLine = StringUtil.replace(emailLine, "<**type_encoded**>", typeEncoded ) ;
+										emailLine = StringUtil.replace(emailLine, "<**string6_encoded**>", string6Encoded ) ;
 
 										// common call
-										emailLine = StringUtil.exchange(emailLine, "<**commoncall**>", commonCall);
+										emailLine = StringUtil.replace(emailLine, "<**commoncall**>", commonCall);
 
-										emailLine = StringUtil.exchange(emailLine, "<**webpath**>", webpath);
+										emailLine = StringUtil.replace(emailLine, "<**webpath**>", webpath);
 
 										// images
 										String imgs = "";
 										/*if(isAlertImages)
 											imgs = nii.getImages4Alerts(frame.getAVHost(),Long.parseLong(rsn));
-										emailLine = StringUtil.exchange(emailLine, "<**images**>", imgs);*/
+										emailLine = StringUtil.replace(emailLine, "<**images**>", imgs);*/
 
 										emailLine = EmojiParser.parseToUnicode(emailLine);
 
@@ -524,8 +532,8 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 							if(emailLines != ""){
 								//Set the email message
 								emailMessage = emailMessage + "] | Saving alert for user: " + alertRS.getString(3);
-								String email = StringUtil.exchange(parts.get("partStr"),"<**num**>",String.valueOf(messageCounter));
-								email = StringUtil.exchange(email,"<**story_links**>",emailLines);
+								String email = StringUtil.replace(parts.get("partStr"),"<**num**>",String.valueOf(messageCounter));
+								email = StringUtil.replace(email,"<**story_links**>",emailLines);
 
 								String alertRSN = alertRS.getString(5);
 								String u = alertRS.getString(3);                     // user name
@@ -541,11 +549,11 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 									if (sPreviousTitle.length()>100) sPreviousTitle = sPreviousTitle.substring(0, 95)+"...";
 
 									s = parts.get("partSingleSubjStr");
-									s = StringUtil.exchange(s, "<**title**>", previousTitle ) ;
-									s = StringUtil.exchange(s, "<**stitle**>", sPreviousTitle ) ;
-									s = StringUtil.exchange(s, "<**source**>", previousSource ) ;
-									s = StringUtil.exchange(s, "<**transcript_emoji**>", "" ) ;
-									s = StringUtil.exchange(s, "<**tone_emoji**>", "" ) ;
+									s = StringUtil.replace(s, "<**title**>", previousTitle ) ;
+									s = StringUtil.replace(s, "<**stitle**>", sPreviousTitle ) ;
+									s = StringUtil.replace(s, "<**source**>", previousSource ) ;
+									s = StringUtil.replace(s, "<**transcript_emoji**>", "" ) ;
+									s = StringUtil.replace(s, "<**tone_emoji**>", "" ) ;
 								}
 
 								myEmailVector.addElement( new EmailMessage(alertRSN,u,r,s,email,rsnInThisAlert,"",view_tone) );
@@ -580,14 +588,14 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 							EmailMessage em = (EmailMessage) myEmailVector.elementAt(ii);
 
 							// compare current message to previous message
-							if ( (em.getSubject().equals(lastSubject)) && (em.getRSNList().equals(lastRSNList)) ) {
+							if ( (em.getSubject().equals(lastSubject)) && (em.getRsnList().equals(lastRSNList)) ) {
 								// subject and message are the same
 
 								// is there room to add another BCC recipient? 4000 chars max
-								if (((EmailMessage) myEmailVector.elementAt(ii-1)).getBCCRecipients().length()<3500) {
+								if (((EmailMessage) myEmailVector.elementAt(ii-1)).getBccRecipients().length()<3500) {
 									// add BCC recipient to previous message
 									((EmailMessage) myEmailVector.elementAt(ii-1)).addBCC(em.getRecipients());
-									((EmailMessage) myEmailVector.elementAt(ii-1)).addAlertRSN(em.getAlertRSN());
+									((EmailMessage) myEmailVector.elementAt(ii-1)).addAlertRsn(em.getAlertRsn());
 									// delete current message
 									myEmailVector.remove(ii);
 								} else {
@@ -597,7 +605,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 							} else {
 								// not identical emails, move on
 								lastSubject = em.getSubject();
-								lastRSNList = em.getRSNList();
+								lastRSNList = em.getRsnList();
 								ii++;
 							}
 						}
@@ -606,7 +614,6 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 					decoratedTrace(INDENT2, "Sending alerts...");
 
 					// Send the emails
-					Vector msgs = new Vector(5,10);
 					String msg = "";
 					if(! stopAlertProcessing) {
 						for (int ii=0; ii<myEmailVector.size(); ii++) {
@@ -614,39 +621,40 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 							if (em != null) {
 								msg = em.send();
 
-								//int pos = msg.indexOf("Could not connect to SMTP host");
 								int pos = msg.indexOf("javax.mail.SendFailedException: Sending failed");
-								if (pos > 0)
+								if (pos >= 0)
 								{
 									// save this EmailMessage for later
-									//save_email_alert(frame, o, em);
+									saveEmailAlert(em, session);
 								}
 
-								StringTokenizer st1 = new StringTokenizer(msg, "\n");
-								int tokens = st1.countTokens();
-								for (int j = 0; j < tokens; j++) {
-									String tmsg = st1.nextToken();
-									if (tmsg.length() !=0 ) {
-										//msgs.addElement(new LogMessage(tmsg));
-									}
+								if(msg.length() > 0) {
+									decoratedTrace(INDENT2, msg);
 								}
-
 							}
 						}
 					}
 
-					// multi-line message is possible
-					//eventLogMultiple(msgs);
-					//frame.addJLogMultiple(msgs);
-
-					msgs.removeAllElements();
 					myEmailVector.removeAllElements();
-
-					//update news_items set alert = 0 where rsn in (" + rsn_list + ")"
 				} catch (SQLException e) {
 					decoratedError(INDENT2, "Processing Alert records.", e);
 				}
+				
+				//Update news items so they don't get picked up on the next pass
+				if(!stopAlertProcessing) {
+					decoratedTrace(INDENT2, "Finished Processing Alerts. " + rsnList + " [" + rsnAlertedList + "]");
+					NewsItemsDao.clearAlertNewsItems(rsnAlertedList, false, session);
+					NewsItemsDao.clearAlertNewsItems(rsnList, true, session);
+					checkForTriggerInsertion(rsnList, session);
+				} else {
+					decoratedTrace(INDENT2, "ALERT PROCESSING STOPPED BECAUSE OF ORACLE TEXT ERROR!");
+					clearTrigger = false;
+				}
 			}
+		}
+		
+		if(clearTrigger) {
+			AlertTriggerDao.deleteAllRecords(session);
 		}
 	}
 	
@@ -720,91 +728,129 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 		return parts;
 	}
 	
-	/* private boolean retry_saved_email_alert(Frame1 f, jorelEmail jMail, dbAlert alertObj, OracleConnection conn) {
-		boolean smtp_is_ok = true;
+	private boolean retrySavedEmailAlerts(Session session) {
+		boolean smtpIsOk = true;
 
-		String rsn_list = "0";
-		String readObjSQL = "SELECT * FROM saved_email_alerts";
+		String rsnList = "0";
 		try
 		{
-			int c = 0;
-			PreparedStatement stmt = conn.getConnection().prepareStatement(readObjSQL);
-			ResultSet rs = stmt.executeQuery();
-			while(rs.next())
-			{
-				if(c == 0)
-				{
-					f.addJLog("Retry Sending Saved Alerts...");					
-				}
-				c++;
+			List<SavedEmailAlertsDao> alerts = SavedEmailAlertsDao.getSavedEmailAlerts(session);
+			
+			if(alerts.size() > 0) {
+				decoratedTrace(INDENT2, "Retry Sending Saved Alerts.");
+			}
+			
+			for(SavedEmailAlertsDao alert : alerts) {
+				BigDecimal rsn = alert.getRsn();
+				String alertRsn = alert.getAlertrsn();
+				String username = alert.getUsername();
+				String recipients = alert.getRecipients();
+				String subject = alert.getSubject();
+				String bcc = alert.getBcc();
+				String alertRsns = alert.getAlertrsns();
+				long userRsn = 0;
+				String userEmail = "";
 
-				long rsn = rs.getLong(1);
-				String a = rs.getString(2);
-				String u = rs.getString(3);
-				String r = rs.getString(4);
-				String s = rs.getString(5);
-				String b = rs.getString(7);
-				String al = rs.getString(8);
-				long user_rsn = 0;
-				String user_email = "";
-
-				String m = "";
-				Clob cl = rs.getClob(6);
+				String message = "";
+				Clob cl = alert.getMessage();
 				if (cl != null) {
 					int l = (int) cl.length();
-					m = cl.getSubString(1, l).replace( (char) 0, (char) 32);
+					message = cl.getSubString(1, l).replace( (char) 0, (char) 32);
 				}
 				
-				String user_sql = "SELECT rsn,email_address FROM users where user_name = '"+u+"'";
-				PreparedStatement stmt2 = conn.getConnection().prepareStatement(readObjSQL);
-				ResultSet rs2 = stmt2.executeQuery();
-				if(rs2.next())
-				{
-					user_rsn = rs2.getLong(1);
-					user_email = rs2.getString(2);
-				}
-				rs2.close();
-				stmt2.close();
-
-				EmailMessage em = new EmailMessage(a,u,r,s,m,"","",false);
-				em.bcc_recipients = b;
-				em.alertRsnList = al;
+				EmailMessage em = new EmailMessage(alertRsn, username, recipients, subject, message, "", "",false);
+				em.bccRecipients = bcc;
+				em.alertRsnList = alertRsns;
 				if(em != null)
 				{
-					String msg = em.send(jMail, alertObj, conn);
-					//int pos = msg.indexOf("Could not connect to SMTP host");
+					String msg = em.send();
 					int pos = msg.indexOf("javax.mail.SendFailedException: Sending failed");
 					if (pos > 0) 
 					{
 						// DO NOTHING AND GET OUT!  STILL CANNOT CONNECT
-						smtp_is_ok = false;
+						smtpIsOk = false;
 						break;
 					}
 					else
 					{
-						rsn_list = rsn_list + "," + rsn;
+						rsnList = rsnList + "," + rsn;
 					}
 				}
 			}
-			stmt.close();
-		} catch(Exception err) {f.addJLog("retry_saved_email_alert: "+err.toString());}
+		} catch(Exception err) {
+			decoratedError(INDENT2, "Processing saved email alerts.", err);
+		}
 
-		if(rsn_list != "0")
+		if(rsnList != "0")
 		{
 			try
 			{
-				String sql = "delete from saved_email_alerts where rsn in ("+rsn_list+")";
-				Statement s = conn.getConnection().createStatement();
-				ResultSet r = s.executeQuery(sql);
-				r.close();
-				s.close();
-			} catch(Exception err) {;}		    	
+				SavedEmailAlertsDao.deleteSavedEmailAlerts(rsnList, session);
+			} catch(Exception err) {
+				decoratedError(INDENT2, "Deleting saved email alerts.", err);
+			}		    	
 		}
-		return smtp_is_ok;
-	} */
+		return smtpIsOk;
+	}
 	
+	private void saveEmailAlert(EmailMessage em, Session session)
+	{
+		String te = em.getToneEmoji();
+		boolean vt = em.getViewTone();
+		String subject = em.getSubject();
+		SavedEmailAlertsDao emailAlert = new SavedEmailAlertsDao();
+
+		if(!vt) te="";
+		subject = StringUtil.replace(subject, "<**tone_emoji**>", te );
+		subject = EmojiParser.parseToUnicode(subject);
+		
+		emailAlert.setAlertrsn(em.getAlertRsn());
+		emailAlert.setUsername(em.getUsername());
+		emailAlert.setRecipients(em.getRecipients());
+		emailAlert.setSubject(subject);
+		emailAlert.setBcc(em.getBccRecipients());
+		emailAlert.setAlertrsns(em.getAlertRsnList());
+		emailAlert.setMessage(StringUtil.stringToClob(em.getMessage()));
+
+		session.beginTransaction();
+		session.persist(emailAlert);
+		session.getTransaction().commit();
+	}
+	
+	public void clearAlertTrigger(Session session){
+		Statement s = null;
+		try{
+			AlertTriggerDao.deleteAllRecords(session);
+		} catch (Exception err) {
+			System.out.println("dbAlert clearAlertTrigger failure: "+err);
+		}
+		
+		try{
+			AutoRunDao.signalAutoRunEvent(session);
+		} catch (Exception err) {;}
+	}
+	
+	public void checkForTriggerInsertion(String rsnList, Session session){
+	
+		try{
+			List<Long> results = NewsItemsDao.getActiveAlertCountInRsnList(rsnList, session);
+			
+			if(results.size() > 0) {
+				Long count = results.get(0);
+				if (count > 0) {
+					SyncIndexDao idx = new SyncIndexDao(new Date(), "Jorel Alert Processor", "Alert processor requesting reindex");
+					session.beginTransaction();
+					session.persist(idx);
+					session.getTransaction().commit();
+				}
+			}
+		} catch (Exception err) {
+			decoratedError(INDENT2, "Checking or inserting sync-trigger record", err);
+		}
+	}
+
 	private class EmailMessage {
-		String alertRSN;
+		String alertRsn;
 		String username;
 		String recipients;
 		String bccRecipients;
@@ -816,33 +862,35 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 		boolean view_tone;
 		String hostAddress;
 		String mailPort;
+		String from;
 		
 		private EmailMessage(String rsn, String u, String r, String s, String m, String rl, String te, boolean vt) {
-			alertRSN=rsn;
-			username=u;
-			recipients=r;
+			alertRsn = rsn;
+			username = u;
+			recipients = r;
 			subject = StringUtil.removeCRLF(s);
 			message=m;
-			itemRsnList=rl;
-			bccRecipients="";
-			alertRsnList="";
-			tone_emoji=te;
-			view_tone=vt;
+			itemRsnList = rl;
+			bccRecipients = "";
+			alertRsnList = "";
+			tone_emoji = te;
+			view_tone = vt;
 			hostAddress = instance.getMailHostAddress();
 			mailPort = instance.getMailPortNumber();
+			from = instance.getMailFromAddress();
 			addBCC(r);
-			addAlertRSN(rsn);
+			addAlertRsn(rsn);
 		}
 		
-		private String getAlertRSN() { return alertRSN; }
+		private String getAlertRsn() { return alertRsn; }
 		private String getUsername() { return username; }
 		private String getRecipients() { return recipients; }
 		private String getSubject() { return subject; }
 		private String getToneEmoji() { return tone_emoji; }
 		private boolean getViewTone() { return view_tone; }
 		private String getMessage() { return message; }
-		private String getBCCRecipients() { return bccRecipients; }
-		private String getRSNList() { return itemRsnList; }
+		private String getBccRecipients() { return bccRecipients; }
+		private String getRsnList() { return itemRsnList; }
 		
 		private String send() {
 			if (username == null) return "username is null";
@@ -851,24 +899,19 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 			if (message == null) return "message is null";
 
 			if(!view_tone) tone_emoji = "";
-			subject = StringUtil.exchange(subject, "<**tone_emoji**>", tone_emoji ) ;
+			subject = StringUtil.replace(subject, "<**tone_emoji**>", tone_emoji ) ;
 			subject = EmojiParser.parseToUnicode(subject);
 			
 			String msg = "";
 			try {
-				msg = EmailUtil.sendAlertEmail(hostAddress, mailPort, username, recipients, subject, message);
+				msg = EmailUtil.sendAlertEmail(hostAddress, mailPort, username, recipients, from, subject, message);
 			} catch (Exception ex) {
 				msg =  "Exception sendEmail: "+ex.toString()+" bcc: " + bccRecipients+", re: "+subject;
 			}
-			/* try {
-				if (alertRsnList != null) alertObj.updateAlertDates( o, alertRsnList );
-			} catch (Exception ex) {
-				msg =  "Exception updateAlertDates: "+ex.toString()+" '"+alertRsnList+"'";
-			}*/
 			return msg;
 		}
 		
-		private String getAlertRSNList() { return alertRsnList; }
+		private String getAlertRsnList() { return alertRsnList; }
 	
 		private void addBCC(String r) {
 			if (bccRecipients.length() == 0) {
@@ -878,7 +921,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 			}
 		}
 		
-		private void addAlertRSN(String rsn) {
+		private void addAlertRsn(String rsn) {
 			if (alertRsnList.length()==0) {
 				alertRsnList = rsn;
 			} else {

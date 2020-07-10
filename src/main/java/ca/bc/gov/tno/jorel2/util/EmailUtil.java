@@ -2,6 +2,7 @@ package ca.bc.gov.tno.jorel2.util;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
@@ -37,7 +38,7 @@ public class EmailUtil extends Jorel2Root {
 		javax.mail.Session session = getEmailSession(hostAddress, portNumber);
 		String subject = "TNO Page Watcher: " + watcher.getName();
 		String message = formatWatcherEmailMessage(watcher, changes);
-		InternetAddress[] inetAddress = new InternetAddress[1];
+		InternetAddress[] inetAddress = new InternetAddress[1]; // Only used to dictate the type of the array contents
 		
 		try {
 			String toWhome = watcher.getEmailRecipients();
@@ -70,7 +71,7 @@ public class EmailUtil extends Jorel2Root {
 		javax.mail.Session session = EmailUtil.getEmailSession(hostAddress, portNumber);
 		String subject = "TNO Archive Folder Ready";
 		message = "The following directories can be copied to new CD(s):\r\n" + message;
-		InternetAddress[] inetAddress = new InternetAddress[1];
+		InternetAddress[] inetAddress = new InternetAddress[1]; // Only used to dictate the type of the array contents
 		
 		try {
 			if (toAddress == null) {
@@ -121,13 +122,16 @@ public class EmailUtil extends Jorel2Root {
 		return message;
 	}
 	
-	public static String sendAlertEmail(String hostAddress, String portNumber, String username, String recipients, String subject, String message){
+	public static String sendAlertEmail(String hostAddress, String portNumber, String username, String recipients, String from, String subject, String message){
 		
 		boolean debug = false;
 		String result = "";
-
-		Session session = getEmailSession(config.getString("mail.host"), config.getString("mail.portNumber"));
+		Session session = getEmailSession(hostAddress, portNumber);
 		session.setDebug(false);
+		InternetAddress[] inetAddress = new InternetAddress[1]; // Only used to dictate the type of the array contents
+		
+		//return "javax.mail.SendFailedException: Sending failed";
+
 		try {
 			if (recipients == null) {
 				logger.error("Attempting to send alert email.", new IllegalStateException("The email recipients list is null."));
@@ -140,8 +144,8 @@ public class EmailUtil extends Jorel2Root {
 				}
 				
 				MimeMessage msg = new MimeMessage(session);
-				msg.setFrom(new InternetAddress(config.getString("mail.from")));
-				msg.setRecipients(Message.RecipientType.TO, (Address[]) addresses.toArray());
+				msg.setFrom(new InternetAddress(from));
+				msg.setRecipients(Message.RecipientType.TO, addresses.toArray(inetAddress));
 				msg.setSubject(subject);
 				msg.setText(message);
 				msg.setHeader("Content-Type", "text/html");// charset=\"UTF-8\"");

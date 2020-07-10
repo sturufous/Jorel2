@@ -461,7 +461,7 @@ public class StringUtil extends Jorel2Root {
 		return sb.toString();
 	}
 	
-	public static String exchange(String src, String chrs, String data) {
+	public static String replace(String src, String chrs, String data) {
 		StringBuilder sb = new StringBuilder();
 		int p = 0;
 		int i = 0;

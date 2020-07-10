@@ -7,21 +7,18 @@ import java.sql.Clob;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
+
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -806,6 +803,52 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
         }
         
 		return rsnList;
+	}
+	
+	/**
+	 * Get the rsns for all news items with their alert flag set to true as a comma delimited list. 
+	 * 
+	 * @param session The current Hibernate persistence context.
+	 * @return A list containing all the records that meet the selection criteria.
+	 */
+	public static List<Long> getActiveAlertCountInRsnList(String rsnList, Session session) {
+		
+		String sqlStmt = "select count(*) from NewsItemsDao where alert = 1 and rsn in (" + rsnList + ")";
+
+		Query<Long> query = session.createQuery(sqlStmt, Long.class);
+        List<Long> results = query.getResultList();
+                
+		return results;
+	}
+	
+	/**
+	 * Clear the alert flag in all eligible NEWS_ITEMS records. This method may be called with a useLastDoSyncIndex value of true or false.
+	 * If useLastDoSyncIndex is false, the alert column of all news items in rsnList will be set to zero. If useLastDoSyncIndex is true
+	 * the alert column will be set to zero only if the item was last modified before the the most recent re-index of the news_items table.
+	 * 
+	 * @param rsnList The list of NEWS_ITEMS rsn to clear.
+	 * @param useLastDoSyncIndex Use the date in LastDoSyncIndexDao to filter the list of records updated.
+	 * @param session
+	 */
+	public static void clearAlertNewsItems(String rsnList, boolean useLastDoSyncIndex, Session session){
+		if (rsnList.length() == 0) return;
+		String sqlStmt = "update NewsItemsDao set alert = 0 where rsn in (" + rsnList + ")";
+
+		if (useLastDoSyncIndex) {
+			sqlStmt = "update NewsItemsDao n set n.alert = 0 where n.rsn in " +
+				"(select x.rsn from NewsItemsDao x, LastDosyncindexDao l where x.rsn in (" + rsnList + ") and " +
+				"to_timestamp(to_char(x.recordModified,'YYYY/MM/DD HH24:MI:SS'),'YYYY/MM/DD HH24:MI:SS') < l.dosyncindex)";
+		}
+
+		try{
+			Query query = session.createQuery(sqlStmt);
+			session.beginTransaction();
+			query.executeUpdate();
+			session.getTransaction().commit();
+		}
+		catch (Exception err) {
+			decoratedError(INDENT2, "Clearing alert news items.", err);
+		}
 	}
 	
 	/**
