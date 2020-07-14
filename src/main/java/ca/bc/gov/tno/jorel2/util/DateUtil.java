@@ -28,6 +28,8 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
  */
 public class DateUtil extends Jorel2Root {
 
+	static final String mmm[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
 	/**
 	 * Takes the RSS formatted published date and converts it into java.util.Date object for storage in the TNO database.
 	 * 
@@ -314,5 +316,11 @@ public class DateUtil extends Jorel2Root {
 		}
 
 		return cal;
+	}
+	
+	public static String today() {
+		Calendar cal = Calendar.getInstance();
+
+		return cal.get(Calendar.DATE) + "-" + mmm[cal.get(Calendar.MONTH)] + "-" + cal.get(Calendar.YEAR) ;
 	}
 }

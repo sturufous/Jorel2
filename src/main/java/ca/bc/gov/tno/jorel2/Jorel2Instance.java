@@ -511,6 +511,17 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The ftp root path.
 	 */
+	@ManagedAttribute(description="HTTP address of the Otis instance", currencyTimeLimit=15)
+	public String getStorageAvHost() {
+		
+		return config.getString("avHost");
+	}
+	
+	/**
+	 * Exposes the ftp root path as a JMX attribute.
+	 * 
+	 * @return The ftp root path.
+	 */
 	@ManagedAttribute(description="Ftp root path in which media are stored", currencyTimeLimit=15)
 	public String getStorageFtpRoot() {
 		
