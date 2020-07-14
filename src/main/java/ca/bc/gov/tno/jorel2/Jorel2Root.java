@@ -2,13 +2,18 @@ package ca.bc.gov.tno.jorel2;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.persistence.MappedSuperclass;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.annotations.NamedQuery;
+
+import ca.bc.gov.tno.jorel2.model.EventActivityLogDao;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
+
+import org.hibernate.Session;
 import org.hibernate.annotations.NamedQueries;
 
 @NamedQueries({
@@ -62,7 +67,9 @@ public class Jorel2Root {
     protected static final String V35ALERTSEMAILSINGLE_DFLT = "<A HREF = \"<**httphost**>command=showstory&rsn=<**rsn**>\"><**title**></A><br>";
     protected static final String V61TOS_SCRUM_DFLT = "This e-mail is a service provided by the Public Affairs Bureau and is only intended for the original addressee.";
     
-	public enum EventType {
+    protected static String rootInstanceName = "";
+    
+    public enum EventType {
 		
 		DURATION, CHANNELWATCHER, INFLUENCERSCORE, TRENDINGSCRAPER, SMAMONITOR, SMAPOLLING, FTP, SCHEDULE, ARCHIVER, USER, 
 		HTML, TRIGGER, PLSQL, MONITOR, LAUNCH, SYNC, CLEANUP, EXPIRE, LOADBINARY, CLEANBINARYROOT, ALERT, CONVERTER, EXPIRE3GP,
@@ -93,6 +100,15 @@ public class Jorel2Root {
 		
 		String decoratedMsg = StringUtil.getLogMarker(indent) + message;
 		logger.error(decoratedMsg, e);
+	}
+	
+	protected static void decoratedTrace(String indent, String message, Session session) {
+		
+		EventActivityLogDao logEntry = new EventActivityLogDao(null, rootInstanceName, new Date(), message);
+		session.beginTransaction();
+		session.persist(logEntry);
+		session.getTransaction().commit();
+		decoratedTrace(indent, message);
 	}
 	
 	protected static void decoratedTrace(String indent, String message) {

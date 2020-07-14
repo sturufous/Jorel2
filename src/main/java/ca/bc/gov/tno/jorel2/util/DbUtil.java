@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +32,15 @@ public class DbUtil {
 		session.getTransaction().commit();
 	}
 	
+	/**
+	 * Takes an sql statement and uses Hibernate's <code>doReturningWork()</code> method to execute the statement and
+	 * return a result set containing the list of rows matched by the statement.
+	 * 
+	 * @param query The query to run
+	 * @param session The current Hibernate presistence context
+	 * @return The result set containing the list of rows matched by the statement.
+	 * @throws SQLException
+	 */
 	public static ResultSet runSql(String query, Session session) throws SQLException {
 		
        ResultSet results = session.doReturningWork(new ReturningWork<ResultSet>() {
@@ -49,4 +59,32 @@ public class DbUtil {
        
        return results;
 	}
+
+	/**
+	 * Takes an sql statement and uses Hibernate's <code>doReturningWork()</code> method to execute and update using the statement and
+	 * return the number of records affected by the update.
+	 * 
+	 * @param query The update query to run.
+	 * @param session The current Hibernate presistence context
+	 * @return The number of records affected by the update statement.
+	 * @throws SQLException
+	 */
+	public static Integer runUpdateSql(String query, Session session) throws SQLException {
+		
+       Integer result = session.doReturningWork(new ReturningWork<Integer>() {
+            
+            public Integer execute(Connection connection) throws SQLException {
+ 
+                Statement cstmt = connection.createStatement();
+                cstmt = connection.prepareStatement(query);
+				int c = cstmt.executeUpdate(query);
+                cstmt.close();
+                
+                return Integer.valueOf(c);
+            }
+        });
+       
+       return result;
+	}
+
 }

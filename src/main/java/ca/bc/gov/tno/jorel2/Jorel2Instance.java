@@ -66,10 +66,11 @@ public class Jorel2Instance extends Jorel2Root {
 	/** Allows charting of individual run times in VisualVM */
 	private long lastDuration = 0;
 	
+	/** Keeps a tally of how many alert emails have been sent out */
+	private long alertCounter = 0;
+	
 	/** Indicates whether this instance currently has access to a network connection */
 	private ConnectionStatus connectionStatus = ConnectionStatus.OFFLINE;
-	
-	private PreferencesDao preferences = null;
 	
 	/**
 	 * Construct this object and set the startTime to the time now.
@@ -288,6 +289,27 @@ public class Jorel2Instance extends Jorel2Root {
 	public void addHttpFailure(String message) {
 		
 		httpFailures.put(DateUtil.getTimeNow(), message);
+	}
+	
+	/**
+	 * Adds an entry to the httpFailures Map to record the error condition.
+	 * 
+	 * @param message The failure description (e.g. timeout) and url that caused the failure.
+	 */
+	public void incrementAlertCounter() {
+		
+		alertCounter++;
+	}
+	
+	/**
+	 * Exposes <code>lastDuration</code> as a JMX attribute. 
+	 * 
+	 * @return The lastDuration attribute for this instance.
+	 */
+	@ManagedAttribute(description="The number of alert emails sent out", currencyTimeLimit=15)
+	public long getAppAlertCounter() {
+		
+		return alertCounter;
 	}
 	
 	/**
@@ -625,23 +647,6 @@ public class Jorel2Instance extends Jorel2Root {
 	}
 	
 	/**
-	 * Loads the single record from the PREFERENCES table in the TNO database. This is then stored as a PreferencesDao object in
-	 * this instance.
-	 * 
-	 * @param session The current Hibernate persistence context.
-	 */
-	public void loadPreferences(Session session) {
-		
-		List<PreferencesDao> preferenceList = PreferencesDao.getPreferencesByRsn(PREFERENCES_RSN, session);
-		
-		if (preferenceList.size() > 0) {
-			preferences = preferenceList.get(0);
-		} else {
-			decoratedError(INDENT0, "Reading preferences from database.", new IOException("Unable to retried preferences from TNO database."));
-		}
-	}
-	
-	/**
 	 * Adds a Quote Extractor word count entry. This allows a monitoring entity to see how many entries there are for the types
 	 * Noise, Verb, Title and Noisename.
 	 * 
@@ -663,16 +668,5 @@ public class Jorel2Instance extends Jorel2Root {
 	public Map<String, Integer> getWordCounts() {
 		
 		return wordCounts;
-	}
-	
-	/**
-	 * Returns the PreferencesDao object that was loaded by <code>loadPreferences()</code>. This object is used very rarely and is
-	 * likely a legacy feature of the TNO system.
-	 * 
-	 * @return The preferences object.
-	 */
-	public PreferencesDao getPreferences() {
-		
-		return preferences;
 	}
 }

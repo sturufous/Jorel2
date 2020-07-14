@@ -143,7 +143,7 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 	            result = clob.getSubString(1, (int) len);
 	            parts.put(keyStr, result);
 			} catch (SQLException e) {
-				decoratedError(INDENT2, "Extracting Clob cotent.", e);
+				decoratedError(INDENT2, "Extracting Clob content.", e);
 			}
         } else {
         	parts.put(keyStr, deflt);

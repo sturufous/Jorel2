@@ -27,6 +27,7 @@ import com.vdurmont.emoji.EmojiParser;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.AlertTriggerDao;
+import ca.bc.gov.tno.jorel2.model.AlertsDao;
 import ca.bc.gov.tno.jorel2.model.AutoRunDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.JorelDao;
@@ -35,6 +36,7 @@ import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.model.SavedEmailAlertsDao;
 import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
 import ca.bc.gov.tno.jorel2.util.Base64Util;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
 import ca.bc.gov.tno.jorel2.util.EmailUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
@@ -565,7 +567,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 					
 					try { alertRS.close(); } catch (Exception e) {;}
 					
-					decoratedTrace(INDENT2, "Combining alerts...");
+					decoratedTrace(INDENT2, "Combining alerts...", session);
 
 					// Coalesce emails - send identical emails to multiple recipients
 					if(!stopAlertProcessing) {
@@ -611,7 +613,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 						}
 					}
 					
-					decoratedTrace(INDENT2, "Sending alerts...");
+					decoratedTrace(INDENT2, "Sending alerts...", session);
 
 					// Send the emails
 					String msg = "";
@@ -619,7 +621,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 						for (int ii=0; ii<myEmailVector.size(); ii++) {
 							EmailMessage em = (EmailMessage) myEmailVector.elementAt(ii);
 							if (em != null) {
-								msg = em.send();
+								msg = em.send(session);
 
 								int pos = msg.indexOf("javax.mail.SendFailedException: Sending failed");
 								if (pos >= 0)
@@ -629,12 +631,12 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 								}
 
 								if(msg.length() > 0) {
-									decoratedTrace(INDENT2, msg);
+									decoratedTrace(INDENT2, msg, session);
 								}
 							}
 						}
 					}
-
+					
 					myEmailVector.removeAllElements();
 				} catch (SQLException e) {
 					decoratedError(INDENT2, "Processing Alert records.", e);
@@ -647,14 +649,14 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 					NewsItemsDao.clearAlertNewsItems(rsnList, true, session);
 					checkForTriggerInsertion(rsnList, session);
 				} else {
-					decoratedTrace(INDENT2, "ALERT PROCESSING STOPPED BECAUSE OF ORACLE TEXT ERROR!");
+					decoratedTrace(INDENT2, "ALERT PROCESSING STOPPED BECAUSE OF ORACLE TEXT ERROR!", session);
 					clearTrigger = false;
 				}
 			}
 		}
 		
 		if(clearTrigger) {
-			AlertTriggerDao.deleteAllRecords(session);
+			clearAlertTrigger(session);
 		}
 	}
 	
@@ -763,7 +765,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				em.alertRsnList = alertRsns;
 				if(em != null)
 				{
-					String msg = em.send();
+					String msg = em.send(session);
 					int pos = msg.indexOf("javax.mail.SendFailedException: Sending failed");
 					if (pos > 0) 
 					{
@@ -892,7 +894,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 		private String getBccRecipients() { return bccRecipients; }
 		private String getRsnList() { return itemRsnList; }
 		
-		private String send() {
+		private String send(Session session) {
 			if (username == null) return "username is null";
 			if (bccRecipients == null) return "recipients is null";
 			if (subject == null) return "subject is null";
@@ -905,9 +907,14 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 			String msg = "";
 			try {
 				msg = EmailUtil.sendAlertEmail(hostAddress, mailPort, username, recipients, from, subject, message);
+				decoratedTrace(INDENT2, "Email sent to: " + recipients + " : " + subject, session);
+				instance.incrementAlertCounter();
 			} catch (Exception ex) {
-				msg =  "Exception sendEmail: "+ex.toString()+" bcc: " + bccRecipients+", re: "+subject;
+				msg =  "Exception sendEmail: " + ex.toString() + " bcc: " + bccRecipients + ", re: " + subject;
 			}
+			
+			AlertsDao.updateLastExecuted(alertRsn, session);
+			
 			return msg;
 		}
 		

@@ -170,6 +170,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		try {
 			// This is the first query to run in Jorel2Runnable. It is used to determine the offline status of the system.
 			// If a query is inserted in the code prior to this one, without the try-catch below, offline mode will not function.
+			rootInstanceName = instance.getAppInstanceName();
 	        List<EventsDao> results = EventsDao.getEventsForProcessing(instance.getAppInstanceName(), session);
 	        
 	        getUniqueEventTypes(eventMap, results);

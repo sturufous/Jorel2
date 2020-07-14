@@ -478,6 +478,23 @@ public class StringUtil extends Jorel2Root {
 		sb.append(src.substring(p));
 		return sb.toString();
 	}
+	
+	public static String replacement(String s, String o, String n) {
+
+		String org = s;
+		String result = s;
+		int i;
+		do {
+			i = org.indexOf(o);
+			if (i != -1) {
+				result = org.substring(0,i);
+				result = result + n;
+				result = result + org.substring(i + o.length());
+				org = result;
+			}
+		} while (i != -1);
+		return result;
+	}
 
 	public static String firstreplacement(String s, String o, String n) {
 
