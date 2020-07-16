@@ -1,6 +1,7 @@
 package ca.bc.gov.tno.jorel2.util;
 
 import java.math.BigDecimal;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
@@ -28,7 +29,11 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
  */
 public class DateUtil extends Jorel2Root {
 
-	static final String mmm[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	// These constant arrays are required for the Aktiv methods.
+	private static final String mmm[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	private static final String mm[] = { "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12" };
+	private static final String dddddd[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+	private static final String mmmmmm[] = { "January", "February", "March", "April", "May", "June","July", "August", "September", "October", "November", "December" };
 
 	/**
 	 * Takes the RSS formatted published date and converts it into java.util.Date object for storage in the TNO database.
@@ -318,9 +323,93 @@ public class DateUtil extends Jorel2Root {
 		return cal;
 	}
 	
+	// Methods from the Aktiv package (not refactored).
+	
 	public static String today() {
 		Calendar cal = Calendar.getInstance();
 
 		return cal.get(Calendar.DATE) + "-" + mmm[cal.get(Calendar.MONTH)] + "-" + cal.get(Calendar.YEAR) ;
+	}
+	
+	public static String yyyymmdd() {
+		Calendar cal = Calendar.getInstance();
+		return yyyymmdd(cal);
+	}
+
+	public static String yyyymmdd(Calendar cal) {
+		if (cal.get(Calendar.DATE) < 10)
+			return cal.get(Calendar.YEAR) + "-" + mm[cal.get(Calendar.MONTH)] + "-0" + cal.get(Calendar.DATE) ;
+		else
+			return cal.get(Calendar.YEAR) + "-" + mm[cal.get(Calendar.MONTH)] + "-" + cal.get(Calendar.DATE) ;
+	}
+	
+	public static String searchDate(java.sql.Date d) {
+		if (d == null) return "";
+		String x = d.toString();
+		return searchDate(x);
+	}
+
+	public static String searchDate(String dateSrc) {          // dateSrc is in the form yyyy-mm-dd
+		if (dateSrc.length() < 10) return "?";
+
+		int m;
+		try {
+			m = Integer.parseInt(dateSrc.substring(5,7)) - 1;
+		} catch (Exception err) {
+			m = 0;
+		}
+		if (m > 11) m=0;
+		return dateSrc.substring(8) + "-" + mmm[m] + "-" + dateSrc.substring(0,4);
+	}
+	
+	public static String fullDate(String dateSrc) {        // dateSrc is in the form yyyy-mm-dd
+		if (dateSrc == null) return "";
+		if (dateSrc.length() < 10) return "?";
+
+		int m;
+		int d;
+		int y;
+		try {
+			m = Integer.parseInt(dateSrc.substring(5,7)) - 1;
+			d = Integer.parseInt(dateSrc.substring(8));
+			y = Integer.parseInt(dateSrc.substring(0,4));
+		} catch (Exception err) {
+			m = 0;
+			d = 0;
+			y = 0;
+		}
+		if ((m == 0) && (d == 0) && (y ==0)) return "?";
+
+		Calendar full = Calendar.getInstance();
+		full.set(y,m,d);
+		int weekday = full.get(Calendar.DAY_OF_WEEK);
+
+		return dddddd[weekday-1] + ", " + mmmmmm[m] + " " + dateSrc.substring(8) + ", " + dateSrc.substring(0,4);
+	}
+	
+	public static long unixTime(String date, String time)
+	{
+		if(time.equals("")) time = "00:00:00";
+		if(time.length() == 5) time = time + ":00";
+		
+		Date xdate = null;
+		long unixTime = currentUnixTime();
+		try
+		{
+		    String dateString = date+" "+time;
+		    DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy H:m:s");
+		    xdate = dateFormat.parse( dateString );
+		    unixTime = (long) xdate.getTime()/1000;
+		}
+		catch (Exception err)
+		{
+			xdate = null;
+		}
+	    return unixTime;
+	}
+
+	public static long currentUnixTime()
+	{
+		return (System.currentTimeMillis() / 1000L);
 	}
 }

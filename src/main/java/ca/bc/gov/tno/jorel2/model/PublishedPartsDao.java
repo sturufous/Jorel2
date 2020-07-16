@@ -123,6 +123,8 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 	 *
 	 * @param name The name of the published part.
 	 * @param deflt The default value for the key <code>name</code>
+	 * @param key to be associated with the result in the parts map.
+	 * @param parts Map that contains all published parts obtained during this run.
 	 * @param session The current Hibernate persistence context
 	 * @return The published part that matches the name.
 	 */
@@ -148,5 +150,39 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
         } else {
         	parts.put(keyStr, deflt);
         }
+	}
+	
+	/**
+	 * Get a published part by name. If there is no record in PUBLISHED_PARTS matching the name then return the default value
+	 * provided by the caller in the deflt parameter.
+	 *
+	 * @param name The name of the published part.
+	 * @param deflt The default value for the key <code>name</code>
+	 * @param session The current Hibernate persistence context
+	 * @return The published part that matches the name.
+	 */
+	public static String getPublishedPartByName(String name, String deflt, Session session) {
+		
+		String sqlStmt = "from PublishedPartsDao where name=:name";
+		String result = "";
+		
+		Query<PublishedPartsDao> query = session.createQuery(sqlStmt, PublishedPartsDao.class);
+		query.setParameter("name", name);
+        List<PublishedPartsDao> results = query.getResultList();
+        
+        if(results.size() > 0) {
+        	Clob clob = results.get(0).getContent();
+            long len;
+			try {
+				len = clob.length();
+	            result = clob.getSubString(1, (int) len);
+			} catch (SQLException e) {
+				decoratedError(INDENT2, "Extracting Clob content.", e);
+			}
+        } else {
+        	result = deflt;
+        }
+        
+		return result;
 	}
 }

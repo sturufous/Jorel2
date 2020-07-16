@@ -11,6 +11,7 @@ import java.util.List;
 import org.hibernate.Session;
 import org.hibernate.jdbc.ReturningWork;
 
+import aktiv.connectionData;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 
@@ -86,5 +87,20 @@ public class DbUtil {
        
        return result;
 	}
+
+	/* static public long nextrsn(connectionData o)
+	{
+		long r=0;
+		Statement stmt=null;
+		ResultSet rs=null;
+		try{
+			stmt=o.c.createStatement();
+			rs=stmt.executeQuery("select tno.next_rsn.nextval from dual");
+			if(rs.next()) r=rs.getLong(1);
+		} catch(Exception err){;}
+		try{ if(rs!=null) rs.close(); } catch(SQLException err){;}
+		try{ if(stmt!=null) stmt.close(); } catch(SQLException err){;}
+		return r;
+	} */
 
 }

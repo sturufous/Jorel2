@@ -2,7 +2,9 @@ package ca.bc.gov.tno.jorel2.controller;
 
 import java.io.StringReader;
 import java.io.Writer;
+import java.math.BigDecimal;
 import java.sql.Clob;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -29,11 +31,14 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import aktiv.aktivString;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.AutoRunDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FolderItemDao;
+import ca.bc.gov.tno.jorel2.model.PublishedPartsDao;
+import ca.bc.gov.tno.jorel2.model.ReportStoriesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
@@ -458,7 +463,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					boolean autoRunDups = rs.getBoolean(3);
 					boolean autoRunSend = rs.getBoolean(4);
 					String lastRun = rs.getString(5);
-					if(lastRun == null) lastRun = aktivDate.yyyymmdd()+" 00:00:05";
+					if(lastRun == null) lastRun = DateUtil.yyyymmdd() + " 00:00:05";
 					String reportGroup = rs.getString(6);
 					if(reportGroup == null) reportGroup = "";
 					String reportName = rs.getString(7);
@@ -515,9 +520,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					{
 						decoratedTrace(INDENT2, "Report to email report " + reportName, session);
 
-						dbParts y = new dbParts();
-						//dbCloaker x = new dbCloaker(oracleConn.db,y,"<**","**>");
-
 						//
 						//	Need some users fields (email, view_tone)
 						//
@@ -530,19 +532,18 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							String tpu = getTonePoolUsers(userRsn, session);
 							String mailHost = instance.getMailHostAddress();
 							httpHost = instance.getAppHttpHost();
-							long currentPeriod = frame.getPrefs().getCurrentPeriod();
+							long currentPeriod = 14; //frame.getPrefs().getCurrentPeriod();
 							String avHost = instance.getStorageAvHost();
 
 							decoratedTrace(INDENT2, "Report create Report object and report.send() it...", session);
 							String msg= "";
 							try
 							{
-								String sqlUpdate = "update tno.report_stories set sort_position = ? where rsn = ?";
-								PreparedStatement ps = oracleConn.c.prepareStatement(sqlUpdate);
+								String sqlUpdate = "update tno.report_stories set sort_position = " + prefSort + " where rsn = " + rsn;
 
-								Report report = new Report(oracleConn, x, rsn, userRsn, userEmail, viewTone, tpu, mailHost, httpHost, currentPeriod, avHost);
-								String sortMsg = report.sortStories(prefSort, Long.toString(rsn), ps);
-								msg = report.send();
+								ReportHandler report = new ReportHandler(rsn, userRsn, userEmail, viewTone, tpu, mailHost, httpHost, currentPeriod, avHost);
+								String sortMsg = report.sortStories(sqlUpdate, session);
+								msg = report.send(session);
 							} catch (Exception e)
 							{
 								decoratedError(INDENT2, "Report send error: " + userEmail, e);
@@ -717,7 +718,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							/*
 							 * Draw the analysis
 							 */
-							Analysis a = new Analysis(oracleConn, rsn, user_rsn, daily.prefs.getCurrentPeriod(), true);
+							Analysis a = new Analysis(oracleConn, rsn, userRsn, 14, true); // Hard code current period to 14 for now
 							a.draw(false, true);
 
 							/*
@@ -729,7 +730,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							{
 								long imageSize = rs2.getLong(1);
 								long fontSize = rs2.getLong(2);
-								a = new Analysis(oracleConn, rsn, userRsn, daily.prefs.getCurrentPeriod(), (int) imageSize, (int) fontSize, true);
+								a = new Analysis(oracleConn, rsn, userRsn, 14, (int) imageSize, (int) fontSize, true); // Hard code current period for now
 								a.draw(false, true);
 							}
 							rs2.close();
@@ -862,8 +863,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				/*
 				 * Date clause for the query
 				 */
-				//String dateWhere = "n.item_date = to_date('"+aktivDate.today()+"','DD-MON-YYYY') ";
-				//String dateWhere = "to_char(n.record_created,'YYYY-MM-DD HH24:MI:SS') >= '"+last_run+"' ";
 				String dateWhere = "n.record_created >= to_date('" + lastRun + "','YYYY-MM-DD HH24:MI:SS') ";
 
 				/*
@@ -1004,8 +1003,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					scoreWhere += "0) > " + Long.toString(score) + ")";
 					themeWhere += scoreWhere;
 				}	
-				//String dateWhere = "n.item_date = to_date('"+aktivDate.today()+"','DD-MON-YYYY') ";
-				//String dateWhere = "to_char(n.record_created,'YYYY-MM-DD HH24:MI:SS') >= '"+last_run+"' ";
 				String dateWhere = "n.record_created >= to_date('" + lastRun + "','YYYY-MM-DD HH24:MI:SS') ";
 				if(published)
 				{
@@ -1074,7 +1071,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 	{
 		//say("reports_by_item_rsn() add item #"+counter);
 
-		Statement stmt = null;
 		ResultSet rs = null;
 
 		String storyrsn = "";
@@ -1087,24 +1083,20 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		boolean pref3 = false;
 		boolean pref8 = false;
 		boolean pref11 = false;
-		boolean pref_inc_images = false;
-		boolean pref_use_thumb = false;
-		boolean pref_inc_frontpage = false;
-		boolean show_tone = false;
-		boolean pref_cloak_byline = false; // include the byline in the TOC
-		boolean pref_add_frontpage = false; // include [FRONTPAGE] in the TOC
+		boolean prefIncImages = false;
+		boolean prefUseThumb = false;
+		boolean prefIncFrontpage = false;
+		boolean showTone = false;
+		boolean prefCloakByline = false; // include the byline in the TOC
+		boolean prefAddFrontpage = false; // include [FRONTPAGE] in the TOC
 		boolean hilite = false;
 		long unixTime = 0;
 		String typeRsn = "0";
-
-		PreparedStatement newsps = null;
-		PreparedStatement ps = null;
-
 		String tonePoolUserRSNs = getTonePoolUsers(userRsn, session);
 
 		//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		// Prepare a JDBC statement for repeated use
-		String where = " n.source = s.source(+) and n.type = st.type and n.rsn = ? and n.rsn = t.item_rsn(+) and t.user_rsn(+) = 0";
+		String where = " n.source = s.source(+) and n.type = st.type and n.rsn = " + itemRsn + " and n.rsn = t.item_rsn(+) and t.user_rsn(+) = 0";
 		String newssql = "select n.rsn, n.item_date, n.source, n.type, n.title, " +
 		"n.string1, n.string2, n.string3, n.string4, n.string5, n.string6, n.string7, " +
 		"n.text, n.contenttype, n.binary, n.binaryloaded, n.webpath, s.abbr, n.archived, " +
@@ -1130,23 +1122,17 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				pref3 = rs2.getBoolean(1);
 				pref8 = rs2.getBoolean(2);
 				pref11 = rs2.getBoolean(3);
-				pref_inc_images = rs2.getBoolean(4);
-				pref_use_thumb = rs2.getBoolean(5);
-				pref_inc_frontpage = rs2.getBoolean(6);
-				show_tone = rs2.getBoolean(7);
-				pref_cloak_byline = rs2.getBoolean(8);
-				pref_add_frontpage = rs2.getBoolean(9);
+				prefIncImages = rs2.getBoolean(4);
+				prefUseThumb = rs2.getBoolean(5);
+				prefIncFrontpage = rs2.getBoolean(6);
+				showTone = rs2.getBoolean(7);
+				prefCloakByline = rs2.getBoolean(8);
+				prefAddFrontpage = rs2.getBoolean(9);
 				hilite = rs2.getBoolean(10);
 			}
 			rs2.close();
 		} catch (Exception err) { 
 			decoratedError(INDENT0, "Reports add item to report error (part 1)", err); 
-		}
-
-		try {
-			newsps = oracleConn.c.prepareStatement(newssql);
-		} catch (Exception err) { 
-			decoratedError(INDENT0, "Reports add item to report error (part 2)", err); 
 		}
 
 		String w = queryText;
@@ -1165,9 +1151,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 
 			progress = "b";
 
-			newsps.setLong(1, itemRsn);
-			newsps.setLong(2, itemRsn);
-			rs = newsps.executeQuery();
+			rs = DbUtil.runSql(newssql, session);
 			if (rs.next()) {
 				long rsn = rs.getLong(1);
 				java.sql.Date itemDate = rs.getDate(2);
@@ -1201,7 +1185,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					t = cl.getSubString(1,l).replace((char)0,(char)32);
 				}
 				String abbr = rs.getString(18);
-				if (abbr == null) abbr = aktivString.removeSpaces(source);
+				if (abbr == null) abbr = StringUtil.removeSpaces(source);
 				String time = rs.getString(26);
 				if (time == null) time="";
 				if (time.startsWith("00:00")) time="";
@@ -1218,15 +1202,15 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				}
 
 				headline = title.trim();
-				if (pref_cloak_byline) {
+				if (prefCloakByline) {
 					if (!string6.equals("")) {
 						headline = headline + " - "+string6;
 					}
 				}
 				if (pref3) headline = headline + " - " + source;
 				if (pref11) headline = headline + commonCall;
-				if (pref8) headline = headline + " - " + aktivDate.searchDate(itemDate);
-				if (pref_add_frontpage) {
+				if (pref8) headline = headline + " - " + DateUtil.searchDate(itemDate);
+				if (prefAddFrontpage) {
 					if (string3.equalsIgnoreCase("a01")) {
 						headline = "[FRONT PAGE] "+headline;
 					}
@@ -1241,10 +1225,10 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				if (!type.equals(prevType)) storyFormat = getItemTypeFormat(type, session);
 				prevType = type;
 
-				String searchDate = aktivDate.searchDate(itemDate);
-				String d = aktivDate.fullDate( itemDate.toString() );
+				String searchDate = DateUtil.searchDate(itemDate);
+				String d = DateUtil.fullDate( itemDate.toString() );
 
-				unixTime = aktivTime.unixTime(searchDate, time);
+				unixTime = DateUtil.unixTime(searchDate, time);
 
 				int tone = 0;
 				Object tone_test = rs.getObject(30);
@@ -1274,7 +1258,8 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 
 					StringBuilder text = new StringBuilder(t);
 					StringBuilder trans = new StringBuilder(transcript);
-					aktiv.Common.markup_content(text, trans, w, itemRsn, item_table, q_id, oracleConn, false);
+					//public static void markup_content(StringBuilder text, StringBuilder transcript, String w, long itemrsn, String item_table, long q_id, connectionData o, boolean stem_search) {
+					StringUtil.markupContent(text, trans, w, itemRsn, item_table, q_id, false, session);
 					t = text.toString();
 					transcript = trans.toString();
 				}
@@ -1313,8 +1298,8 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				line = StringUtil.replace(line, "<**tone**>", "" ) ;
 				line = StringUtil.replace(line, "<**typetag**>", "" ) ;
 				line = StringUtil.replace(line, "<**visualtone**>", "<!--visualtone-->"); // cloak it in later
-				if(pref_inc_images)
-					line = StringUtil.replace(line, "<**images**>", news_item_images(oracleConn.c,itemRsn,source,searchDate,pref_use_thumb,pref_inc_frontpage) ) ;
+				if(prefIncImages)
+					line = StringUtil.replace(line, "<**images**>", newsItemImages(itemRsn, source, searchDate, prefUseThumb, prefIncFrontpage, session));
 				else
 					line = StringUtil.replace(line, "<**images**>", "") ;
 
@@ -1330,51 +1315,41 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 			progress = "g";
 
 			if (itemFound) {
-				long r = aktiv.Common.nextrsn(oracleConn);
+				ReportStoriesDao stories = new ReportStoriesDao();
+				
+				stories.setReportRsn(BigDecimal.valueOf(reportRsn));
+				stories.setHeadline(headline);
+				stories.setReportSectionRsn(BigDecimal.valueOf(sectionRsn));
+				stories.setSortPosition(BigDecimal.valueOf(Long.parseLong(sort)));
+				stories.setTocPosition(BigDecimal.valueOf(Long.parseLong(tocsort)));
+				stories.setSummary(summary);
+				stories.setItemRsn(BigDecimal.valueOf(itemRsn));
+				stories.setDateTime(BigDecimal.valueOf(unixTime));
+				stories.setSourceTypeRsn(BigDecimal.valueOf(Long.parseLong(typeRsn)));
 
-				if (r > 0) {
-					String sqlString = "insert into tno.report_stories values (?,?,?,?,?,?,?,'a',?,?,?)";
-					ps = oracleConn.c.prepareStatement(sqlString);
-					ps.setLong(1, r );
-					ps.setLong(2, reportRsn );
-					ps.setString(3, headline );
-					ps.setLong(4, sectionRsn );
-					ps.setLong(5, Long.parseLong(sort) );
-					ps.setLong(6, Long.parseLong(tocsort) );
-					ps.setString(7, summary );
-					ps.setLong(8, itemRsn );
-					ps.setLong(9, unixTime );
-					ps.setString(10, typeRsn );
-					ps.executeUpdate();
-					ps.close();
+				progress = "h";
 
-					progress = "h";
-
-					sqlString = "select content from tno.report_stories where rsn = ? for update";
-					ps = oracleConn.c.prepareStatement(sqlString);
-					ps.setLong(1,r);
-					rs = ps.executeQuery();
-					if (rs.next()) {
-						CLOB cl = (CLOB)rs.getClob(1);
-						Writer cos = cl.getCharacterOutputStream();
-						cos.write(content);
-						cos.close();
-					}
-					rs.close();
-					ps.close();
-					if (storyrsn.length() < 1) storyrsn = Long.toString(r);
-
-					progress = "i";
+				/*sqlString = "select content from tno.report_stories where rsn = ? for update";
+				ps = oracleConn.c.prepareStatement(sqlString);
+				ps.setLong(1,r);
+				rs = ps.executeQuery();
+				if (rs.next()) {
+					CLOB cl = (CLOB)rs.getClob(1);
+					Writer cos = cl.getCharacterOutputStream();
+					cos.write(content);
+					cos.close();
 				}
+				rs.close();
+				ps.close();
+				if (storyrsn.length() < 1) storyrsn = Long.toString(r);
+
+				progress = "i";*/
 			}
 		} catch (Exception err) { 
 			decoratedError(INDENT0, "Reports add item to report error: " + progress, err); 
 		}
 
-		try { if (newsps != null) newsps.close(); } catch (SQLException err) {;}
 		try { if (rs != null) rs.close(); } catch (SQLException err) {;}
-		try { if (ps != null) ps.close(); } catch (SQLException err) {;}
-		try { if (stmt != null) stmt.close(); } catch (SQLException err) {;}
 	}
 	
 	public String getTonePoolUsers(long userRsn, Session session)
@@ -1461,16 +1436,137 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		if (type.equalsIgnoreCase("tv news")) formatPart = "V35ADD2FORMATAV";
 		if (type.equalsIgnoreCase("talk radio")) formatPart = "V35ADD2FORMATAV";
 		if (type.equalsIgnoreCase("radio news")) formatPart = "V35ADD2FORMATAV";
-		String storyFormat = getPart(formatPart, session);
+		String storyFormat = PublishedPartsDao.getPublishedPartByName(formatPart, "", session);
 		return storyFormat;
 	}
 	
-	private String getPart(String partName, Session session)
+	public static void markup_content(StringBuilder text, StringBuilder transcript, String w, long itemrsn, String item_table, long q_id, boolean stem_search, Session session) {
+		// count the number of line feeds in content
+		int lastIndex = 0;
+		int lfCount = 0;
+		String t = text.toString();
+		
+		while (lastIndex != -1) {
+			lastIndex = t.indexOf((char)10, lastIndex);
+			if (lastIndex != -1) {
+				lfCount++;
+				lastIndex++;
+			}
+		}					
+
+		String q_index = "TEXT_INDEX3";
+		if (item_table.equalsIgnoreCase("current")) q_index = "CONTENT_INDEX3";
+
+		String markedUp = StringUtil.markup(q_index, itemrsn, w, q_id, stem_search, session);
+		if (markedUp.length() > 1) {
+			// markedUp will be the text concatenated to the transcript -- need to split them
+			lfCount=lfCount + 2; // there is a life feed at the beginning and a line feed separating the text and transcript
+			lastIndex = 0;
+			int testIndex = 0;
+			while ((lfCount > 0) && (testIndex != -1)) {
+				testIndex = markedUp.indexOf((char)10, lastIndex);
+				if (testIndex != -1)
+					lastIndex = testIndex+1;
+				else
+					lastIndex = markedUp.length();
+				lfCount--;
+			}
+			
+			// replace the StringBuilders - must use the same ones so we can pass back by reference
+			transcript = transcript.replace(0, transcript.length(), markedUp.substring(lastIndex));
+			text = text.replace(0, text.length(), markedUp.substring(0, lastIndex));
+		} else { // error?
+			text = text.replace(0, text.length(), t + " [" + markedUp + "]");
+		}
+	}
+	
+	private String newsItemImages(Connection conn, long rsn, String source, String searchDate, boolean useThumbs, boolean incFrontPage)
 	{
-		String part = "";
-		ResultSet prs = part_object.select(partName);
-		if(part_object.next(prs)) part = part_object.getContent();
-		try { prs.close(); } catch (Exception ex) {;}
-		return part;
+		String imgs = "";
+		PreparedStatement ps = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		if(incFrontPage)
+		{
+			try {
+				String sql = "select * from source_paper_images i, sources s where i.source_rsn = s.rsn and s.source = ? and i.paper_date = to_date(?,'DD-MON-YYYY')";
+				ps = conn.prepareStatement(sql);
+				ps.setString(1, source );
+				ps.setString(2, searchDate );
+				rs = ps.executeQuery();
+				if (rs.next())
+				{
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(6)+rs.getString(7) + "\" />";
+				}
+			} catch (Exception err) { ; }
+			try { if (rs != null) rs.close(); } catch (Exception err) {;}
+			try { if (ps != null) ps.close(); } catch (Exception err) {;}
+		}
+
+		try {
+			stmt = conn.createStatement();
+			String sql = "select * from news_item_images where image_loaded = 1 and processed = 1 and item_rsn = "+Long.toString(rsn);
+			sql = sql + " order by on_front_page desc, file_name asc";
+
+			rs = stmt.executeQuery (sql);
+			while (rs.next())
+			{
+				String thumbFileName = rs.getString(8);
+				thumbFileName = StringUtil.replacement(thumbFileName,".jpg","^^");
+				thumbFileName = StringUtil.replacement(thumbFileName,"^^","-thumb.jpg");
+
+				if(useThumbs && !rs.getBoolean(3))	// no thumb for paper front page images (A01 picture)
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(7) + thumbFileName + "\" />";
+				else
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(7) + rs.getString(8) + "\" />";
+
+			}
+		} catch (Exception err) { ; }
+		try { if (rs != null) rs.close(); } catch (Exception err) {;}
+		try { if (stmt != null) stmt.close(); } catch (Exception err) {;}
+		if(imgs.length() > 0) imgs = "<p>" + imgs;
+		return imgs;
+	}
+
+	private String newsItemImages(long rsn,String source,String searchDate,boolean useThumbs,boolean incFrontPage, Session session)
+	{
+		String imgs = "";
+		Statement stmt = null;
+		ResultSet rs = null;
+		if(incFrontPage)
+		{
+			try {
+				String sql = "select * from source_paper_images i, sources s where i.source_rsn = s.rsn and s.source = " + source + " and i.paper_date = to_date('" + searchDate + "','DD-MON-YYYY')";
+				rs = DbUtil.runSql(sql, session);
+				if (rs.next())
+				{
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(6)+rs.getString(7) + "\" />";
+				}
+			} catch (Exception err) { ; }
+			try { if (rs != null) rs.close(); } catch (Exception err) {;}
+		}
+
+		try {
+			String sql = "select * from news_item_images where image_loaded = 1 and processed = 1 and item_rsn = " + Long.toString(rsn);
+			sql = sql + " order by on_front_page desc, file_name asc";
+
+			rs = DbUtil.runSql(sql, session);
+			while (rs.next())
+			{
+				String thumbFileName = rs.getString(8);
+				thumbFileName = StringUtil.replacement(thumbFileName,".jpg","^^");
+				thumbFileName = StringUtil.replacement(thumbFileName,"^^","-thumb.jpg");
+
+				if(useThumbs && !rs.getBoolean(3))	// no thumb for paper front page images (A01 picture)
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(7)+thumbFileName + "\" />";
+				else
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(7)+rs.getString(8) + "\" />";
+
+			}
+		} catch (Exception err) { ; }
+		try { if (rs != null) rs.close(); } catch (Exception err) {;}
+		try { if (stmt != null) stmt.close(); } catch (Exception err) {;}
+		if(imgs.length() > 0) imgs = "<p>" + imgs;
+		return imgs;
 	}
 }

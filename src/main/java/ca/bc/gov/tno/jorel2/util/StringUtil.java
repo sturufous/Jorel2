@@ -2,10 +2,22 @@ package ca.bc.gov.tno.jorel2.util;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.sql.CallableStatement;
 import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Properties;
+
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
+
+import org.hibernate.Session;
+
 import com.vdurmont.emoji.EmojiManager;
 import com.vdurmont.emoji.EmojiParser;
+
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -445,6 +457,8 @@ public class StringUtil extends Jorel2Root {
 		return buffer.toString();
 	}
 	
+	// Methods from the Aktiv package
+	
 	public static String removeCRLF(String s) {
 		StringBuilder sb = new StringBuilder(s);
 		int i = 0;
@@ -479,6 +493,53 @@ public class StringUtil extends Jorel2Root {
 		return sb.toString();
 	}
 	
+	public static void replace(StringBuilder src, String chrs, String data) {
+		
+		if (data==null) data = "";
+		int dl = chrs.length();
+		int il = data.length();
+		int p = 0;
+
+		while ((p = src.indexOf(chrs, p)) != -1) {
+			if (dl < il) {
+				src.delete(p,p+dl);
+				src.insert(p,data);
+			} else if (dl > il) {
+				src.delete(p,p+(dl-il));
+				src.replace(p,p+il,data);
+			} else {
+				src.replace(p,p+il,data);
+			}
+			p += il;
+		}
+		return;
+	}
+	
+	public static String replace(String src, Properties values, String sTag, String eTag) {
+		StringBuilder sb = new StringBuilder();
+		String tag = "";
+		int p = 0;
+		int i = 0;
+		int startTag = 0;
+		int endTag = 0;
+
+		while ((startTag = src.indexOf(sTag, p)) != -1) {
+			p = startTag;
+			sb.append(src.substring(i, p));
+			p += sTag.length();
+			endTag = src.indexOf(eTag, p);
+			if (endTag == -1)
+				; // what to do?
+			tag = src.substring(p, endTag);
+			if (tag.length() > 0)
+				sb.append(values.getProperty(tag.toLowerCase(),sTag+tag+eTag));
+			p = endTag + eTag.length();
+			i = p;
+		}
+		sb.append(src.substring(p));
+		return sb.toString();
+	}
+
 	public static String replacement(String s, String o, String n) {
 
 		String org = s;
@@ -509,5 +570,114 @@ public class StringUtil extends Jorel2Root {
 			org = result;
 		}
 		return result;
+	}
+	
+	public static String removeSpaces(String s) {
+		StringBuilder sb = new StringBuilder(s);
+		int i = 0;
+		while (i < sb.length()) {
+			if (sb.charAt(i) == ' ') {
+				sb.deleteCharAt(i);
+			} else {
+				i++;
+			}
+		}
+		return sb.toString();
+	}
+	
+	public static String markup(String pIndex, long pRsn, String pQuery, long pQueryId, boolean stemSearch, Session session) {
+		boolean ok=true;
+		String t="";
+
+		//CallableStatement cstmt = null;
+		//String sqlString = "{call HILITE(?,?,?,?)}";
+		try {
+			StoredProcedureQuery query = session.createStoredProcedureQuery("HILITE");
+			
+			query.registerStoredProcedureParameter("pIndex", String.class, ParameterMode.IN).setParameter(pIndex, value);
+			
+			result = query.execute();
+			
+			cstmt = conn.prepareCall(sqlString);
+			cstmt.setString(1, pIndex);
+			cstmt.setLong(2, pRsn);
+			cstmt.setString(3, pQuery );
+			cstmt.setLong(4, pQueryId );
+			cstmt.executeUpdate();
+			cstmt.close();
+		} catch (Exception err) { ok=false; }
+		try { if (cstmt != null) cstmt.close(); } catch (Exception err) {;}
+		if (! ok) return "1";
+
+		Statement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = conn.createStatement();
+			String sql = "select document from RESULT_MARKUP where query_id = " + pQueryId ;
+			rs = stmt.executeQuery (sql);
+			if (rs.next()) {
+				Clob cl = rs.getClob(1);
+				if (cl == null) {
+					t = "";
+				} else {
+					int l = (int)cl.length();
+					t = cl.getSubString(1,l);
+				}
+			}
+		} catch (Exception err) { ok=false; }
+		try { if (rs != null) rs.close(); } catch (Exception err) {;}
+		try { if (stmt != null) stmt.close(); } catch (Exception err) {;}
+		if (! ok) return "2";
+
+		rs = null;
+		stmt = null;
+		try {
+			stmt = conn.createStatement();
+			String sql = "delete from RESULT_MARKUP where query_id = " + pQueryId;
+			rs = stmt.executeQuery (sql);
+		} catch (Exception err) {;}
+		try { if (rs != null) rs.close(); } catch (Exception err) {;}
+		try { if (stmt != null) stmt.close(); } catch (Exception err) {;}
+		return t;
+	}
+	
+	public static void markupContent(StringBuilder text, StringBuilder transcript, String w, long itemrsn, String item_table, long q_id, boolean stem_search, Session session) {
+		// count the number of line feeds in content
+		int lastIndex = 0;
+		int lfCount = 0;
+		String t = text.toString();
+		
+		while (lastIndex != -1) {
+			lastIndex = t.indexOf((char)10, lastIndex);
+			if (lastIndex != -1) {
+				lfCount++;
+				lastIndex++;
+			}
+		}					
+
+		String q_index = "TEXT_INDEX3";
+		if (item_table.equalsIgnoreCase("current")) q_index = "CONTENT_INDEX3";
+
+		String markedUp = markup(q_index, itemrsn, w, q_id, stem_search, session);
+		if (markedUp.length() > 1) {
+			// markedUp will be the text concatenated to the transcript -- need to split them
+			lfCount=lfCount+2; // there is a life feed at the beginning and a line feed separating the text and transcript
+			lastIndex = 0;
+			int testIndex = 0;
+			while ((lfCount > 0) && (testIndex != -1)) {
+				testIndex = markedUp.indexOf((char)10, lastIndex);
+				if (testIndex != -1)
+					lastIndex = testIndex+1;
+				else
+					lastIndex = markedUp.length();
+				lfCount--;
+			}
+			
+			// replace the StringBuilders - must use the same ones so we can pass back by reference
+			transcript = transcript.replace(0, transcript.length(), markedUp.substring(lastIndex));
+			text = text.replace(0, text.length(), markedUp.substring(0, lastIndex));
+		} else { // error?
+			text = text.replace(0, text.length(), t + " ["+markedUp+"]");
+		}
 	}
 }
