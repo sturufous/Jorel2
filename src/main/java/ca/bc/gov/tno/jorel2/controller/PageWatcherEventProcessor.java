@@ -2,17 +2,10 @@ package ca.bc.gov.tno.jorel2.controller;
 
 import java.math.BigDecimal;
 import java.sql.Clob;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 import javax.inject.Inject;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
@@ -85,7 +78,6 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	 *  
 	 * @param session The current Hibernate persistence context.
 	 */
-	@SuppressWarnings("preview")
 	private void processPageWatchers(Session session) {
 
 		try {

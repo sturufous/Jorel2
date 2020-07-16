@@ -115,11 +115,11 @@ public class PlSqlEventProcessor extends Jorel2Root implements EventProcessor {
 					}
 				} else {
 					IllegalArgumentException e = new IllegalArgumentException("Processing cleanBinaryRoot event.");
-					decoratedError(INDENT1, "Error in format of StartTime for CleanBinaryRoot event.", e);
+					decoratedError(INDENT0, "Error in format of StartTime for CleanBinaryRoot event.", e);
 				}
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT2, "Running PL/SQL event for stored procedure " + currentEvent.getFileName(), e);
+			decoratedError(INDENT0, "Running PL/SQL event for stored procedure " + currentEvent.getFileName(), e);
 		}
 	}
 	

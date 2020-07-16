@@ -1,21 +1,17 @@
 package ca.bc.gov.tno.jorel2;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import org.apache.commons.configuration.PropertiesConfiguration;
-import org.hibernate.Session;
 import org.springframework.jmx.export.annotation.ManagedResource;
-import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedOperationParameter;
@@ -317,7 +313,6 @@ public class Jorel2Instance extends Jorel2Root {
 	 * 
 	 * @return The list of http failure times and their causes.
 	 */
-	@SuppressWarnings("unchecked")
 	@ManagedAttribute(description="Records times when httpFailures took place, and the url being accessed", currencyTimeLimit=15)
 	public LinkedHashMap<String, String> getHttpFailures() {
 		

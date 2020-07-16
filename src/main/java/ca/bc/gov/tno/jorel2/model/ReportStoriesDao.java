@@ -18,6 +18,7 @@ import javax.persistence.Table;
 @Table(name = "REPORT_STORIES", schema = "TNO")
 public class ReportStoriesDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private BigDecimal reportRsn;
 	private String headline;

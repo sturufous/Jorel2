@@ -3,7 +3,6 @@ package ca.bc.gov.tno.jorel2.controller;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -112,7 +111,6 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 			        for (Object[] fieldSet : results) {
 			        	BigDecimal rsn = (BigDecimal) fieldSet[0];
 			        	String type = (String) fieldSet[1];
-			        	Date itemDate = (Date) fieldSet[2];
 			        	
 			        	if(ftpService.isConnected()) {
 			        		manageCdFullRollover(meta, session);
@@ -130,13 +128,13 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 			        }
 				} else {
 					HibernateException e = new HibernateException("Retrieving the preferences record.");
-					decoratedError(INDENT2, "Zero records returned, or unexpected return format.", e);
+					decoratedError(INDENT0, "Zero records returned, or unexpected return format.", e);
 				}
 				
 				ftpService.disconnect();
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT2, "Processing Archiver event.", e);
+			decoratedError(INDENT0, "Processing Archiver event.", e);
 		}
 	}
 	
@@ -197,12 +195,12 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 					    || e.getMessage().indexOf("not enough space") > 0) {
 						success = false;
 					}
-					decoratedError(INDENT2, "While downloading file: " + tempFilePath, e);
+					decoratedError(INDENT0, "While downloading file: " + tempFilePath, e);
 				}
 			}
 		} else {
 			HibernateException e = new HibernateException("Retrieving the hnews_items record.");
-			decoratedError(INDENT2, "Zero records returned, or unexpected return format.", e);
+			decoratedError(INDENT0, "Zero records returned, or unexpected return format.", e);
 		}
 		
 		return success;
@@ -222,8 +220,6 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	 */
 	private void downloadFile(String tempFilePath, ArchiveMetadata meta, File tempLog, BigDecimal rsn, Session session) throws IOException {
 		
-		boolean success = true;
-		
 		long fileSize = 0;
 		ftpService.setTypeBinary();
 		if (ftpService.download(tempFilePath, meta.remoteFile)) {
@@ -234,7 +230,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 					throw new IllegalArgumentException("Zero bytes in " + tempFilePath);
 				} else {
 					meta.cdSize = meta.cdSize + fileSize;
-					decoratedTrace(INDENT2, "Archived file to " + tempFilePath);
+					decoratedTrace(INDENT0, "Archived file to " + tempFilePath);
 					updateArchivedStatus(meta.currentItem, tempFilePath, rsn, session);
 					//ftpService.delete(remoteFile);
 				}
@@ -251,6 +247,8 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	 * @param currentEvent The monitor event currently being processed.
 	 * @param session The current Hibernate persistence context.
 	 */
+	
+	@SuppressWarnings("unused")
 	private void updateLastFtpRun(String value, EventsDao currentEvent, Session session) {
 	
 		//Update this record to reflect that it has run and can now be run again
@@ -268,7 +266,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	 * @return The number of bytes contained in the directory.
 	 */
 	private long calcCDFileSize( String label ) {
-		String fileSep = System.getProperty("file.separator");
+
 		long size = 0;
 
 		File tempdir=new File(config.getString("archiveTo"));

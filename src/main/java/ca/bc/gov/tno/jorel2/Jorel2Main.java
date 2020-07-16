@@ -21,6 +21,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
  */
 
 //@EnableAspectJAutoProxy
+//@SuppressWarnings("")
 public final class Jorel2Main extends Jorel2Root {
 	   
 	/**
@@ -36,7 +37,8 @@ public final class Jorel2Main extends Jorel2Root {
 			logger.trace("/============================= Execution Start ===============================/");
 			
 			// Get the Spring environment
-            AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(); 
+            @SuppressWarnings("resource")
+			AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(); 
             ConfigurableEnvironment env = ctx.getEnvironment(); 
                         
         	// Set the active DataSourceConfig to that identified in the command arguments. Assume a single profile argument.

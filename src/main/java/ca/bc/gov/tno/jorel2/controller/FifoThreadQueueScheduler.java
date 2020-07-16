@@ -58,8 +58,6 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
 	@Inject
 	public PropertiesConfiguration config;
-	
-	private String cronExpression = "";
 
 	/**
 	 * Adds the initial three threads and their associated runnable objects to the <code>threadQueue</code>. This is done <code>PostConstruct</code>
@@ -69,7 +67,6 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	public void init() {
 		
 		threadQueue = new ArrayBlockingQueue<>(THREAD_POOL_SIZE);
-		cronExpression = config.getString("cron.expression");
 		for (int count=0; count < THREAD_POOL_SIZE; count++) {
 			
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);

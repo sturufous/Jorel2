@@ -253,6 +253,8 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	 * @author StuartM
 	 * @version 0.0.1
 	 */
+	
+	@SuppressWarnings("unused")
 	private class ShellCommand {
 		
 		BigDecimal rsn = BigDecimal.valueOf(0.0D);
@@ -294,7 +296,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 				lastFtpRun = (String) queue.removeFirst();
 			} 
 			catch (Exception ex) { 
-				decoratedError(INDENT1, "Error reading offline shell command data.", ex); 
+				decoratedError(INDENT0, "Error reading offline shell command data.", ex); 
 			}
 		}
 
@@ -349,7 +351,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 					};
 
 					try {
-						Process p = Runtime.getRuntime().exec(cmda);
+						Runtime.getRuntime().exec(cmda);
 						System.out.println("Filler.");
 					} catch (Exception e) {
 						logger.error("Exception launching command '" + cmd + "'", e);

@@ -181,6 +181,7 @@ public class NewsItemImagesDao implements java.io.Serializable {
 		
 		String sqlStmt = "from NewsItemImagesDao nii, NewsItemsDao ni where nii.itemRsn = ni.rsn and nii.fileName = :fileName and ni.importedfrom = :sourceFile";
 		
+		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createQuery(sqlStmt);
 		query.setParameter("fileName", fileName);
 		query.setParameter("sourceFile", sourceFile.toUpperCase());
@@ -202,7 +203,7 @@ public class NewsItemImagesDao implements java.io.Serializable {
 		query.setParameter("fmsFile", fmsFile.toUpperCase());
 		
 		session.beginTransaction();
-	    int count = query.executeUpdate();
+	    query.executeUpdate();
 		session.getTransaction().commit();
 	}
 	
@@ -260,6 +261,7 @@ public class NewsItemImagesDao implements java.io.Serializable {
 				"left outer join HnewsItemsDao h on i.itemRsn = h.rsn " + 
 				"where n.rsn is NULL and h.rsn is NULL";
 		
+		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createQuery(sqlStmt);
         List<Object[]> results = query.getResultList();
         

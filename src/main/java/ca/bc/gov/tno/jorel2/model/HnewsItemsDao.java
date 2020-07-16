@@ -24,6 +24,7 @@ import org.hibernate.query.Query;
 @Table(name = "HNEWS_ITEMS", schema = "TNO")
 public class HnewsItemsDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private Date itemDate;
 	private String source;
@@ -665,6 +666,7 @@ public class HnewsItemsDao implements java.io.Serializable {
 				" or (n.expireRule = 1 and FLOOR(sysdate - n.itemDate) > t.special))) OR (t.action = 2 and s.tvarchive = 1" + 
 				" and ((n.expireRule = 0 and FLOOR(sysdate - n.itemDate) > t.days) or (n.expireRule = 1 and FLOOR(sysdate - n.itemDate) > t.special)))) order by n.itemDate";
 
+		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createQuery(sqlStmt);
         List<Object[]> results = query.getResultList();
         

@@ -133,7 +133,7 @@ public class SourcePaperImagesDao implements java.io.Serializable {
 		query.setParameter("date", utilDate);
 		
 		session.beginTransaction();
-	    int count = query.executeUpdate();
+	    query.executeUpdate();
 		session.getTransaction().commit();
 	}
 	

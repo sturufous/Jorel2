@@ -140,8 +140,6 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			session.beginTransaction();
 			for(NewsItemsDao item : expiredItems) {
 	
-				BigDecimal rsn = item.getRsn();
-	
 				boolean externalbinary = item.getExternalbinary();
 				if (externalbinary) {
 	
@@ -153,7 +151,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 					if (delFile.exists()) {
 						if (!delFile.delete()) {
 							IOException e = new IOException("Unable to delete file: " + filename);
-							decoratedError(INDENT2, "Deleting full broadcast items.", e);
+							decoratedError(INDENT0, "Deleting full broadcast items.", e);
 						} else {
 							NewsItemsDao.deleteRecord(item, session);
 							deletedCounter++;
@@ -170,7 +168,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				decoratedTrace(INDENT2, "Expire full broadcasts: " + deletedCounter + " deleted, " + missingCounter + " missing.");
 			}
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Deleting full broadcasts.", ex);
+			decoratedError(INDENT0, "Deleting full broadcasts.", ex);
 			session.getTransaction().rollback();
 		}
 	}
@@ -217,7 +215,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				deleteBinaryThenArchiveHistorical(hNewsItems, sType, "Special", session);
 			}
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Processing source types for expiry.", ex);
+			decoratedError(INDENT0, "Processing source types for expiry.", ex);
 		}
 	}
 	
@@ -241,7 +239,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				deleteBinaryAndNewsItemHistorical(hNewsItems, source, session);
 			}
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Processing sources for expiry.", ex);
+			decoratedError(INDENT0, "Processing sources for expiry.", ex);
 		}
 	}
 	
@@ -268,7 +266,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				}
 			}
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Retrieving list of non-expiring sources (tvarchive = 1).", ex);
+			decoratedError(INDENT0, "Retrieving list of non-expiring sources (tvarchive = 1).", ex);
 		}
 		
 		if (TVSources.length() <= 0) TVSources = "'junk'";
@@ -300,7 +298,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				if (delFile.exists()) {
 					if (!delFile.delete()) {
 						IOException e = new IOException("Unable to delete file: " + filename);
-						decoratedError(INDENT2, "Deleting and archiving by source type.", e);
+						decoratedError(INDENT0, "Deleting and archiving by source type.", e);
 					} else {
 						item.setArchived(true);
 						item.setArchivedTo(" ");
@@ -314,7 +312,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			}
 			session.getTransaction().commit();
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Deleting and archiving news items for expired source types.", ex);
+			decoratedError(INDENT0, "Deleting and archiving news items for expired source types.", ex);
 			session.getTransaction().rollback();
 		}
 		
@@ -347,7 +345,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				if (delFile.exists()) {
 					if (!delFile.delete()) {
 						IOException e = new IOException("Unable to delete file: " + filename);
-						decoratedError(INDENT2, "Deleting and archiving by source type.", e);
+						decoratedError(INDENT0, "Deleting and archiving by source type.", e);
 					} else {
 						item.setArchived(true);
 						item.setArchivedTo(" ");
@@ -361,7 +359,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			}
 			session.getTransaction().commit();
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Deleting and archiving historical news items for expired source types.", ex);
+			decoratedError(INDENT0, "Deleting and archiving historical news items for expired source types.", ex);
 			session.getTransaction().rollback();
 		}
 		
@@ -394,7 +392,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				if (delFile.exists()) {
 					if (!delFile.delete()) {
 						IOException e = new IOException("Unable to delete file: " + filename);
-						decoratedError(INDENT2, "Deleting and archiving for source: " + source, e);
+						decoratedError(INDENT0, "Deleting and archiving for source: " + source, e);
 					} else {
 						NewsItemsDao.deleteRecord(item, session);
 						deletedCounter++;
@@ -407,7 +405,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			
 			session.getTransaction().commit();
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Deleting binary and news items by source: " + source, ex);
+			decoratedError(INDENT0, "Deleting binary and news items by source: " + source, ex);
 			session.getTransaction().rollback();
 		}
 		
@@ -440,7 +438,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				if (delFile.exists()) {
 					if (!delFile.delete()) {
 						IOException e = new IOException("Unable to delete file: " + filename);
-						decoratedError(INDENT2, "Deleting and archiving for source: " + source, e);
+						decoratedError(INDENT0, "Deleting and archiving for source: " + source, e);
 					} else {
 						HnewsItemsDao.deleteRecord(item, session);
 						deletedCounter++;
@@ -452,7 +450,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			}
 			session.getTransaction().commit();
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Deleting binary and news items for source: " + source, ex);
+			decoratedError(INDENT0, "Deleting binary and news items for source: " + source, ex);
 			session.getTransaction().rollback();
 		}
 
@@ -491,7 +489,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 					if (delFile.exists()) {
 						if (!delFile.delete()) {
 							IOException e = new IOException("Unable to delete file: " + path + fileName);
-							decoratedError(INDENT2, "Finding and clearing expired images.", e);
+							decoratedError(INDENT0, "Finding and clearing expired images.", e);
 						} else {
 							NewsItemImagesDao.deleteRecord(itemImage, session);
 							deletedCounter++;
@@ -505,7 +503,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			
 			session.getTransaction().commit();
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Finding and clearing expiring images.", ex);
+			decoratedError(INDENT0, "Finding and clearing expiring images.", ex);
 			session.getTransaction().rollback();
 		}
 		
@@ -541,7 +539,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				if (delFile.exists()) {
 					if (!delFile.delete()) {
 						IOException e = new IOException("Unable to delete file: " + path + fileName);
-						decoratedError(INDENT2, "Finding and clearing expired source images.", e);
+						decoratedError(INDENT0, "Finding and clearing expired source images.", e);
 					} else {
 						SourcePaperImagesDao.deleteRecord(itemImage, session);
 						deletedCounter++;
@@ -554,7 +552,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			
 			session.getTransaction().commit();
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Finding and clearing expiring source images.", ex);
+			decoratedError(INDENT0, "Finding and clearing expiring source images.", ex);
 			session.getTransaction().rollback();
 		}
 		
@@ -590,7 +588,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 				if (delFile.exists()) {
 					if (!delFile.delete()) {
 						IOException e = new IOException("Unable to delete file: " + path + fileName);
-						decoratedError(INDENT2, "Finding and clearing orphaned images.", e);
+						decoratedError(INDENT0, "Finding and clearing orphaned images.", e);
 					} else {
 						NewsItemImagesDao.deleteRecord(itemImage, session);
 						deletedCounter++;
@@ -603,7 +601,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 			
 			session.getTransaction().commit();
 		} catch (Exception ex) {
-			decoratedError(INDENT2, "Finding and clearing orphaned images.", ex);
+			decoratedError(INDENT0, "Finding and clearing orphaned images.", ex);
 			session.getTransaction().rollback();
 		}
 		

@@ -20,6 +20,7 @@ import org.hibernate.query.Query;
 @Table(name = "IMPORT_DEFINITIONS", schema = "TNO")
 public class ImportDefinitionsDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String name;
 	private String type;

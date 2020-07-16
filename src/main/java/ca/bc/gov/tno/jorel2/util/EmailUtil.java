@@ -2,12 +2,9 @@ package ca.bc.gov.tno.jorel2.util;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
-import java.util.StringTokenizer;
 
 import javax.inject.Inject;
-import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -124,7 +121,6 @@ public class EmailUtil extends Jorel2Root {
 	
 	public static String sendAlertEmail(String hostAddress, String portNumber, String username, String recipients, String from, String subject, String message){
 		
-		boolean debug = false;
 		String result = "";
 		Session session = getEmailSession(hostAddress, portNumber);
 		session.setDebug(false);

@@ -19,6 +19,7 @@ import org.hibernate.query.Query;
 @Table(name = "SOURCES", schema = "TNO")
 public class SourcesDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String source;
 	private String abbr;
@@ -487,6 +488,7 @@ public class SourcesDao implements java.io.Serializable {
 		//select s.rsn from tno.news_items n, sources s where s.source = n.source and n.importedfrom = ?		
 		String sqlStmt = "from NewsItemsDao n, SourcesDao s where s.source = n.source and n.importedfrom=:fileName";
 
+		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createQuery(sqlStmt);
 		query.setParameter("fileName", fileName.toUpperCase());
         List<Object[]> results = query.getResultList();

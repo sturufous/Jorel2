@@ -1,9 +1,6 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -18,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import javax.xml.bind.Unmarshaller;
 import org.hibernate.Session;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
@@ -42,10 +38,6 @@ import ca.bc.gov.tno.jorel2.util.StringUtil;
 @Service
 public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 
-    /** Context from which to extract the Jorel2Thread Prototype */
-    @Inject
-    private AnnotationConfigApplicationContext ctx;
-    
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
 	Jorel2Instance instance;
@@ -164,7 +156,6 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @param session The current Hibernate persistence context
 	 * @param rss The entire rss feed retrieved from the publisher
 	 */
-	@SuppressWarnings("preview")
 	private void insertNewsItems(String source, List<Rss.Channel.Item> newsItems, Rss rss, Session session) {
 		
 		NewsItemsDao newsItem = null;
@@ -220,9 +211,9 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 			}
 		} catch (SocketTimeoutException se) {
 			instance.addHttpFailure("Timeout at: " + address);
-			decoratedError(INDENT2, "Timeout at: " + address, se);
+			decoratedError(INDENT0, "Timeout at: " + address, se);
 		} catch (Exception me) {
-			decoratedError(INDENT1, "Retrieving RSS content from " + address, me);
+			decoratedError(INDENT0, "Retrieving RSS content from " + address, me);
 		}
 		
 		return rssContent;

@@ -1,7 +1,6 @@
 package ca.bc.gov.tno.jorel2.controller;
 
 import java.io.StringReader;
-import java.io.Writer;
 import java.math.BigDecimal;
 import java.sql.Clob;
 import java.sql.Connection;
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Vector;
-
 import javax.inject.Inject;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -31,7 +29,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import aktiv.aktivString;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.AutoRunDao;
@@ -54,6 +51,7 @@ import oracle.sql.CLOB;
  * @version 0.0.1
  */
 
+@SuppressWarnings({ "unused", "deprecation" })
 @Service
 public class AutorunEventProcessor extends Jorel2Root implements EventProcessor {
 
@@ -114,6 +112,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 			String dateTrigger = AutoRunDao.getDateTrigger(session);
 
 			processFilters(dateTrigger, session);
+			processAnalysis(dateTrigger, session);
 			processReports(dateTrigger, session);
 		}
 	}
@@ -126,7 +125,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		 * Get a vector of Story Line RSNs to process
 		 * 	This way, we can lock them so 2 JORELs do not process the same Story Line
 		 */
-		Vector filterRsns = new Vector(5,2);
+		Vector<String> filterRsns = new Vector<>(5,2);
 
 		String sql = "select fi.rsn, fi.name "+
 		"from tno.filters fi, tno.folder f "+
@@ -139,7 +138,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				filterRsns.addElement( Long.toString( rs.getLong(1) ));
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT2, "Filter collect RSNs Error! ", e);
+			decoratedError(INDENT0, "Filter collect RSNs Error! ", e);
 		}
 		try {rs.close();} catch (Exception e) {;}
 
@@ -147,7 +146,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		 * Now process the vector of Story Line RSNs, locking each record as we go
 		 */
 		int alertTriggerCount = 0;
-		Enumeration vEnum = filterRsns.elements();
+		Enumeration<String> vEnum = filterRsns.elements();
 		while ((alertTriggerCount == 0) && vEnum.hasMoreElements())
 		{
 			String fiRsn = (String) vEnum.nextElement();
@@ -262,7 +261,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					{
 						if(daysPeriod > 0)
 						{
-							dateWhere = "n.item_date >= to_date(sysdate-"+Long.toString(daysPeriod)+") ";
+							dateWhere = "n.item_date >= to_date(sysdate-" + Long.toString(daysPeriod)+") ";
 						}
 						else
 						{
@@ -286,7 +285,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 						int c = DbUtil.runUpdateSql(query, session);
 						itemsInserted += c;
 					} catch (Exception e2) {
-						decoratedError(INDENT2, "Filter Search Error! ", e2);
+						decoratedError(INDENT0, "Filter Search Error! ", e2);
 					}
 
 					if(historyRun)
@@ -299,7 +298,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							int c = DbUtil.runUpdateSql(query, session);
 							itemsInserted += c;
 						} catch (Exception e2) {
-							decoratedError(INDENT2, "Filter Search Error! ", e2);
+							decoratedError(INDENT0, "Filter Search Error! ", e2);
 						}
 					}
 					if(itemsInserted > 0)
@@ -308,14 +307,13 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 						try {
 							int c = DbUtil.runUpdateSql("update folder set updated = SYSDATE where rsn = " + frsn, session);
 						} catch (Exception e2) {
-							decoratedError(INDENT2, "Folder update error! ", e2);
+							decoratedError(INDENT0, "Folder update error! ", e2);
 						}
 					}
 					else
 					{
 						status = "no items found";
 					}
-					//try {oracleConn.c.commit();} catch (Exception ec) {;}
 
 					/*
 					 * BUZZ, calculate the buzz for this story line, after the items have been added to the folder
@@ -344,7 +342,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					try {
 						DbUtil.runUpdateSql(fiUpdate, session);
 					} catch (Exception e2) {
-						decoratedError(INDENT2, "Filter update error! ", e2);
+						decoratedError(INDENT0, "Filter update error! ", e2);
 					}
 				}
 				else
@@ -366,11 +364,10 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				}
 				else
 				{
-					decoratedError(INDENT2, "Filter " + fiRsn + " Loop Error! ", e);
+					decoratedError(INDENT0, "Filter " + fiRsn + " Loop Error! ", e);
 				}
 			}
 			try {rs.close();} catch (Exception e) {;}
-			//try {oracleConn.c.commit();} catch (Exception e) {;}
 
 			/*
 			 * Escape clause for some JORELs
@@ -383,6 +380,205 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 			decoratedTrace(INDENT2, "Filter Done! " + fiRsn + " " + status, session);
 		}
 		decoratedTrace(INDENT2, "AutoRun Filters done!", session);
+	}
+	
+	private void processAnalysis(String dateTrigger, Session session)
+	{
+		decoratedTrace(INDENT2, "AutoRun Analysis starting...");
+		ResultSet rs = null;
+		ResultSet rs2 = null;
+
+		/*
+		 * Get a vector of Story Line RSNs to process
+		 * 	This way, we can lock them so 2 JORELs do not process the same Story Line
+		 */
+		Vector<String> analysis_rsns = new Vector<String>(5,2);
+
+		String sql = "select a.rsn from tno.analysis a "+
+		"where a.auto_run = 1 and "+
+		"(a.last_run < to_date('" + dateTrigger + "','YYYY-MM-DD HH24:MI:SS') or a.last_run is null)";
+		try {
+			rs = DbUtil.runSql(sql, session);
+			while (rs.next())
+			{
+				analysis_rsns.addElement( Long.toString( rs.getLong(1) ));
+			}
+		} catch (Exception e) {
+			decoratedError(INDENT0, "Analysis collect RSNs Error! ", e);
+		}
+		try {rs.close();} catch (Exception e) {;}
+
+		/*
+		 * Now process the vector of Story Line RSNs, locking each record as we go
+		 */
+		int alertTriggerCount = 0;
+		Enumeration<String> vEnum = analysis_rsns.elements();
+		while ((alertTriggerCount == 0) && vEnum.hasMoreElements())
+		{
+			String aRsn = (String) vEnum.nextElement();
+			String status = "";
+			decoratedTrace(INDENT2, "Analysis " + aRsn, session);
+
+			sql = "select a.rsn, a.user_rsn, a.name, a.data, to_char(a.last_run,'YYYY-MM-DD HH24:MI:SS') from tno.analysis a where a.rsn = " + aRsn + " and (a.last_run < to_date('" + dateTrigger + "','YYYY-MM-DD HH24:MI:SS') or a.last_run is null) for update nowait";
+			try {
+				rs = DbUtil.runSql(sql, session);
+
+				if ((alertTriggerCount == 0) && rs.next())
+				{
+
+					long rsn = rs.getLong(1);
+					long userRsn = rs.getLong(2);
+					String name = rs.getString(3);
+					String lastRun = rs.getString(5);
+					if (lastRun == null) lastRun = "";
+
+					// For some of the form data (most actually), the form data is
+					//    in an XML string
+					Clob cl=rs.getClob(4);
+					long l=cl.length();
+					Document doc=null;
+					String xml="";
+					if(l>0){
+						xml=cl.getSubString(1,(int)l); // scares me here too
+						doc=parseXML(xml);
+					}
+
+					String searchType=getValueByTagName(doc,"a_searchtype");
+
+					/*
+					 * If it is an analysis by folder or filter folder, then we can auto-run
+					 */
+					if (searchType.equalsIgnoreCase("folder")) {
+
+						updateLastRunDate(rsn, session);	// so it will not be picked up during this cycle twice
+
+						/*
+						 * Find the folder with the data and see if any data has been added since the last time this folder was used in an auto report
+						 */
+						String folder_rsn=getValueByTagName(doc,"a_folder");
+						sql = "select f.rsn from tno.folder f where f.rsn = "+folder_rsn+" and " +
+						"(f.updated > to_date('" + lastRun + "','YYYY-MM-DD HH24:MI:SS') OR to_date('" + lastRun + "','YYYY-MM-DD HH24:MI:SS') is null OR f.updated is null)";
+						try {
+							rs2 = DbUtil.runSql(sql, session);
+
+							if (rs2.next())
+							{
+								rs2.close();
+								/*
+								 * Draw the analysis
+								 */
+								AnalysisHandler a = new AnalysisHandler(rsn, userRsn, 14, true); // Current_period defaults to 14 for now
+								a.draw(false, true, session);
+
+								/*
+								 * Draw any analysis appearing in reports
+								 */
+								sql = "select rg.image_size, rg.font_size from tno.report_graphs rg where rg.analysis_rsn = " + aRsn;
+								rs2 = DbUtil.runSql(sql, session);
+								while (rs2.next())
+								{
+									long imageSize = rs2.getLong(1);
+									long fontSize = rs2.getLong(2);
+									a = new AnalysisHandler(rsn, userRsn, 14, (int) imageSize, (int) fontSize, true); // Current_period defaults to 14 for now
+									a.draw(false, true, session);
+								}
+								rs2.close();
+
+								status = "drawn";
+							} else {
+								status = "skip; analysis folder not updated";
+							}
+
+						} catch (Exception e2) {
+							decoratedError(INDENT0, "Analysis update error!", e2);
+						}
+					} else if (searchType.equalsIgnoreCase("filter")) {
+
+						updateLastRunDate(rsn, session);	// so it will not be picked up during this cycle twice
+
+						/*
+						 * Find the filter with the data and see if any data has been added since the last time this folder was used in an auto report
+						 */
+						String filterRsn = getValueByTagName(doc, "a_filter");
+						sql = "select f.rsn from tno.filters fi, tno.folder f where fi.rsn = " + filterRsn + " and " +
+						"fi.auto_folder = 1 and fi.folder_name = f.folder_name and " +
+						"(f.updated > to_date('" + lastRun + "','YYYY-MM-DD HH24:MI:SS') OR to_date('" + lastRun + "','YYYY-MM-DD HH24:MI:SS') is null OR f.updated is null)";
+						try {
+							rs2 = DbUtil.runSql(sql, session);
+
+							if (rs2.next())
+							{
+								rs2.close();
+								/*
+								 * Draw the analysis
+								 */
+								AnalysisHandler a = new AnalysisHandler(rsn, userRsn, 14L, true); // Current_period defaults to 14 for now
+								a.draw(false, true, session);
+
+								/*
+								 * Draw any analysis appearing in reports
+								 */
+								sql = "select rg.image_size, rg.font_size from tno.report_graphs rg where rg.analysis_rsn = " + aRsn;
+								rs2 = DbUtil.runSql(sql, session);
+								
+								while (rs2.next())
+								{
+									long imageSize = rs2.getLong(1);
+									long fontSize = rs2.getLong(2);
+									a = new AnalysisHandler(rsn, userRsn, 14L, (int) imageSize, (int) fontSize, true); // Current_period defaults to 14 for now
+									a.draw(false, true, session);
+								}
+								rs2.close();
+
+								status = "drawn";
+							} else {
+								status = "skip; analysis filter not updated";
+							}
+
+						} catch (Exception e2) {
+							decoratedError(INDENT0, "Analysis update error!", e2);
+						}
+					} else {
+						status = "skip; analysis does not use a folder or filter";
+					}
+
+				}
+				else
+				{
+					if(alertTriggerCount == 0)
+					{
+						status = "skipped!  Probably processed by a different JOREL";
+					}
+					else
+					{
+						status = "skipped!  Alerts ready to be processed by this JOREL.";
+					}
+				}
+			} catch (Exception e) {
+				String err = e.toString();
+				if(err.indexOf("ORA-00054") > 0)
+				{
+					status = "skipped!  Analysis locked by a different JOREL";
+				}
+				else
+				{
+					decoratedError(INDENT0, "Analysis " + aRsn + " Loop Error!", e);
+				}
+			}
+			if (rs!=null) try {rs.close();} catch (Exception e) {;}
+			if (rs2!=null) try {rs2.close();} catch (Exception e) {;}
+
+			/*
+			 * Escape clause for some JORELs
+			 *	Does this JOREL have more important events to process?  ALERTS
+			 */
+			/* if(doesAlerts)
+			{
+				if(alertObject != null) alertTriggerCount = alertObject.checkTrigger( oracleConn.getOracleConnection() );
+			}
+			say( "Analysis " + a_rsn + " " + status);*/
+		}
+		decoratedTrace(INDENT2, "AutoRun Analysis done!", session);
 	}
 	
 	private void processReports(String dateTrigger, Session session)
@@ -433,7 +629,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				report_rsns.addElement( Long.toString( rs.getLong(1) ));
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT2, "Report collect RSNs Error! " + e.toString(), e);
+			decoratedError(INDENT0, "Report collect RSNs Error! " + e.toString(), e);
 		}
 		try {rs.close();} catch (Exception e) {;}
 
@@ -489,7 +685,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					try {
 						DbUtil.runUpdateSql(slUpdate, session);
 					} catch (Exception e2) {
-						decoratedError(INDENT2, "Report update error! ", e2);
+						decoratedError(INDENT0, "Report update error! ", e2);
 					}
 					//try {oracleConn.c.commit();} catch (Exception e) {;}
 
@@ -499,7 +695,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					try {
 						DbUtil.runSql("delete from tno.report_stories where report_rsn = " + rRsn, session);
 					} catch (Exception e) {
-						decoratedError(INDENT2, "Report data cleared Error! ", e);
+						decoratedError(INDENT0, "Report data cleared Error! ", e);
 					}
 
 					/*
@@ -539,14 +735,14 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							String msg= "";
 							try
 							{
-								String sqlUpdate = "update tno.report_stories set sort_position = " + prefSort + " where rsn = " + rsn;
+								String sqlUpdate = "update tno.report_stories set sort_position = ?1 where rsn = ?2";
 
 								ReportHandler report = new ReportHandler(rsn, userRsn, userEmail, viewTone, tpu, mailHost, httpHost, currentPeriod, avHost);
-								String sortMsg = report.sortStories(sqlUpdate, session);
+								String sortMsg = report.sortStories(prefSort, Long.toString(rsn), sqlUpdate, session);
 								msg = report.send(session);
 							} catch (Exception e)
 							{
-								decoratedError(INDENT2, "Report send error: " + userEmail, e);
+								decoratedError(INDENT0, "Report send error: " + userEmail, e);
 							}
 							msg = msg.trim();
 							if(msg.equalsIgnoreCase("Email sent!"))
@@ -567,7 +763,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 										DbUtil.runUpdateSql(revertUpdate, session);
 									} catch (Exception e4)
 									{
-										decoratedError(INDENT2, "Report could not reset report for re-run after SMTP host error! " + rsn + " " + userEmail, e4);
+										decoratedError(INDENT0, "Report could not reset report for re-run after SMTP host error! " + rsn + " " + userEmail, e4);
 									}
 								}
 							}
@@ -592,7 +788,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				}
 				else
 				{
-					decoratedError(INDENT2, "Report " + rRsn + " Loop Error!", e);
+					decoratedError(INDENT0, "Report " + rRsn + " Loop Error!", e);
 				}
 			}
 			if (rs != null) try {rs.close();} catch (Exception e) {;}
@@ -634,7 +830,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				if(storylineRsn > 0) reportsByStoryline(reportRsn, sectionRsn, storylineRsn, autoRunDups, autoRunDupsSection, lastRun, reportGroup, showCP, showScrums, showSocialMedia, autoBcUpdate, session);
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT2, "Report repopulate " + reportRsn + " Error! ", e);
+			decoratedError(INDENT0, "Report repopulate " + reportRsn + " Error! ", e);
 		}
 		try { if (rs != null) rs.close(); } catch (SQLException err) {;}
 		try { if (stmt != null) stmt.close(); } catch (SQLException err) {;}
@@ -666,7 +862,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				analysis_rsns.addElement( Long.toString( rs.getLong(1) ));
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT2, "Analysis collect RSNs Error! ", e);
+			decoratedError(INDENT0, "Analysis collect RSNs Error! ", e);
 		}
 		try {rs.close();} catch (Exception e) {;}
 
@@ -718,8 +914,8 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							/*
 							 * Draw the analysis
 							 */
-							Analysis a = new Analysis(oracleConn, rsn, userRsn, 14, true); // Hard code current period to 14 for now
-							a.draw(false, true);
+							AnalysisHandler a = new AnalysisHandler(rsn, userRsn, 14, true); // Hard code current period to 14 for now
+							a.draw(false, true, session);
 
 							/*
 							 * Draw any analysis appearing in reports
@@ -730,8 +926,8 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							{
 								long imageSize = rs2.getLong(1);
 								long fontSize = rs2.getLong(2);
-								a = new Analysis(oracleConn, rsn, userRsn, 14, (int) imageSize, (int) fontSize, true); // Hard code current period for now
-								a.draw(false, true);
+								a = new AnalysisHandler(rsn, userRsn, 14, (int) imageSize, (int) fontSize, true); // Hard code current period for now
+								a.draw(false, true, session);
 							}
 							rs2.close();
 							
@@ -1326,6 +1522,10 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				stories.setItemRsn(BigDecimal.valueOf(itemRsn));
 				stories.setDateTime(BigDecimal.valueOf(unixTime));
 				stories.setSourceTypeRsn(BigDecimal.valueOf(Long.parseLong(typeRsn)));
+				
+				session.beginTransaction();
+				session.persist(stories);
+				session.getTransaction().commit();
 
 				progress = "h";
 
@@ -1426,7 +1626,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		try {
 			DbUtil.runUpdateSql(slUpdate, session);
 		} catch (Exception e2) {
-			decoratedError(INDENT2, "Analysis update error!", e2);
+			decoratedError(INDENT0, "Analysis update error!", e2);
 		}
 		//try {oracleConn.c.commit();} catch (Exception e) {;}
 	}
@@ -1531,7 +1731,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 	private String newsItemImages(long rsn,String source,String searchDate,boolean useThumbs,boolean incFrontPage, Session session)
 	{
 		String imgs = "";
-		Statement stmt = null;
 		ResultSet rs = null;
 		if(incFrontPage)
 		{
@@ -1540,7 +1739,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				rs = DbUtil.runSql(sql, session);
 				if (rs.next())
 				{
-					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(6)+rs.getString(7) + "\" />";
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(6) + rs.getString(7) + "\" />";
 				}
 			} catch (Exception err) { ; }
 			try { if (rs != null) rs.close(); } catch (Exception err) {;}
@@ -1558,14 +1757,13 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				thumbFileName = StringUtil.replacement(thumbFileName,"^^","-thumb.jpg");
 
 				if(useThumbs && !rs.getBoolean(3))	// no thumb for paper front page images (A01 picture)
-					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(7)+thumbFileName + "\" />";
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(7) + thumbFileName + "\" />";
 				else
-					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(7)+rs.getString(8) + "\" />";
+					imgs = imgs + "<img src=\"" + instance.getStorageAvHost() + rs.getString(7) + rs.getString(8) + "\" />";
 
 			}
 		} catch (Exception err) { ; }
 		try { if (rs != null) rs.close(); } catch (Exception err) {;}
-		try { if (stmt != null) stmt.close(); } catch (Exception err) {;}
 		if(imgs.length() > 0) imgs = "<p>" + imgs;
 		return imgs;
 	}

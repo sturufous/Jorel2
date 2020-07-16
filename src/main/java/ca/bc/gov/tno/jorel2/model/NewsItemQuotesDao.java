@@ -21,6 +21,7 @@ import ca.bc.gov.tno.jorel2.controller.QuoteExtractor;
 @Table(name = "NEWS_ITEM_QUOTES", schema = "TNO")
 public class NewsItemQuotesDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private BigDecimal itemRsn;
 	private String name;

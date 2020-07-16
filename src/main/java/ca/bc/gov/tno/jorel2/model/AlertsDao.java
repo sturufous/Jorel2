@@ -21,6 +21,7 @@ import org.hibernate.query.Query;
 @Table(name = "ALERTS", schema = "TNO")
 public class AlertsDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private BigDecimal userRsn;
 	private String alertName;
@@ -184,7 +185,7 @@ public class AlertsDao implements java.io.Serializable {
 
 		String sqlStmt = "update AlertsDao set lastExecuted = current_date, lastExecuted2 = lastExecuted, lastExecuted3 = lastExecuted2 where rsn = :rsn";
 
-		Query query = session.createQuery(sqlStmt);
+		Query<?> query = session.createQuery(sqlStmt);
 		query.setParameter("rsn", new BigDecimal(rsn));
 		session.beginTransaction();
 		query.executeUpdate();

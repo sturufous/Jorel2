@@ -412,4 +412,26 @@ public class DateUtil extends Jorel2Root {
 	{
 		return (System.currentTimeMillis() / 1000L);
 	}
+	
+	public static Calendar calendarDate(String dateSrc) {
+		Calendar full = Calendar.getInstance();
+		if (dateSrc == null) return full;
+		if (dateSrc.length() < 10) return full;
+
+		int m;
+		int d;
+		int y;
+		try {
+			m = Integer.parseInt(dateSrc.substring(5,7)) - 1;
+			d = Integer.parseInt(dateSrc.substring(8));
+			y = Integer.parseInt(dateSrc.substring(0,4));
+		} catch (Exception err) {
+			m = 0;
+			d = 0;
+			y = 0;
+		}
+		if ((m == 0) && (d == 0) && (y ==0)) return full;
+		full.set(y,m,d);
+		return full;
+	}
 }

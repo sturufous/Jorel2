@@ -1,14 +1,12 @@
 package ca.bc.gov.tno.jorel2.controller;
 
 
-import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
-import ca.bc.gov.tno.jorel2.model.EventsDao;
 
 /**
  * Manages the retrieval and processing of various RSS feeds using JAXB objects in the
@@ -39,7 +37,7 @@ public class DirectoryEventProcessor extends Jorel2Root implements EventProcesso
     	try {
     		decoratedTrace(INDENT1, "Starting RSS event processing");
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        //List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
     	} 
     	catch (Exception e) {
     		logger.error("Processing user directory entries.", e);

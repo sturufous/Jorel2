@@ -25,6 +25,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 @Table(name = "WORDS", schema = "TNO")
 public class WordsDao extends Jorel2Root implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String word;
 	private BigDecimal type;

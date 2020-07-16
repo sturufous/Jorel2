@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.sql.Clob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Comparator;
@@ -14,12 +13,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.StringTokenizer;
 import java.util.Vector;
 
 import javax.inject.Inject;
 import org.hibernate.Session;
-import org.hibernate.query.Query;
 import org.springframework.stereotype.Service;
 
 import com.vdurmont.emoji.EmojiParser;
@@ -97,6 +94,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 	 * this handler for consistency. 
 	 */
 	
+	@SuppressWarnings("unused")
 	private void alertEvent(EventsDao currentEvent, Session session) {
 		
 		JorelDao.updateLastAlertRunTime(LocalDateTime.now().toString(), session);
@@ -115,8 +113,8 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 			
 			if(rsnList.length() > 0) {
 				boolean stopAlertProcessing = false;
-				Vector myEmailVector = new Vector(5,10);
-				Vector singletonEmailVector = new Vector(5,10);
+				Vector<EmailMessage> myEmailVector = new Vector<>(5,10);
+				Vector<EmailMessage> singletonEmailVector = new Vector<>(5,10);
 				String emailMessage = null;
 				
 				Map<String, String> parts = loadPublishedParts(showEmoji, session);
@@ -186,7 +184,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 									String r = userEmail;              		// recipients
 									if (r==null) r = "";
 
-									myEmailVector.addElement( new EmailMessage(alertRSN,u,r,em.getSubject(),em.getMessage(),em.getRsnList(),em.getToneEmoji(),view_tone) );
+									myEmailVector.addElement(new EmailMessage(alertRSN,u,r,em.getSubject(),em.getMessage(),em.getRsnList(),em.getToneEmoji(),view_tone) );
 								}
 							}
 						} else {
@@ -206,7 +204,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 								newsRecords = DbUtil.runSql(itemQuery, session);
 							} catch (SQLException e) {
 								exceptionString = e.toString().toLowerCase();
-								decoratedError(INDENT2, "Reading list of matching news items for alert.", e);
+								decoratedError(INDENT0, "Reading list of matching news items for alert.", e);
 								sqlAlertError = true;
 							}
 							
@@ -631,7 +629,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 								}
 
 								if(msg.length() > 0) {
-									decoratedTrace(INDENT2, msg, session);
+									decoratedTrace(INDENT0, msg, session);
 								}
 							}
 						}
@@ -639,17 +637,17 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 					
 					myEmailVector.removeAllElements();
 				} catch (SQLException e) {
-					decoratedError(INDENT2, "Processing Alert records.", e);
+					decoratedError(INDENT0, "Processing Alert records.", e);
 				}
 				
 				//Update news items so they don't get picked up on the next pass
 				if(!stopAlertProcessing) {
-					decoratedTrace(INDENT2, "Finished Processing Alerts. " + rsnList + " [" + rsnAlertedList + "]");
+					decoratedTrace(INDENT0, "Finished Processing Alerts. " + rsnList + " [" + rsnAlertedList + "]");
 					NewsItemsDao.clearAlertNewsItems(rsnAlertedList, false, session);
 					NewsItemsDao.clearAlertNewsItems(rsnList, true, session);
 					checkForTriggerInsertion(rsnList, session);
 				} else {
-					decoratedTrace(INDENT2, "ALERT PROCESSING STOPPED BECAUSE OF ORACLE TEXT ERROR!", session);
+					decoratedTrace(INDENT0, "ALERT PROCESSING STOPPED BECAUSE OF ORACLE TEXT ERROR!", session);
 					clearTrigger = false;
 				}
 			}
@@ -750,8 +748,6 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				String subject = alert.getSubject();
 				String bcc = alert.getBcc();
 				String alertRsns = alert.getAlertrsns();
-				long userRsn = 0;
-				String userEmail = "";
 
 				String message = "";
 				Clob cl = alert.getMessage();
@@ -780,7 +776,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				}
 			}
 		} catch(Exception err) {
-			decoratedError(INDENT2, "Processing saved email alerts.", err);
+			decoratedError(INDENT0, "Processing saved email alerts.", err);
 		}
 
 		if(rsnList != "0")
@@ -789,7 +785,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 			{
 				SavedEmailAlertsDao.deleteSavedEmailAlerts(rsnList, session);
 			} catch(Exception err) {
-				decoratedError(INDENT2, "Deleting saved email alerts.", err);
+				decoratedError(INDENT0, "Deleting saved email alerts.", err);
 			}		    	
 		}
 		return smtpIsOk;
@@ -820,11 +816,11 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 	}
 	
 	public void clearAlertTrigger(Session session){
-		Statement s = null;
+
 		try{
 			AlertTriggerDao.deleteAllRecords(session);
 		} catch (Exception err) {
-			System.out.println("dbAlert clearAlertTrigger failure: "+err);
+			decoratedError(INDENT0, "dbAlert clearAlertTrigger failure.", err);
 		}
 		
 		try{
@@ -847,7 +843,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				}
 			}
 		} catch (Exception err) {
-			decoratedError(INDENT2, "Checking or inserting sync-trigger record", err);
+			decoratedError(INDENT0, "Checking or inserting sync-trigger record", err);
 		}
 	}
 

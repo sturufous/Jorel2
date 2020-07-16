@@ -25,6 +25,7 @@ import org.hibernate.query.Query;
 @Table(name = "FILES_IMPORTED", schema = "TNO")
 public class FilesImportedDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private Date dateImported;
 	private String fileName;

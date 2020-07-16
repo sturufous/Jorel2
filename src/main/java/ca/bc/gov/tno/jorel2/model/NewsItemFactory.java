@@ -1,7 +1,6 @@
 package ca.bc.gov.tno.jorel2.model;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Date;
 import com.sun.syndication.feed.synd.SyndEntry;
 

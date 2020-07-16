@@ -39,7 +39,7 @@ public class DurationEventProcessor extends Jorel2Root implements EventProcessor
     	try {
     		decoratedTrace(INDENT1, "Starting Duration event processing");
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        //List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
 	        
 	        List<FileQueueDao> files = FileQueueDao.getQueuedFilesByTarget("3gp", session);
 	        for (FileQueueDao file : files) {

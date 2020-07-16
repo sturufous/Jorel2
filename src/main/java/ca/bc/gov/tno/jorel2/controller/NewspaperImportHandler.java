@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.sql.Clob;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.StringTokenizer;
 import javax.inject.Inject;
 import javax.xml.bind.Unmarshaller;
@@ -85,13 +84,14 @@ public class NewspaperImportHandler extends Jorel2Root {
 			session.getTransaction().commit();
 			success = true;
 		} catch (Exception e) {
-			decoratedError(INDENT1, "Unmarshalling/persisting xml newspaper article: " + xmlFilePath, e);
+			decoratedError(INDENT0, "Unmarshalling/persisting xml newspaper article: " + xmlFilePath, e);
 			success = false;
 		}
 
 		return success;
 	} 
 	
+	@SuppressWarnings("unused")
 	public boolean doFreeFormImport(EventsDao currentEvent, ImportDefinitionsDao importMeta, String currentFile, BufferedReader in, Session session) {
 		
 		String line="";
@@ -361,7 +361,6 @@ public class NewspaperImportHandler extends Jorel2Root {
 		return false;
 	}
 
-	@SuppressWarnings("preview")
 	public void addToField(String num, String value, NewsItemsDao item) {
 
 		// Content is a special field

@@ -19,6 +19,7 @@ import org.hibernate.query.Query;
 @Table(name = "SOURCE_TYPES", schema = "TNO")
 public class SourceTypesDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String type;
 	private String clarktype;

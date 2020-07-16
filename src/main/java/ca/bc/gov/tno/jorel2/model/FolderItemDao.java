@@ -2,7 +2,6 @@ package ca.bc.gov.tno.jorel2.model;
 // Generated Dec 24, 2019, 8:06:31 AM by Hibernate Tools 5.0.6.Final
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -19,6 +18,7 @@ import org.hibernate.query.Query;
 @Table(name = "FOLDER_ITEM", schema = "TNO")
 public class FolderItemDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private BigDecimal folderRsn;
 	private BigDecimal itemRsn;
@@ -86,7 +86,7 @@ public class FolderItemDao implements java.io.Serializable {
 
 		String sqlStmt = "update FolderItemDao set autoRunFlag = 0 where autoRunFlag = 1 and folderRsn = :frsn";
 
-		Query query = session.createQuery(sqlStmt);
+		Query<?> query = session.createQuery(sqlStmt);
 		query.setParameter("frsn", BigDecimal.valueOf(frsn));
 		session.beginTransaction();
 		query.executeUpdate();

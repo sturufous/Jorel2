@@ -11,7 +11,6 @@ import javax.inject.Inject;
 
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
@@ -133,7 +132,7 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 				}
 			} else {
 				IllegalArgumentException e = new IllegalArgumentException("Processing cleanBinaryRoot event.");
-				decoratedError(INDENT1, "Error in format of StartTime for CleanBinaryRoot event.", e);
+				decoratedError(INDENT0, "Error in format of StartTime for CleanBinaryRoot event.", e);
 			}
 		}
 	}
@@ -191,12 +190,12 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 							if (justLogit.equalsIgnoreCase("deleteit")) {
 								if (!file.delete()) {
 									IOException e = new IOException("Attempting to clean up file.");
-									decoratedError(INDENT2, "Deleting file " + file.getName(), e);
+									decoratedError(INDENT0, "Deleting file " + file.getName(), e);
 								}
 							}
 						}
 					} catch (Exception ex) {
-						decoratedError(INDENT1, "Reading from NEWS_ITEM_IMAGES.", ex);
+						decoratedError(INDENT0, "Reading from NEWS_ITEM_IMAGES.", ex);
 					}
 
 				// not image - filename should be RSN
@@ -205,7 +204,7 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 					try {
 						fileRsn = Long.parseLong(shortname);
 					} catch (NumberFormatException ex) {
-						decoratedError(INDENT2, "Parsing NEWS_ITEM RSN: " + file.getName(), ex);
+						decoratedError(INDENT0, "Parsing NEWS_ITEM RSN: " + file.getName(), ex);
 						fileRsn = 0;
 					}
 
@@ -216,12 +215,12 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 								if (justLogit.equalsIgnoreCase("deleteit")) {
 									if (!file.delete()) {
 										IOException e = new IOException("Attempting to clean up file.");
-										decoratedError(INDENT2, "Deleting file " + file.getName(), e);
+										decoratedError(INDENT0, "Deleting file " + file.getName(), e);
 									}
 								}
 							}
 						} catch (Exception ex) {
-							decoratedError(INDENT1, "Reading from NEWS_ITEMS.", ex);
+							decoratedError(INDENT0, "Reading from NEWS_ITEMS.", ex);
 						}
 					}
 				} 

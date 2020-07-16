@@ -22,6 +22,7 @@ import org.hibernate.query.Query;
 @Table(name = "AUTO_RUN", schema = "TNO")
 public class AutoRunDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private Date dateCreated;
 

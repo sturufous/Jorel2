@@ -20,6 +20,7 @@ import javax.persistence.TemporalType;
 @Table(name = "EVENT_ACTIVITY_LOG", schema = "TNO")
 public class EventActivityLogDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String process;
 	private Date entryDate;

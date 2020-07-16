@@ -1,19 +1,14 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.io.PrintWriter;
-import java.io.Writer;
 import java.sql.Clob;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import javax.mail.Message;
-import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
@@ -24,7 +19,6 @@ import static ca.bc.gov.tno.jorel2.model.PublishedPartsDao.getPublishedPartByNam
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
-import oracle.sql.CLOB;
 
 public class ReportHandler {
 	
@@ -65,6 +59,7 @@ public class ReportHandler {
 		this.av_host = av_host;
 	}
 	
+	@SuppressWarnings("unused")
 	public String send(org.hibernate.Session hSession) {
 
 		StringBuilder sb = new StringBuilder();
@@ -81,10 +76,6 @@ public class ReportHandler {
 		boolean pagebreak = false;
 		boolean include_analysis = false;
 		boolean ok = true;
-
-		long key = 0;
-		boolean bbflag = false;  // blackberry test
-		String bbMsg = "";
 
 		try {
 			String select = "select r.email_subject, r.email_from, r.email_recipients, r.pref5, r.pref10, r.email_bcc, r.email_blackberry, " +
@@ -212,8 +203,8 @@ public class ReportHandler {
 								count_suffix = ""+count;
 
 							MimeBodyPart mbp2 = new MimeBodyPart();
-							Analysis analysis = new Analysis(o, analysis_rsn, user_rsn, current_period, (int)image_size, (int)font_size);
-							analysis.report_write_file(randomStr);
+							AnalysisHandler analysis = new AnalysisHandler(analysis_rsn, user_rsn, current_period, (int)image_size, (int)font_size);
+							analysis.report_write_file(randomStr, hSession);
 	
 							String tempdir = System.getProperty("java.io.tmpdir");
 							if ( !(tempdir.endsWith("/") || tempdir.endsWith("\\")) )
@@ -236,7 +227,7 @@ public class ReportHandler {
 
 				} catch (Exception mex) {
 					usermsg = "Sending Report Failed!";
-					usermsg = usermsg + "\n<!-- "+mex.toString()+" -->";
+					usermsg = usermsg + "\n<!-- " + mex.toString() + " -->";
 					sendMsg = false;
 				}
 			}
@@ -302,6 +293,7 @@ public class ReportHandler {
 		format(sb, pageBreak, false, "", hSession);
 	}
 	
+	@SuppressWarnings("unused")
 	public void format(StringBuilder sb, boolean pageBreak, boolean sendButton, String randomStr, org.hibernate.Session hSession) {
 		String select = "";
 		boolean ok = true;
@@ -454,8 +446,8 @@ public class ReportHandler {
 						StringBuilder analysis_graph = new StringBuilder(analysisFormat);
 						if(analysis_ok)
 						{
-							Analysis analysis = new Analysis(o, a_rsn, user_rsn, current_period, (int)a_imagesize, (int)a_fontsize);
-							analysis.draw(true, false);
+							AnalysisHandler analysis = new AnalysisHandler(a_rsn, user_rsn, current_period, (int)a_imagesize, (int)a_fontsize);
+							analysis.draw(true, false, hSession);
 							Random rnd=new Random();
 							String rndNumber=Integer.toString(rnd.nextInt());
 							if (sendButton) { //preview
@@ -947,7 +939,8 @@ public class ReportHandler {
 		}
 	}
 	
-	public String sortStories(String sort_method, String report_rsn, PreparedStatement ps, org.hibernate.Session hSession)
+	@SuppressWarnings("resource")
+	public String sortStories(String sort_method, String report_rsn, String updateSql, org.hibernate.Session hSession)
 	{
 		ResultSet rs = null;
 		String msg = "";
@@ -956,7 +949,7 @@ public class ReportHandler {
 		{
 			// Get list of unassign sort position (-1)
 			List<Long> listRSNs = new ArrayList<Long>();
-			String select = "select r.rsn from report_stories r where r.sort_position = -1 and r.report_rsn = "+report_rsn+" order by r.rsn";
+			String select = "select r.rsn from report_stories r where r.sort_position = -1 and r.report_rsn = " + report_rsn + " order by r.rsn";
 			rs = DbUtil.runSql(select, hSession);
 			while (rs.next())
 			{
@@ -987,9 +980,9 @@ public class ReportHandler {
 						if(listRSNs.contains(storylinersn))
 						{
 							// update this story with a sort position
-							ps.setLong(1, last_sort+sort_inc );
-							ps.setLong(2, storylinersn );
-							ps.executeUpdate();
+							updateSql = updateSql.replaceAll("?1", Long.toString(last_sort + sort_inc));
+							updateSql = updateSql.replaceAll("?2", Long.toBinaryString(storylinersn));
+							DbUtil.runUpdateSql(updateSql, hSession);
 							
 							sort_inc++;
 						}
@@ -1026,9 +1019,9 @@ public class ReportHandler {
 						if(listRSNs.contains(storylinersn))
 						{
 							// update this story with a sort position
-							ps.setLong(1, last_sort+sort_inc );
-							ps.setLong(2, storylinersn );
-							ps.executeUpdate();
+							updateSql = updateSql.replaceAll("?1", Long.toString(last_sort + sort_inc));
+							updateSql = updateSql.replaceAll("?2", Long.toBinaryString(storylinersn));
+							DbUtil.runUpdateSql(updateSql, hSession);
 							
 							sort_inc++;
 						}
@@ -1072,6 +1065,7 @@ public class ReportHandler {
 						" where r.report_rsn = "+report_rsn+" and r.report_section_rsn = rs.rsn(+) and r.item_rsn = h.rsn(+) and h.source = s.source(+) and h.type = t.type(+) "+
 						" order by 9,2,3,4,5,6";
 					}
+					
 					rs = DbUtil.runSql(select, hSession);
 					while (rs.next())
 					{
@@ -1090,9 +1084,9 @@ public class ReportHandler {
 						if(listRSNs.contains(storylinersn))
 						{
 							// update this story with a sort position
-							ps.setLong(1, last_sort+sort_inc );
-							ps.setLong(2, storylinersn );
-							ps.executeUpdate();
+							updateSql = updateSql.replaceAll("?1", Long.toString(last_sort + sort_inc));
+							updateSql = updateSql.replaceAll("?2", Long.toBinaryString(storylinersn));
+							DbUtil.runUpdateSql(updateSql, hSession);
 
 							sort_inc++;
 							

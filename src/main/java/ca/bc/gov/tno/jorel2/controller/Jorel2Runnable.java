@@ -1,10 +1,7 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.sql.CallableStatement;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -20,15 +17,12 @@ import javax.persistence.PersistenceException;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.jdbc.ReturningWork;
-import org.springframework.core.env.Environment;
 
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
-import ca.bc.gov.tno.jorel2.util.DbUtil;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.
@@ -43,10 +37,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
 	private DataSourceConfig config;
 	
-	/** Environment variable used for retrieving active profiles */
-	@Inject
-    private Environment environment;
-		
 	/** RSS Event processor service */
 	@Inject
     private RssEventProcessor rssEventProcessor;
@@ -165,7 +155,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	private void processOnlineEvents(Session session) {
 		
         Map<EventType, String> eventMap = new HashMap<>();
-		Optional<String> eventResult;
         
 		try {
 			// This is the first query to run in Jorel2Runnable. It is used to determine the offline status of the system.
@@ -180,7 +169,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        	EventType eventEnum = eventEntry.getKey();
 	        	String eventTypeName = eventEntry.getValue();
 	        	
-	        	eventResult = switch (eventEnum) {
+	        	switch (eventEnum) {
 	        		case NEWRSS -> rssEventProcessor.processEvents(eventTypeName, session);
 	        		case RSS -> rssEventProcessor.processEvents(eventTypeName, session);
 	        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
@@ -301,7 +290,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		try {
 			session.doWork(connection -> {
 				PreparedStatement stmt = connection.prepareStatement(query);
-				ResultSet rs = stmt.executeQuery(query);
+				stmt.executeQuery(query);
 			});
 			result = true;
 		}

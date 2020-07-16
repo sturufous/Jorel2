@@ -2,18 +2,16 @@ package ca.bc.gov.tno.jorel2.util;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.sql.CallableStatement;
 import java.sql.Clob;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Properties;
 
 import javax.persistence.ParameterMode;
 import javax.persistence.StoredProcedureQuery;
 
 import org.hibernate.Session;
+import org.hibernate.procedure.ProcedureOutputs;
 
 import com.vdurmont.emoji.EmojiManager;
 import com.vdurmont.emoji.EmojiParser;
@@ -445,7 +443,6 @@ public class StringUtil extends Jorel2Root {
 		
 		try {
 			Reader r = content.getCharacterStream();
-			int j = 0;
 			int ch;
 			while ((ch = r.read()) != -1) {
 			   buffer.append("" + (char) ch);
@@ -589,32 +586,23 @@ public class StringUtil extends Jorel2Root {
 		boolean ok=true;
 		String t="";
 
-		//CallableStatement cstmt = null;
-		//String sqlString = "{call HILITE(?,?,?,?)}";
 		try {
 			StoredProcedureQuery query = session.createStoredProcedureQuery("HILITE");
 			
-			query.registerStoredProcedureParameter("pIndex", String.class, ParameterMode.IN).setParameter(pIndex, value);
+			query.registerStoredProcedureParameter("pIndex", String.class, ParameterMode.IN).setParameter("pIndex", pIndex);
+			query.registerStoredProcedureParameter("pRsn", String.class, ParameterMode.IN).setParameter("pRsn", pRsn);
+			query.registerStoredProcedureParameter("pQuery", String.class, ParameterMode.IN).setParameter("pQuery", pQuery);
+			query.registerStoredProcedureParameter("pQueryId", String.class, ParameterMode.IN).setParameter("pQueryId", pQueryId);
+			query.execute();
+		    query.unwrap(ProcedureOutputs.class).release();
 			
-			result = query.execute();
-			
-			cstmt = conn.prepareCall(sqlString);
-			cstmt.setString(1, pIndex);
-			cstmt.setLong(2, pRsn);
-			cstmt.setString(3, pQuery );
-			cstmt.setLong(4, pQueryId );
-			cstmt.executeUpdate();
-			cstmt.close();
 		} catch (Exception err) { ok=false; }
-		try { if (cstmt != null) cstmt.close(); } catch (Exception err) {;}
-		if (! ok) return "1";
+		if (!ok) return "1";
 
-		Statement stmt = null;
 		ResultSet rs = null;
 		try {
-			stmt = conn.createStatement();
 			String sql = "select document from RESULT_MARKUP where query_id = " + pQueryId ;
-			rs = stmt.executeQuery (sql);
+			rs = DbUtil.runSql(sql, session);
 			if (rs.next()) {
 				Clob cl = rs.getClob(1);
 				if (cl == null) {
@@ -626,18 +614,14 @@ public class StringUtil extends Jorel2Root {
 			}
 		} catch (Exception err) { ok=false; }
 		try { if (rs != null) rs.close(); } catch (Exception err) {;}
-		try { if (stmt != null) stmt.close(); } catch (Exception err) {;}
 		if (! ok) return "2";
 
 		rs = null;
-		stmt = null;
 		try {
-			stmt = conn.createStatement();
 			String sql = "delete from RESULT_MARKUP where query_id = " + pQueryId;
-			rs = stmt.executeQuery (sql);
+			rs = DbUtil.runSql(sql, session);
 		} catch (Exception err) {;}
 		try { if (rs != null) rs.close(); } catch (Exception err) {;}
-		try { if (stmt != null) stmt.close(); } catch (Exception err) {;}
 		return t;
 	}
 	
@@ -677,7 +661,7 @@ public class StringUtil extends Jorel2Root {
 			transcript = transcript.replace(0, transcript.length(), markedUp.substring(lastIndex));
 			text = text.replace(0, text.length(), markedUp.substring(0, lastIndex));
 		} else { // error?
-			text = text.replace(0, text.length(), t + " ["+markedUp+"]");
+			text = text.replace(0, text.length(), t + " [" + markedUp + "]");
 		}
 	}
 }

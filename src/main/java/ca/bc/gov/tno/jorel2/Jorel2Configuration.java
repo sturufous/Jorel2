@@ -1,7 +1,6 @@
 package ca.bc.gov.tno.jorel2;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -11,7 +10,6 @@ import java.io.File;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.EnableMBeanExport;
@@ -51,7 +49,6 @@ public class Jorel2Configuration extends Jorel2Root {
 	@Bean
 	public PropertiesConfiguration propertiesConfiguration() throws ConfigurationException {
 	    String filePath = "properties/jorel.properties";
-	    String cronExpression = "";
 	    PropertiesConfiguration configuration = new PropertiesConfiguration(
 	      new File(filePath));
 	    configuration.setReloadingStrategy(new FileChangedReloadingStrategy());
@@ -104,7 +101,6 @@ public class Jorel2Configuration extends Jorel2Root {
     @Bean("jaxbUnmarshallers")
     @Scope("singleton")
     public JaxbUnmarshallerFactory jaxbUnmarshallerFactory() {
-    	JaxbUnmarshallerFactory unmarshaller = null;
     			
 		return new JaxbUnmarshallerFactory();
     }

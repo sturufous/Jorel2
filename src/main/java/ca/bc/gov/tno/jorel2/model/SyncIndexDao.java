@@ -1,7 +1,6 @@
 package ca.bc.gov.tno.jorel2.model;
 // Generated Dec 24, 2019, 8:06:31 AM by Hibernate Tools 5.0.6.Final
 
-import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 

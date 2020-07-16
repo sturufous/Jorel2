@@ -841,13 +841,13 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 		}
 
 		try{
-			Query query = session.createQuery(sqlStmt);
+			Query<?> query = session.createQuery(sqlStmt);
 			session.beginTransaction();
 			query.executeUpdate();
 			session.getTransaction().commit();
 		}
 		catch (Exception err) {
-			decoratedError(INDENT2, "Clearing alert news items.", err);
+			decoratedError(INDENT0, "Clearing alert news items.", err);
 		}
 	}
 	

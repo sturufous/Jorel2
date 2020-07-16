@@ -22,6 +22,7 @@ import org.hibernate.query.Query;
 @Table(name = "FILE_QUEUE", schema = "TNO")
 public class FileQueueDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String filename;
 	private String fullfilepath;

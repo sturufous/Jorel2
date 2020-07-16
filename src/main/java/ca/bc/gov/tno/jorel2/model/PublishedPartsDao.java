@@ -25,6 +25,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 @Table(name = "PUBLISHED_PARTS", schema = "TNO", uniqueConstraints = @UniqueConstraint(columnNames = "NAME"))
 public class PublishedPartsDao extends Jorel2Root implements java.io.Serializable  {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal partRsn;
 	private String name;
 	private String type;
@@ -128,7 +129,7 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 	 * @param session The current Hibernate persistence context
 	 * @return The published part that matches the name.
 	 */
-	public static void getPublishedPartByName(String name, String deflt, String keyStr, Map parts, Session session) {
+	public static void getPublishedPartByName(String name, String deflt, String keyStr, Map<String, String> parts, Session session) {
 		
 		String sqlStmt = "from PublishedPartsDao where name=:name";
 		
@@ -145,7 +146,7 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 	            result = clob.getSubString(1, (int) len);
 	            parts.put(keyStr, result);
 			} catch (SQLException e) {
-				decoratedError(INDENT2, "Extracting Clob content.", e);
+				decoratedError(INDENT0, "Extracting Clob content.", e);
 			}
         } else {
         	parts.put(keyStr, deflt);
@@ -177,7 +178,7 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 				len = clob.length();
 	            result = clob.getSubString(1, (int) len);
 			} catch (SQLException e) {
-				decoratedError(INDENT2, "Extracting Clob content.", e);
+				decoratedError(INDENT0, "Extracting Clob content.", e);
 			}
         } else {
         	result = deflt;

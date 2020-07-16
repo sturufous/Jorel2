@@ -1,13 +1,10 @@
 package ca.bc.gov.tno.jorel2.util;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
-
-import javax.inject.Inject;
 
 import com.sun.syndication.feed.synd.SyndEntry;
 
@@ -36,7 +33,6 @@ public class UrlUtil extends Jorel2Root {
 		
 		String currentUrl = item.getLink();
 		String articlePage = new String("");
-		String articleTitle = new String("");
 		String content = new String("");
 		
 		articlePage = retrievePageContent(currentUrl, instance);
@@ -79,7 +75,7 @@ public class UrlUtil extends Jorel2Root {
 			urlConnection.disconnect();
 		} catch (SocketTimeoutException te) {
 			instance.addHttpFailure("Timeout at: " + url);			
-			decoratedError(INDENT2, "Timeout at: " + url, te);
+			decoratedError(INDENT0, "Timeout at: " + url, te);
 		} catch (Exception e) {
 			logger.error("Error retrieving page at: {}", url, e);
 			articlePage = null;

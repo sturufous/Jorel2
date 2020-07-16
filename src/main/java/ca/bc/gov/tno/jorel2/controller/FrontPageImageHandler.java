@@ -22,7 +22,6 @@ import javax.inject.Inject;
 
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.FilesImportedDao;
@@ -94,13 +93,13 @@ class FrontPageImageHandler extends Jorel2Root {
 								success = createNewsItemImage(sourceRsn, id, wwwTargetName, jpgFileName, c, session);
 							}
 						} catch (IOException ex) {
-							decoratedError(INDENT1, "Copying from " + c + " to " + archiveTarget, ex);
+							decoratedError(INDENT0, "Copying from " + c + " to " + archiveTarget, ex);
 							success = false;
 						}
 					}
 				}
 			} catch (Exception ex) {
-				decoratedError(INDENT1, "Processing Globe and Mail front page image.", ex);
+				decoratedError(INDENT0, "Processing Globe and Mail front page image.", ex);
 				success = false;
 			} 
 		}
@@ -120,7 +119,6 @@ class FrontPageImageHandler extends Jorel2Root {
 	boolean infomartImageHandler(String zipFileName, String fullFileName, Session session) {
 		
 		boolean success = true;
-		File importZipFile = new File(fullFileName);
 
 		try {
 			// Only import if the corresponding fms file has been imported already	
@@ -149,7 +147,7 @@ class FrontPageImageHandler extends Jorel2Root {
 					NewsItemImagesDao.updateProcessedByImportFile(fmsFile, session);
 				} else {
 					IOException e = new IOException("Unable to extract " + zipFileName + " to " + zipTarget);
-					decoratedError(INDENT2, "Extracting Informart image.", e);
+					decoratedError(INDENT0, "Extracting Informart image.", e);
 					success = false;
 				}
 			} else {
@@ -157,7 +155,7 @@ class FrontPageImageHandler extends Jorel2Root {
 				success = false;
 			}
 		} catch (Exception ex) {
-			decoratedError(INDENT1, "Processing Infomart Image", ex);
+			decoratedError(INDENT0, "Processing Infomart Image", ex);
 			success = false;
 		}
 		
@@ -209,7 +207,7 @@ class FrontPageImageHandler extends Jorel2Root {
 
 				}
 			} catch (Exception ex) {
-				decoratedError(INDENT1, "Processing Van24 front page image.", ex);
+				decoratedError(INDENT0, "Processing Van24 front page image.", ex);
 			}
 		}
 
@@ -245,7 +243,7 @@ class FrontPageImageHandler extends Jorel2Root {
 				success = updateNewsItemImage(niiRecord, id, wwwTargetName, session);
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT1, "Updating NewsItem Image.", e);
+			decoratedError(INDENT0, "Updating NewsItem Image.", e);
 			success = false;
 		}
 		
@@ -300,7 +298,7 @@ class FrontPageImageHandler extends Jorel2Root {
 				success = false;
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT1, "Creating NewsItemImage record.", e);
+			decoratedError(INDENT0, "Creating NewsItemImage record.", e);
 			success = false;
 		}
 
@@ -358,7 +356,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			try {
 				success = copyFile(tempPath, fileTarget);
 			} catch (IOException ex) {
-				decoratedError(INDENT1, "Copying image file to target directory.", ex);
+				decoratedError(INDENT0, "Copying image file to target directory.", ex);
 				success = false;
 				//frame.addJLog(eventLog("DailyFunctions.infomartImages(): File move error: "+ex.getMessage()));
 			}
@@ -395,14 +393,14 @@ class FrontPageImageHandler extends Jorel2Root {
 				}
 			} else {
 				IOException e = new IOException("Unable to create the directory: " + tempZipDir);
-				decoratedError(INDENT1, "Creating temporary unzip directory.", e);
+				decoratedError(INDENT0, "Creating temporary unzip directory.", e);
 				success = false;
 			}
 
 			zin.close();
 			
 		} catch (Exception ex) {
-			decoratedError(INDENT1, "Extracting archive to temp directory.", ex);
+			decoratedError(INDENT0, "Extracting archive to temp directory.", ex);
 			success = false;
 		}
 		
@@ -433,7 +431,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			session.getTransaction().commit();
 			success = true;
 		} catch (Exception e) {
-			decoratedError(INDENT1, "Updating news item image.", e);
+			decoratedError(INDENT0, "Updating news item image.", e);
 			success = false;
 		}
 		
@@ -482,10 +480,10 @@ class FrontPageImageHandler extends Jorel2Root {
 				c.delete();
 			} else {
 				IOException e = new IOException("Unable to copy " + c + " to " + avTargetFile);
-				decoratedError(INDENT2, "Copying front page image from home directory to avTarget.", e);
+				decoratedError(INDENT0, "Copying front page image from home directory to avTarget.", e);
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT2, "Creating news item image.", e);
+			decoratedError(INDENT0, "Creating news item image.", e);
 			success = false;
 		}
 		
@@ -554,11 +552,11 @@ class FrontPageImageHandler extends Jorel2Root {
 			try {
 				if (!(dirTarget.mkdirs())) {
 					IOException e = new IOException("Could not create directory " + config.getString("binaryRoot") + dirTargetName);
-					decoratedError(INDENT1, "Creating new image directory.", e);
+					decoratedError(INDENT0, "Creating new image directory.", e);
 					dirTargetName = "";
 				}
 			} catch (Exception ex) {
-				decoratedError(INDENT1, "Creating new image directory.", ex);
+				decoratedError(INDENT0, "Creating new image directory.", ex);
 				dirTargetName = "";
 			}
 		}
@@ -598,7 +596,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			
 			success = true;
 		} catch (Exception e) {
-			decoratedError(INDENT1, "Copying " + sourceFile + " to " + destinationFile, e);
+			decoratedError(INDENT0, "Copying " + sourceFile + " to " + destinationFile, e);
 			success = false;
 		}
 
@@ -684,7 +682,7 @@ class FrontPageImageHandler extends Jorel2Root {
 			try {
 				pdfToJpg(fullFileName, dirTargetName + sep + jpgFileName, c);
 			} catch (Exception ex) {
-				decoratedError(INDENT1, "Extracting Van24 front page image from PDF.", ex);
+				decoratedError(INDENT0, "Extracting Van24 front page image from PDF.", ex);
 				success = false;
 			}
 		}

@@ -18,6 +18,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 
 @Service
+@SuppressWarnings("unused")
 public class FtpDataSource {
 	
 	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
@@ -181,6 +182,7 @@ public class FtpDataSource {
 	public boolean exists(String path) {
 		if (secure) {
 			try {
+				@SuppressWarnings("unchecked")
 				Vector<ChannelSftp.LsEntry> list = channel.ls(path);
 				for (ChannelSftp.LsEntry entry : list) {
 					return true;

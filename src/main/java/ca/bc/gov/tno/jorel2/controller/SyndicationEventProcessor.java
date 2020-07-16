@@ -93,7 +93,7 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
     	} 
     	catch (SocketTimeoutException te) {
 			instance.addHttpFailure("Timeout at: " + address);
-			decoratedError(INDENT2, "Timeout at: " + address, te);
+			decoratedError(INDENT0, "Timeout at: " + address, te);
     	}
     	catch (Exception e) {
     		decoratedError(INDENT0, "Retrieving or storing RSS feed.", e);
@@ -110,8 +110,6 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	 * @param session The current Hibernate persistence context
 	 * @param newsItems The list of news items retrieved from the publisher
 	 */
-	
-	@SuppressWarnings("preview")
 	private void insertNewsItems(String source, Session session, List<SyndEntry> newsItems) {
 		
 		NewsItemsDao newsItem = null;

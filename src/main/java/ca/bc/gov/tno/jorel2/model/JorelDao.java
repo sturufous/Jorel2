@@ -19,6 +19,7 @@ import org.hibernate.query.Query;
 @Table(name = "JOREL", schema = "TNO")
 public class JorelDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private String lastAlertRun;
 
 	public JorelDao() {

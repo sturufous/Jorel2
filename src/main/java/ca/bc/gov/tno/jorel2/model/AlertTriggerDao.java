@@ -1,8 +1,6 @@
 package ca.bc.gov.tno.jorel2.model;
 // Generated Dec 24, 2019, 8:06:31 AM by Hibernate Tools 5.0.6.Final
 
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.Date;
 import java.util.List;
 
@@ -23,6 +21,7 @@ import org.hibernate.query.Query;
 @Table(name = "ALERT_TRIGGER", schema = "TNO")
 public class AlertTriggerDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private Date dateCreated;
 
 	public AlertTriggerDao() {
@@ -85,7 +84,7 @@ public class AlertTriggerDao implements java.io.Serializable {
 		String sqlStmt = "delete from AlertTriggerDao";
 		
 		session.beginTransaction();
-		Query<SyncIndexDao> syncQuery = session.createQuery(sqlStmt);
+		Query<?> syncQuery = session.createQuery(sqlStmt);
 		syncQuery.executeUpdate();
 		session.getTransaction().commit();
 	}

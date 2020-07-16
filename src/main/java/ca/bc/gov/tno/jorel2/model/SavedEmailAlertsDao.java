@@ -23,6 +23,7 @@ import org.hibernate.query.Query;
 @Table(name = "SAVED_EMAIL_ALERTS", schema = "TNO")
 public class SavedEmailAlertsDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String alertrsn;
 	private String username;
@@ -152,6 +153,7 @@ public class SavedEmailAlertsDao implements java.io.Serializable {
 		
 		String sqlStmt = "delete from SavedEmailAlertsDao where rsn in (" + rsnList + ")";
 
+		@SuppressWarnings("unchecked")
 		Query<SavedEmailAlertsDao> query = session.createQuery(sqlStmt);
 		session.beginTransaction();
         query.executeUpdate();

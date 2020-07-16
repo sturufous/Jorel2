@@ -14,6 +14,7 @@ import javax.persistence.Table;
 @Table(name = "LAST_DOSYNCINDEX", schema = "TNO")
 public class LastDosyncindexDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private Serializable dosyncindex;
 
 	public LastDosyncindexDao() {

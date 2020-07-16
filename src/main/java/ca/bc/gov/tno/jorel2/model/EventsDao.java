@@ -28,6 +28,7 @@ import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 @Entity
 @Table(name = "EVENTS", schema = "TNO")
+@SuppressWarnings("unused")
 public class EventsDao extends Jorel2Root implements java.io.Serializable {
 
 	/**

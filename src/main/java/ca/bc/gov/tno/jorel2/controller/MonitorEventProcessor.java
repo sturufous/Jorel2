@@ -104,7 +104,6 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 		File dir = new File(currentEvent.getFileName());
 		
 		if ((nowHoursMinutes.compareTo(startHoursMinutes) >= 0) && dir.isDirectory()) {
-			String definitionName = currentEvent.getDefinitionName();
 
 			try {
 				int importFileHours = Integer.valueOf(config.getString("importFileHours"));
@@ -128,7 +127,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 					}
 				}
 			} catch (Exception ex) { 
-				decoratedError(INDENT2, "Processing import file list.", ex);
+				decoratedError(INDENT0, "Processing import file list.", ex);
 			}
 					
 			// If any files imported, then rebuild the index CONTENT_INDEX
@@ -227,6 +226,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @param f An abstract representation of the file to monitor.
 	 */
 	
+	@SuppressWarnings("unused")
 	private void verifyDownloadCompletion(File f) {
 		
 		long size = 0;
@@ -245,7 +245,11 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			}
 			// Wait a second
 			if (notSameSize) {
-				try { Thread.sleep(wait); } catch (InterruptedException e) { System.out.println("Thread was interrupted: " + e); }
+				try { 
+					Thread.sleep(wait); 
+				} catch (InterruptedException e) { 
+					decoratedError(INDENT0, "Thread was interrupted.", e); 
+				}
 			}
 		} // while (notSameSize)
 	}
@@ -396,7 +400,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 					moveFile(currentFile, fileForImport);
 				}
 			} catch (Exception e) {
-				decoratedError(INDENT2, "Importing news item file: " + fileForImport, e);
+				decoratedError(INDENT0, "Importing news item file: " + fileForImport, e);
 				success = false;
 			}
 		} else {
@@ -416,7 +420,6 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 */
 	private BufferedReader getBufferedReader(String fileForImport, String charEncoding) {
 		
-		FileInputStream bin = null;
 		BufferedReader in = null;
 
 		try {
@@ -429,7 +432,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				in = new BufferedReader(isr);
 			}
 		} catch (IOException e) {
-			decoratedError(INDENT2, "Opening file for import: " + fileForImport, e);
+			decoratedError(INDENT0, "Opening file for import: " + fileForImport, e);
 		}
 
 		return in;
@@ -448,7 +451,6 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Whether the file was imported successfully.
 	 */
 	
-	@SuppressWarnings("preview")
 	private boolean importFile(EventsDao currentEvent, String currentFile, String filePath, ImportDefinitionsDao importMeta, BufferedReader in, Session session) {
 		
 		boolean success = true;
@@ -471,7 +473,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 				session.getTransaction().commit();
 			}
 		} catch (Exception e) {
-			decoratedError(INDENT2, "Importing newspaper file.", e);
+			decoratedError(INDENT0, "Importing newspaper file.", e);
 		}
 		
 		// Create NewsItem here
@@ -507,7 +509,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 			// Rename the file just imported
 			if (!f.renameTo(newFile)) {
 				IOException e = new IOException("Unable to move file from export directory to: " + newFile);
-				decoratedError(INDENT2, "Moving newspaper file.", e);
+				decoratedError(INDENT0, "Moving newspaper file.", e);
 				success = false;
 			}
 		}

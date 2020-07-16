@@ -19,6 +19,7 @@ import org.hibernate.query.Query;
 @Table(name = "PREFERENCES", schema = "TNO")
 public class PreferencesDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private BigDecimal servletListeners;
 	private BigDecimal maxServletListeners;

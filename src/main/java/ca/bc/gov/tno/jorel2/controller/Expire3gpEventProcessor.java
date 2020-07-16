@@ -3,12 +3,8 @@ package ca.bc.gov.tno.jorel2.controller;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -20,13 +16,6 @@ import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2Instance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
-import ca.bc.gov.tno.jorel2.model.HnewsItemsDao;
-import ca.bc.gov.tno.jorel2.model.NewsItemImagesDao;
-import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
-import ca.bc.gov.tno.jorel2.model.PreferencesDao;
-import ca.bc.gov.tno.jorel2.model.SourcePaperImagesDao;
-import ca.bc.gov.tno.jorel2.model.SourceTypesDao;
-import ca.bc.gov.tno.jorel2.model.SourcesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
@@ -131,7 +120,6 @@ public class Expire3gpEventProcessor extends Jorel2Root implements EventProcesso
 						for (int i = 0; i < fileList.length; i++) {
 
 							delFile = new File(config.getString("binaryRoot") + sep + dirTargetName + sep + fileList[i]);
-							String shortName = delFile.getName();
 							int p = delFile.getName().indexOf(".");
 							if (p != -1) {
 								extension = delFile.getName().substring(p+1);
@@ -140,7 +128,7 @@ public class Expire3gpEventProcessor extends Jorel2Root implements EventProcesso
 								if (extension.equalsIgnoreCase("3gp") || extension.equalsIgnoreCase("mp3")) {
 									if (!delFile.delete()) {
 										IOException e = new IOException("Unable to delete file: " + delFile.getAbsolutePath());
-										decoratedError(INDENT2, "Expiring 3gp file.", e);
+										decoratedError(INDENT0, "Expiring 3gp file.", e);
 									} else {
 										deletedCounter++;
 									}
