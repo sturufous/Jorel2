@@ -123,22 +123,22 @@ public class AnalysisHandler extends Jorel2Root {
 		ResultSet rs=null;
 		Document doc=null;
 		try{
-			rs = DbUtil.runSql("select * from analysis where rsn = "+analysis_rsn+" and user_rsn = " + user_rsn, session);
+			rs = DbUtil.runSql("select * from analysis where rsn = " + analysis_rsn + " and user_rsn = " + user_rsn, session);
 			if(rs.next()){
-				name=rs.getString(3);
-				title=name;
+				name = rs.getString(3);
+				title = name;
 
 				// For some of the form data (most actually), the form data is
 				//    in an XML string
-				Clob cl=rs.getClob(8);
-				long l=cl.length();
-				if(l>0){
-					xml=cl.getSubString(1,(int)l); // scares me here too
+				Clob cl = rs.getClob(8);
+				long l = cl.length();
+				if(l > 0){
+					xml = cl.getSubString(1, (int) l); // scares me here too
 
 					// All data for the form must come from the XML data, so
 					// ... parse the XML
-					doc=parseXML(xml);
-					if(doc==null)
+					doc = parseXML(xml);
+					if(doc == null)
 						error=true;
 				}
 			}
@@ -155,34 +155,34 @@ public class AnalysisHandler extends Jorel2Root {
 		String report_rsn = "0";
 		String report_section_rsn = "0";
 
-		String searchType=getValueByTagName(doc,"a_searchtype");
+		String searchType = getValueByTagName(doc, "a_searchtype");
 		if (searchType.equalsIgnoreCase("report"))
 		{
-			String sum_by_section=getValueByTagName(doc,"b_sum_by_section");
+			String sum_by_section = getValueByTagName(doc,"b_sum_by_section");
 			if(sum_by_section.equalsIgnoreCase("1"))
 			{
 				summarize_by_section = true;
 			}
 		}
-		String a_report=getValueByTagName(doc,"a_report");
+		String a_report = getValueByTagName(doc,"a_report");
 		int p = a_report.indexOf(".");
 		if(p > 0) {
 			report_rsn = a_report.substring(0,p);
-			report_section_rsn = a_report.substring(p+1);
+			report_section_rsn = a_report.substring(p + 1);
 		}
 
 		/*
 		 * Start extracting data from the parsed XML document
 		 */
-		String reporttype=getValueByTagName(doc,"b_reporttype");
-		String over_time=getValueByTagName(doc,"b_over_time");
-		String sub_zero=getValueByTagName(doc,"b_sub_zero");
-		String line_width=getValueByTagName(doc,"c_line_width");
-		String prefer_pie=getValueByTagName(doc,"c_prefer_pie");
-		String prefer_3d=getValueByTagName(doc,"c_prefer_3d");
+		String reporttype = getValueByTagName(doc,"b_reporttype");
+		String over_time = getValueByTagName(doc,"b_over_time");
+		String sub_zero = getValueByTagName(doc,"b_sub_zero");
+		String line_width = getValueByTagName(doc,"c_line_width");
+		String prefer_pie = getValueByTagName(doc,"c_prefer_pie");
+		String prefer_3d = getValueByTagName(doc,"c_prefer_3d");
 
-		String tonePoolString=getValueByTagName(doc,"b_tonepool");
-		String tonePoolName=getTonePoolName(tonePoolString, session);
+		String tonePoolString = getValueByTagName(doc,"b_tonepool");
+		String tonePoolName = getTonePoolName(tonePoolString, session);
 
 		String yaxislabel = "";
 		String xaxislabel = "";
@@ -248,7 +248,7 @@ public class AnalysisHandler extends Jorel2Root {
 
 			summarize_by_section = false;
 		}
-		int xaxis_over_time_groupby=DAY;
+		int xaxis_over_time_groupby = DAY;
 
 		/* ------------------------------------------------------------------
 		 * Create a SQL command to perform the search
@@ -257,26 +257,26 @@ public class AnalysisHandler extends Jorel2Root {
 		 */
 		long s1 = (new java.util.Date()).getTime();
 
-		String mainSQL="";
-		String sqlDescription="";
+		String mainSQL = "";
+		String sqlDescription = "";
 		if(doc!=null){
-			Properties pm=new Properties();
+			Properties pm = new Properties();
 			mainSQL = createSQL(pm, doc, xaxislabel, yaxislabel, session);
-			if(mainSQL.length()<2)
-				error=true;
+			if(mainSQL.length() < 2)
+				error = true;
 
 			// For none time based grouping, sort it
 			if (xaxis_over_time.equalsIgnoreCase("")) {
 				if (xaxislabel.equalsIgnoreCase("Source")) {
-					mainSQL=mainSQL+" order by 3";
+					mainSQL = mainSQL+" order by 3";
 				} else if (xaxislabel.equalsIgnoreCase("Source Type")) {
-					mainSQL=mainSQL+" order by 4";
+					mainSQL = mainSQL+" order by 4";
 				} else if (xaxislabel.equalsIgnoreCase("Byline/Program")) {
-					mainSQL=mainSQL+" order by 5";
+					mainSQL = mainSQL+" order by 5";
 				}
 			}
 
-			sqlDescription=pm.getProperty("sqlDescription").replaceAll("~","\n");
+			sqlDescription = pm.getProperty("sqlDescription").replaceAll("~","\n");
 
 			/* ------------------------------------------------------------------
 			 * Get the max and min date for the query
@@ -341,13 +341,13 @@ public class AnalysisHandler extends Jorel2Root {
 		 */
 		try{
 			while(rs.next()){
-				long item=rs.getLong(1);
-				String itemDate=rs.getString(2);
+				long item = rs.getLong(1);
+				String itemDate = rs.getString(2);
 				String source=rs.getString(3);
-				String source_type=rs.getString(4);
+				String source_type = rs.getString(4);
 				String series=rs.getString(5);
-				if(series == null) series="";
-				String day_of_week=rs.getString(6);
+				if(series == null) series = "";
+				String day_of_week = rs.getString(6);
 				String itemTitle = rs.getString(7);
 				long number1 = rs.getLong(8);
 				long number2 = rs.getLong(9);
@@ -358,12 +358,12 @@ public class AnalysisHandler extends Jorel2Root {
 				// get the Section name
 				String section_name = getReportSection(item, report_rsn, session);
 
-				String graph_record = "\t"+itemDate+"\t"+itemTitle+"\t"+source_type+"\t"+source+"\t"+series;
+				String graph_record = "\t" + itemDate + "\t" + itemTitle + "\t" + source_type + "\t" + source + "\t" + series;
 				if(summarize_by_section)
 				{
-					graph_record = graph_record +"\t"+section_name;
+					graph_record = graph_record + "\t" + section_name;
 				}
-				graph_record = graph_record +"\n";
+				graph_record = graph_record + "\n";
 
 				String xaxis = "";
 				if(xaxislabel.equalsIgnoreCase("Source Type")) {							// ***** source type
@@ -439,10 +439,10 @@ public class AnalysisHandler extends Jorel2Root {
 								xaxis = section_name + "~" + xaxis;
 							}
 						}
-						x_sum(reportHashtable,countHashtable,xaxis,yaxislabel,value);
-						x_sum(reportCsvHashtable,countCsvHashtable,xaxis,yaxislabel,value); // for csv download
+						x_sum(reportHashtable, countHashtable, xaxis, yaxislabel, value);
+						x_sum(reportCsvHashtable, countCsvHashtable, xaxis, yaxislabel, value); // for csv download
 					} catch (Exception err) {
-						throw new Exception("x_sum() "+ err.toString());
+						throw new Exception("x_sum() " + err.toString());
 					}
 				} else {
 
@@ -466,9 +466,9 @@ public class AnalysisHandler extends Jorel2Root {
 				 * update the detail string used when a user down loads the tab delim file
 				 */
 				if(yaxislabel.startsWith("Tone") && (value == -99)) {
-					graph_record = "?"+graph_record;
+					graph_record = "?" + graph_record;
 				} else {
-					graph_record = ""+value+graph_record;
+					graph_record = "" + value + graph_record;
 				}
 				graph_detail = graph_detail + graph_record;				
 			}
@@ -477,8 +477,8 @@ public class AnalysisHandler extends Jorel2Root {
 			decoratedError(INDENT0, "draw3() generation error", err);
 			error=true;
 		}
-		try{ if(rs!=null) rs.close(); } catch(SQLException err){;}
-		if(error){
+		try{ if(rs != null) rs.close(); } catch(SQLException err) {;}
+		if(error) {
 			errorImage(name, session);
 			return;
 		}
@@ -492,17 +492,17 @@ public class AnalysisHandler extends Jorel2Root {
 		/* ------------------------------------------------------------------
 		 * Create the graph
 		 */
-		JFreeChart jfc=null;
+		JFreeChart jfc = null;
 		try{
 			boolean prefer3d = prefer_3d.equalsIgnoreCase("1");
 			if (xaxis_over_time.equalsIgnoreCase("")) {
 				if ((prefer_pie.equalsIgnoreCase("1")) && (!yaxislabel.startsWith("Tone"))) {
-					jfc = simple_pie_chart(title, xaxis, yaxislabel, prefer3d, reportHashtable,countHashtable);
+					jfc = simple_pie_chart(title, xaxis, yaxislabel, prefer3d, reportHashtable, countHashtable);
 				} else {
-					jfc = simple_bar_chart(title, xaxis, yaxislabel, prefer3d, reportHashtable,countHashtable);
+					jfc = simple_bar_chart(title, xaxis, yaxislabel, prefer3d, reportHashtable, countHashtable);
 				}
 			} else {
-				jfc = simple_time_series_chart(title, xaxis, yaxislabel, line_width, prefer3d, reportHashtable,countHashtable, xaxis_over_time_groupby );
+				jfc = simple_time_series_chart(title, xaxis, yaxislabel, line_width, prefer3d, reportHashtable, countHashtable, xaxis_over_time_groupby );
 			}			
 		} catch(Exception err){
 			errorImage("draw3() creation error: " + err.toString(), session);
@@ -514,7 +514,7 @@ public class AnalysisHandler extends Jorel2Root {
 			long s5 = (new java.util.Date()).getTime();
 			report_save_graph(jfc, set_auto_run_in_saved_analysis, session);
 			long s6 = (new java.util.Date()).getTime();
-			message = message+" 1: "+(s2-s1)+" 2:"+(s3-s2)+" 3:"+(s4-s3)+" 4:"+(s5-s4)+" 5:"+(s6-s5);
+			message = message + " 1: " + (s2-s1) + " 2:" + (s3-s2) + " 3:" + (s4-s3) + " 4:" + (s5-s4) + " 5:" + (s6-s5);
 		} catch(Exception err){
 			errorImage("draw3() save error: " + err.toString(), session);
 			decoratedError(INDENT0, "draw3() save error.", err);
@@ -999,9 +999,9 @@ public class AnalysisHandler extends Jorel2Root {
 		/*
 		 * Delete and then add the record for the newly created analysis
 		 */
-		ResultSet rs=null;
-		ResultSet rs2=null;
-		long rsn=0;
+		ResultSet rs = null;
+		ResultSet rs2 = null;
+		long rsn = 0;
 
 		try{
 			rs2 = DbUtil.runSql("select tno.next_rsn.nextval from dual", session);
@@ -1010,34 +1010,34 @@ public class AnalysisHandler extends Jorel2Root {
 
 			if (rsn != 0) {
 				report_delete_graph(false, session); // delete any previous saved graphs
-				DbUtil.runUpdateSql("insert into analysis_graphs (rsn, analysis_rsn, image_size, font_size, created, data, was_auto_run) values (" + rsn + "," + analysis_rsn + "," + image_size + "," + font_size+", current_date,empty_blob()," + ((set_auto_run) ? "1" : "0") + ")", session);
+				DbUtil.runUpdateSql("insert into analysis_graphs (rsn, analysis_rsn, image_size, font_size, created, data, was_auto_run) values (" + rsn + "," + analysis_rsn + "," + image_size + "," + font_size+", current_date, empty_blob()," + ((set_auto_run) ? "1" : "0") + ")", session);
 			}
-		} catch(Exception err){;}
-		try{ if(rs != null) rs.close(); } catch(SQLException err){;}
+		} catch(Exception err) {;}
+		try{ if(rs != null) rs.close(); } catch(SQLException err) {;}
 
 		if (rsn != 0) {
 			/*
 			 * Update the ANALYSIS_GRAPHS record with the new data
 			 */
 			try{
-				String sqlString="select data from analysis_graphs where rsn = "+rsn+" for update";
+				String sqlString = "select data from analysis_graphs where rsn = " + rsn + " for update";
 				rs = DbUtil.runSql(sqlString, session);
-				if(rs.next()){
+				if(rs.next()) {
 					long sa = (new java.util.Date()).getTime();
-					BLOB bl=(BLOB)rs.getBlob(1);
+					BLOB bl = (BLOB)rs.getBlob(1);
 					OutputStream outstream = bl.getBinaryOutputStream();
 
 					long sb = (new java.util.Date()).getTime();
-					BufferedImage buffer=jfc.createBufferedImage(image_size,image_size);
+					BufferedImage buffer = jfc.createBufferedImage(image_size, image_size);
 					long sc = (new java.util.Date()).getTime();
 
 					ImageIO.setUseCache(false);
 					ImageIO.write(buffer, "gif", outstream);
 					outstream.close();
 					long sd = (new java.util.Date()).getTime();
-					message = message+" [i: "+(sb-sa)+" ii: "+(sc-sb)+" iii: "+(sd-sc)+"] ";
+					message = message + " [i: " + (sb - sa) + " ii: " + (sc-sb) + " iii: " + (sd - sc) + "] ";
 				}
-			} catch(Exception err){;}
+			} catch(Exception err) {;}
 		}
 	}
 
@@ -1138,12 +1138,12 @@ public class AnalysisHandler extends Jorel2Root {
 		int seriescount=0;
 		int ic=0;
 
-		csv.append(name+"\n");
-		csv.append(yaxis+" vs "+xaxis+"\n");
-		csv.append(sqlDescription+"\n");
+		csv.append(name + "\n");
+		csv.append(yaxis + " vs " + xaxis + "\n");
+		csv.append(sqlDescription + "\n");
 
 		if (yaxis.startsWith("Tone") || yaxis.startsWith("Earned Media")) {
-			csv.append("Using tone pools: "+tonePoolName+"\n");
+			csv.append("Using tone pools: " + tonePoolName+"\n");
 		}
 
 		/* ------------------------------------------------------------------
@@ -1257,8 +1257,8 @@ public class AnalysisHandler extends Jorel2Root {
 				/*
 				 * Save the CSV file into a string buffer
 				 */
-				if(seriescount>0){
-					for(int nr=0;nr<=ic;nr++){
+				if(seriescount > 0){
+					for(int nr = 0; nr <= ic; nr++){
 						csv.append(csvp.getProperty(""+nr)+"\n");
 					}
 				}
@@ -1266,12 +1266,12 @@ public class AnalysisHandler extends Jorel2Root {
 		} catch(Exception err){
 			csv.append("Error creating report\n"+err.toString());}
 
-		if(graph_detail.length()>0){
-			csv.append(yaxis+"\n");
-			csv.append(graph_detail+"\n");
+		if(graph_detail.length() > 0){
+			csv.append(yaxis + "\n");
+			csv.append(graph_detail + "\n");
 		}
 		if(message.length()>0)
-			csv.append(message+"\n");
+			csv.append(message + "\n");
 
 		/*
 		 * Delete and then add the record for the newly created report
@@ -1287,7 +1287,7 @@ public class AnalysisHandler extends Jorel2Root {
 		 * Update the ANALYSISCSV record with the new data
 		 */
 		try{
-			String sqlString="select data from analysiscsv where rsn = "+analysis_rsn+" for update";
+			String sqlString="select data from analysiscsv where rsn = " + analysis_rsn + " for update";
 			rs = DbUtil.runSql(sqlString, session);
 			if(rs.next()){
 				CLOB cl=(CLOB)rs.getClob(1);
@@ -1482,25 +1482,25 @@ public class AnalysisHandler extends Jorel2Root {
 		 *  Check for a filter query first, the user is using one of their own filters
 		 */
 		if(searchType.equalsIgnoreCase("filter")){
-			String rsn=getValueByTagName(doc,"a_filter");
+			String rsn = getValueByTagName(doc, "a_filter");
 
-			String orderBy="";
-			String name="?";
+			String orderBy = "";
+			String name = "?";
 
-			Properties filterProperties=new Properties();
+			Properties filterProperties = new Properties();
 
 			DbUtil.filterSQLWhere(rsn, orderBy, current_period, filterProperties, session);
 
 			if(!filterProperties.isEmpty()){
-				where=filterProperties.getProperty("defaultWhere");
-				name=filterProperties.getProperty("name");
+				where = filterProperties.getProperty("defaultWhere");
+				name = filterProperties.getProperty("name");
 			}
 			where = StringUtil.replacement(where, "c.", "n.");
 
-			pm.put("sqlDescription","Filter: "+name);
+			pm.put("sqlDescription", "Filter: " + name);
 
 		} else if (searchType.equalsIgnoreCase("folder")) {
-			String rsn=getValueByTagName(doc,"a_folder");
+			String rsn = getValueByTagName(doc,"a_folder");
 
 			String name="?";
 
@@ -1574,12 +1574,12 @@ public class AnalysisHandler extends Jorel2Root {
 		}
 		pm.put("sql_where", where);
 
-		String tonePoolString=getValueByTagName(doc,"b_tonepool");
-		String tonePoolUserRSNs=getTonePool(tonePoolString, session);
+		String tonePoolString = getValueByTagName(doc, "b_tonepool");
+		String tonePoolUserRSNs = getTonePool(tonePoolString, session);
 
-		String tonesql="0";
+		String tonesql = "0";
 		if (yaxis.startsWith("Tone") || yaxis.startsWith("Earned Media")) { // only need tone for "tone" and "earned media" reports. Otherwise don't bother.
-			tonesql="select avg (tn.tone) from users_tones tn where tn.item_rsn = n.rsn";
+			tonesql = "select avg (tn.tone) from users_tones tn where tn.item_rsn = n.rsn";
 			if(tonePoolUserRSNs.length()>0) {
 				tonesql=tonesql+" and tn.user_rsn in ("+tonePoolUserRSNs+")";
 			}
@@ -1902,16 +1902,16 @@ public class AnalysisHandler extends Jorel2Root {
 
 	private String getReportSection(long rsn, String report_rsn, Session session){
 		String report_section = "";
-		ResultSet rs=null;
+		ResultSet rs = null;
 
-		String sql = "select name from report_sections s1, report_stories s2 where s1.rsn = s2.report_section_rsn and s2.item_rsn = "+rsn+" and s1.report_rsn = "+report_rsn;		
+		String sql = "select name from report_sections s1, report_stories s2 where s1.rsn = s2.report_section_rsn and s2.item_rsn = " + rsn + " and s1.report_rsn = " + report_rsn;		
 		try{
 			rs = DbUtil.runSql(sql, session);
 			if(rs.next()){
-				report_section=rs.getString(1);
+				report_section = rs.getString(1);
 			}
 		} catch(Exception err){;}
-		try{ if(rs!=null) rs.close(); } catch(SQLException err){;}
+		try{ if(rs != null) rs.close(); } catch(SQLException err){;}
 		return report_section;
 	}
 

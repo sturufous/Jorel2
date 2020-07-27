@@ -12,6 +12,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
+import javax.transaction.Transactional;
 
 import org.hibernate.Session;
 import org.hibernate.query.Query;
@@ -155,7 +156,8 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 	
 	/**
 	 * Get a published part by name. If there is no record in PUBLISHED_PARTS matching the name then return the default value
-	 * provided by the caller in the deflt parameter.
+	 * provided by the caller in the deflt parameter. Uses the Transactional annotation to ensure any open result sets on the
+	 * session's connection are not closed.
 	 *
 	 * @param name The name of the published part.
 	 * @param deflt The default value for the key <code>name</code>

@@ -47,9 +47,11 @@ public class DbUtil {
  
             	ResultSet rs = null;
             	
-                PreparedStatement cstmt = null;
-                cstmt = connection.prepareStatement(query);
-                rs = cstmt.executeQuery();
+                Statement stmt = null;
+                stmt = connection.createStatement();
+                connection.beginRequest();
+                rs = stmt.executeQuery(query);
+                connection.endRequest();
                 
                 return rs;
             }
@@ -60,7 +62,8 @@ public class DbUtil {
 
 	/**
 	 * Takes an sql statement and uses Hibernate's <code>doReturningWork()</code> method to execute the statement and
-	 * return a result set containing the list of rows matched by the statement.
+	 * return a result set containing the list of rows matched by the statement. Uses the TYPE_SCROLL_INSENSITIVE and
+	 * CONCUR_READ_ONLY flags when creating the Statement object.
 	 * 
 	 * @param query The query to run
 	 * @param session The current Hibernate presistence context
@@ -163,13 +166,13 @@ public class DbUtil {
 				buzz = rs.getFloat(11);
 				itemsforbuzz = rs.getLong(12);
 
-				if (text==null) text="";
-				if (orderBy==null) orderBy="";
+				if (text == null) text = "";
+				if (orderBy == null) orderBy = "";
 				if (orderBy == null) orderBy = defaultOrder; else orderBy = orderBy.trim();
 				if (folder_name == null) folder_name = "";
 			}
 		} catch (SQLException err) {;}
-		try{if(rs!=null) rs.close();} catch(SQLException err){;}
+		try{if(rs != null) rs.close();} catch(SQLException err){;}
 		if (defaultWhere.length() == 0) return;
 
 		// check where clause for SYSDATE in which case, no need to tweak the date
@@ -200,19 +203,19 @@ public class DbUtil {
 		} else {
 
 			// SYSDATE is in the where clause
-			dateClause = whereLC.substring(p+6);
+			dateClause = whereLC.substring(p + 6);
 			p = dateClause.indexOf(" and ");
 			if (p > 0) dateClause = dateClause.substring(0,p);
 
-			String period="";
-			for (int i=0; i<dateClause.length(); i++) {
+			String period = "";
+			for (int i = 0; i < dateClause.length(); i++) {
 				String x = dateClause.substring(i, i + 1);
 				if ((x.compareTo("0") >= 0) & (x.compareTo("9") <= 0)) period = period + x;
 			}
-			int d=0;
+			int d = 0;
 			try {
 				d = Integer.parseInt(period);
-			} catch (NumberFormatException err) { d=0; }
+			} catch (NumberFormatException err) {d = 0;}
 			if (d > currentPeriod) whichTables = "both";
 		}
 		p = whereLC.indexOf("#words#");

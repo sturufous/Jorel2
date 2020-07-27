@@ -67,9 +67,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 	 */
 	
 	public Optional<String> processEvents(String eventType, Session session) {
-    	
-		decoratedTrace(INDENT1, "Starting Autorun event processing");
-		
+    			
     	try {
     		if (instance.isExclusiveEventActive(EventType.AUTORUN)) {
     			decoratedTrace(INDENT1, "Autorun event processing already active. Skipping.");    			
@@ -111,8 +109,8 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		if ((nowHoursMinutes.compareTo(startHoursMinutes) >= 0)) {
 			String dateTrigger = AutoRunDao.getDateTrigger(session);
 
-			processFilters(dateTrigger, session);
-			processAnalysis(dateTrigger, session);
+			//processFilters(dateTrigger, session);
+			//processAnalysis(dateTrigger, session);
 			processReports(dateTrigger, session);
 		}
 	}
@@ -394,7 +392,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		 */
 		Vector<String> analysis_rsns = new Vector<String>(5,2);
 
-		String sql = "select a.rsn from tno.analysis a "+
+		String sql = "select a.rsn from tno.analysis a " +
 		"where a.auto_run = 1 and "+
 		"(a.last_run < to_date('" + dateTrigger + "','YYYY-MM-DD HH24:MI:SS') or a.last_run is null)";
 		try {
@@ -434,16 +432,16 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 
 					// For some of the form data (most actually), the form data is
 					//    in an XML string
-					Clob cl=rs.getClob(4);
-					long l=cl.length();
-					Document doc=null;
-					String xml="";
-					if(l>0){
-						xml=cl.getSubString(1,(int)l); // scares me here too
-						doc=parseXML(xml);
+					Clob cl = rs.getClob(4);
+					long l = cl.length();
+					Document doc = null;
+					String xml = "";
+					if(l > 0){
+						xml = cl.getSubString(1, (int) l); // scares me here too
+						doc = parseXML(xml);
 					}
 
-					String searchType=getValueByTagName(doc,"a_searchtype");
+					String searchType = getValueByTagName(doc, "a_searchtype");
 
 					/*
 					 * If it is an analysis by folder or filter folder, then we can auto-run
@@ -575,8 +573,8 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 			/* if(doesAlerts)
 			{
 				if(alertObject != null) alertTriggerCount = alertObject.checkTrigger( oracleConn.getOracleConnection() );
-			}
-			say( "Analysis " + a_rsn + " " + status);*/
+			} */
+			decoratedTrace(INDENT2, "Analysis " + aRsn + " " + status, session);
 		}
 		decoratedTrace(INDENT2, "AutoRun Analysis done!", session);
 	}
@@ -611,22 +609,22 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		boolean triggered = false;
 		String sql = "select r.rsn from tno.reports r where r.auto_run = 1 and "+
 		"(r.freq_daily = 1 or "+
-		"(r.freq_weekly = 1 and freq_weekly_day = "+day_of_week+")"+
-		") and "+
-		"to_char(r."+runTimeField+",'HH24:MI') <> '00:00' and "+
-		"to_char(r."+runTimeField+",'HH24:MI') < to_char(sysdate,'HH24:MI') and "+
+		"(r.freq_weekly = 1 and freq_weekly_day = " + day_of_week+")"+
+		") and " +
+		"to_char(r." + runTimeField + ",'HH24:MI') <> '00:00' and " +
+		"to_char(r." + runTimeField+",'HH24:MI') < to_char(sysdate,'HH24:MI') and " +
 		"(to_char(r.last_run,'YYYY-MM-DD') < substr('" + dateTrigger + "',1,10) or r.last_run is null)";
 		try {
 			decoratedTrace(INDENT2, "Reports sql... " + sql, session);
 			rs = DbUtil.runSql(sql, session);
 			while (rs.next())
 			{
-				if(! triggered)
+				report_rsns.addElement(Long.toString(rs.getLong(1)));
+				if(!triggered)
 				{
 					triggered = true;
-					decoratedTrace(INDENT2, "Auto Run Report triggered! " + sql, session);
+					decoratedTrace(INDENT2, "Auto Run Report triggered! " + sql);
 				}
-				report_rsns.addElement( Long.toString( rs.getLong(1) ));
 			}
 		} catch (Exception e) {
 			decoratedError(INDENT0, "Report collect RSNs Error! " + e.toString(), e);
@@ -1332,7 +1330,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 
 		String w = queryText;
-		boolean isQueryWords=false;
+		boolean isQueryWords = false;
 		if (w != null) {
 			if (hilite) isQueryWords=true;
 		}
@@ -1347,6 +1345,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 
 			progress = "b";
 
+			session.beginTransaction();
 			rs = DbUtil.runSql(newssql, session);
 			if (rs.next()) {
 				long rsn = rs.getLong(1);
@@ -1400,7 +1399,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				headline = title.trim();
 				if (prefCloakByline) {
 					if (!string6.equals("")) {
-						headline = headline + " - "+string6;
+						headline = headline + " - " + string6;
 					}
 				}
 				if (pref3) headline = headline + " - " + source;
@@ -1506,6 +1505,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 			} else {
 				itemFound = false;
 			}
+			session.getTransaction().commit();
 			rs.close();
 
 			progress = "g";
