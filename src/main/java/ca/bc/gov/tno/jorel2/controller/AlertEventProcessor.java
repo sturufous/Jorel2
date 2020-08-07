@@ -262,7 +262,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 									} catch (Exception ex) { ; }
 
 									if (!commonCall.equals("")) {
-										commonCall = "("+commonCall+")";
+										commonCall = "(" + commonCall + ")";
 									}
 									
 									if ((type.equals("Transcript")) | (type.equals("Scrum")) | (type.equals("CP News")) | (type.equals("Internet")) | (type.equals("TV News")) | 
@@ -616,7 +616,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 					// Send the emails
 					String msg = "";
 					if(! stopAlertProcessing) {
-						for (int ii=0; ii<myEmailVector.size(); ii++) {
+						for (int ii=0; ii < myEmailVector.size(); ii++) {
 							EmailMessage em = (EmailMessage) myEmailVector.elementAt(ii);
 							if (em != null) {
 								msg = em.send(session);
@@ -642,7 +642,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 				
 				//Update news items so they don't get picked up on the next pass
 				if(!stopAlertProcessing) {
-					decoratedTrace(INDENT0, "Finished Processing Alerts. " + rsnList + " [" + rsnAlertedList + "]");
+					decoratedTrace(INDENT2, "Finished Processing Alerts. " + rsnList + " [" + rsnAlertedList + "]");
 					NewsItemsDao.clearAlertNewsItems(rsnAlertedList, false, session);
 					NewsItemsDao.clearAlertNewsItems(rsnList, true, session);
 					checkForTriggerInsertion(rsnList, session);

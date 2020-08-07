@@ -14,6 +14,7 @@ import ca.bc.gov.tno.jorel2.model.EventActivityLogDao;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.hibernate.annotations.NamedQueries;
 
 @NamedQueries({
@@ -73,7 +74,7 @@ public class Jorel2Root {
 		
 		DURATION, CHANNELWATCHER, INFLUENCERSCORE, TRENDINGSCRAPER, SMAMONITOR, SMAPOLLING, FTP, SCHEDULE, ARCHIVER, USER, 
 		HTML, TRIGGER, PLSQL, MONITOR, LAUNCH, SYNC, CLEANUP, EXPIRE, LOADBINARY, CLEANBINARYROOT, ALERT, CONVERTER, EXPIRE3GP,
-		PAGEWATCHER, RSS, NEWRSS, CLEANLOCALBINARYROOT, CAPTURE, SHELLCOMMAND, AUTORUN, BUZZSUMMARY, SYNDICATION
+		PAGEWATCHER, RSS, NEWRSS, CLEANLOCALBINARYROOT, CAPTURE, SHELLCOMMAND, AUTORUN, BUZZSUMMARY, SYNDICATION, LDAP
 	}
 	
 	public enum WordType {
@@ -105,9 +106,18 @@ public class Jorel2Root {
 	protected static void decoratedTrace(String indent, String message, Session session) {
 		
 		EventActivityLogDao logEntry = new EventActivityLogDao(null, rootInstanceName, new Date(), message);
-		session.beginTransaction();
+		boolean transactionActive = session.getTransaction().isActive();
+		
+		if (!transactionActive) {
+			session.beginTransaction();
+		}
+		
 		session.persist(logEntry);
-		session.getTransaction().commit();
+		
+		if (!transactionActive) {
+			session.getTransaction().commit();
+		}
+		
 		decoratedTrace(indent, message);
 	}
 	

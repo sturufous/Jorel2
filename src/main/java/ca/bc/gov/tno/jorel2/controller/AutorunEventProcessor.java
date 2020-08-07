@@ -81,7 +81,10 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		        	if (entityPair[0] instanceof EventsDao) {
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
 		        		
+		        		DbUtil.updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
 		        		autorunEvent(currentEvent, session);
+		        		AutoRunDao.deleteAllRecords(session);
+		        		DbUtil.updateLastFtpRun("idle", currentEvent, session);
 		        	}
 		        }
 		        
@@ -90,7 +93,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
     	}
     	catch (Exception e) {
     		instance.removeExclusiveEvent(EventType.AUTORUN);
-    		logger.error("Processing shell command entries.", e);
+    		logger.error("Processing Autorun entries.", e);
     	}
 		
 		decoratedTrace(INDENT1, "Completed Autorun event processing");
@@ -109,9 +112,11 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		if ((nowHoursMinutes.compareTo(startHoursMinutes) >= 0)) {
 			String dateTrigger = AutoRunDao.getDateTrigger(session);
 
-			//processFilters(dateTrigger, session);
-			//processAnalysis(dateTrigger, session);
-			processReports(dateTrigger, session);
+			if (!dateTrigger.isEmpty()) {
+				processFilters(dateTrigger, session);
+				processAnalysis(dateTrigger, session);
+				processReports(dateTrigger, session);
+			}
 		}
 	}
 	
@@ -259,7 +264,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					{
 						if(daysPeriod > 0)
 						{
-							dateWhere = "n.item_date >= to_date(sysdate-" + Long.toString(daysPeriod)+") ";
+							dateWhere = "n.item_date >= to_date(sysdate-" + Long.toString(daysPeriod) + ") ";
 						}
 						else
 						{
@@ -276,8 +281,8 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					 * 		specified for this folder
 					 */
 					String query = "insert into folder_item ";
-					query += "select tno.next_rsn.nextval,"+frsn+",n.rsn,1 from tno.news_items n "+
-					"where "+ dateWhere+defaultWhere +
+					query += "select tno.next_rsn.nextval," + frsn + ",n.rsn,1 from tno.news_items n " +
+					"where " + dateWhere + defaultWhere +
 					" and n.rsn not in (select f.item_rsn from folder_item f where f.folder_rsn = " + Long.toString(frsn) + ")";
 					try {
 						int c = DbUtil.runUpdateSql(query, session);
@@ -289,7 +294,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					if(historyRun)
 					{
 						query = "insert into folder_item ";
-						query += "select tno.next_rsn.nextval,"+frsn+",n.rsn,1 from tno.hnews_items n "+
+						query += "select tno.next_rsn.nextval," + frsn + ",n.rsn,1 from tno.hnews_items n " +
 						"where " + dateWhere+defaultWhere +
 						" and n.rsn not in (select f.item_rsn from folder_item f where f.folder_rsn = " + Long.toString(frsn) + ")";
 						try {
@@ -733,7 +738,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							String msg= "";
 							try
 							{
-								String sqlUpdate = "update tno.report_stories set sort_position = ?1 where rsn = ?2";
+								String sqlUpdate = "update tno.report_stories set sort_position = aaa where rsn = bbb";
 
 								ReportHandler report = new ReportHandler(rsn, userRsn, userEmail, viewTone, tpu, mailHost, httpHost, currentPeriod, avHost);
 								String sortMsg = report.sortStories(prefSort, Long.toString(rsn), sqlUpdate, session);
@@ -815,6 +820,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		ResultSet rs = null;
 		String sql = "select s.rsn,s.filter_rsn,s.story_line_rsn,s.folder_rsn from tno.report_sections s where s.report_rsn = " + reportRsn + " order by s.sort_position";
 		try {
+			session.beginTransaction();
 			rs = DbUtil.runSql(sql, session);
 			while (rs.next())
 			{
@@ -827,7 +833,9 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				if(folderRsn > 0) reportsByFolder(reportRsn, sectionRsn, folderRsn, autoRunDups, autoRunDupsSection, lastRun, reportGroup, showCP, showScrums, showSocialMedia, autoBcUpdate, session);
 				if(storylineRsn > 0) reportsByStoryline(reportRsn, sectionRsn, storylineRsn, autoRunDups, autoRunDupsSection, lastRun, reportGroup, showCP, showScrums, showSocialMedia, autoBcUpdate, session);
 			}
+			session.getTransaction().commit();
 		} catch (Exception e) {
+			session.getTransaction().rollback();
 			decoratedError(INDENT0, "Report repopulate " + reportRsn + " Error! ", e);
 		}
 		try { if (rs != null) rs.close(); } catch (SQLException err) {;}
@@ -1345,7 +1353,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 
 			progress = "b";
 
-			session.beginTransaction();
 			rs = DbUtil.runSql(newssql, session);
 			if (rs.next()) {
 				long rsn = rs.getLong(1);
@@ -1407,7 +1414,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				if (pref8) headline = headline + " - " + DateUtil.searchDate(itemDate);
 				if (prefAddFrontpage) {
 					if (string3.equalsIgnoreCase("a01")) {
-						headline = "[FRONT PAGE] "+headline;
+						headline = "[FRONT PAGE] " + headline;
 					}
 				}
 
@@ -1505,7 +1512,6 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 			} else {
 				itemFound = false;
 			}
-			session.getTransaction().commit();
 			rs.close();
 
 			progress = "g";
@@ -1522,28 +1528,11 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				stories.setItemRsn(BigDecimal.valueOf(itemRsn));
 				stories.setDateTime(BigDecimal.valueOf(unixTime));
 				stories.setSourceTypeRsn(BigDecimal.valueOf(Long.parseLong(typeRsn)));
+				stories.setContent(StringUtil.stringToClob(content));
 				
-				session.beginTransaction();
 				session.persist(stories);
-				session.getTransaction().commit();
 
 				progress = "h";
-
-				/*sqlString = "select content from tno.report_stories where rsn = ? for update";
-				ps = oracleConn.c.prepareStatement(sqlString);
-				ps.setLong(1,r);
-				rs = ps.executeQuery();
-				if (rs.next()) {
-					CLOB cl = (CLOB)rs.getClob(1);
-					Writer cos = cl.getCharacterOutputStream();
-					cos.write(content);
-					cos.close();
-				}
-				rs.close();
-				ps.close();
-				if (storyrsn.length() < 1) storyrsn = Long.toString(r);
-
-				progress = "i";*/
 			}
 		} catch (Exception err) { 
 			decoratedError(INDENT0, "Reports add item to report error: " + progress, err); 

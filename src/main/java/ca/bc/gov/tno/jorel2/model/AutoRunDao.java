@@ -70,6 +70,7 @@ public class AutoRunDao implements java.io.Serializable {
 		AutoRunDao autoRun = new AutoRunDao(BigDecimal.valueOf(1L), new Date());
 		
 		try {
+			AutoRunDao.deleteAllRecords(session);
 			session.beginTransaction();
 			session.persist(autoRun);
 			session.getTransaction().commit();
@@ -78,6 +79,21 @@ public class AutoRunDao implements java.io.Serializable {
 		}
 	}
 	
+	/**
+	 * Delete all records in the AUTO_RUN table.
+	 * 
+	 * @param session The current Hibernate persistence context.
+	 */
+	public static void deleteAllRecords(Session session) {
+		
+		String sqlStmt = "delete from AutoRunDao";
+		
+		session.beginTransaction();
+		Query<?> syncQuery = session.createQuery(sqlStmt);
+		syncQuery.executeUpdate();
+		session.getTransaction().commit();
+	}
+
 	/**
 	 * Get the date trigger date and time from the AUTO_RUN table. 
 	 * 

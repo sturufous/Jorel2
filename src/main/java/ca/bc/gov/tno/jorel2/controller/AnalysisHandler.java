@@ -55,13 +55,14 @@ import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 @SuppressWarnings({"deprecation", "unused"})
 public class AnalysisHandler extends Jorel2Root {
+	
 	// Time based constants
-	private static final int DAY=1;
-	private static final int TRIDAY=2;
-	private static final int WEEK=3;
-	private static final int BIWEEK=4;
-	private static final int MONTH=5;
-	private static final int YEAR=6;
+	private static final int DAY = 1;
+	private static final int TRIDAY = 2;
+	private static final int WEEK = 3;
+	private static final int BIWEEK = 4;
+	private static final int MONTH = 5;
+	private static final int YEAR = 6;
 
 	private String message="";
 	private String graph_detail="";
@@ -105,23 +106,23 @@ public class AnalysisHandler extends Jorel2Root {
 			}
 		}
 
-		boolean error=false;
+		boolean error = false;
 		String min_date = "";
 		String max_date = "";
-		Calendar min_cal_date=null;
-		Calendar max_cal_date=null;
+		Calendar min_cal_date = null;
+		Calendar max_cal_date = null;
 		boolean summarize_by_section = false;
 
 		// Initialize the fields from the analysis table
-		String name="";
-		String title="";
-		String xml="";
+		String name = "";
+		String title = "";
+		String xml = "";
 
 		/* ------------------------------------------------------------------
 		 * Get the media analysis report record to be created
 		 */
-		ResultSet rs=null;
-		Document doc=null;
+		ResultSet rs = null;
+		Document doc = null;
 		try{
 			rs = DbUtil.runSql("select * from analysis where rsn = " + analysis_rsn + " and user_rsn = " + user_rsn, session);
 			if(rs.next()){
@@ -139,11 +140,11 @@ public class AnalysisHandler extends Jorel2Root {
 					// ... parse the XML
 					doc = parseXML(xml);
 					if(doc == null)
-						error=true;
+						error = true;
 				}
 			}
 		} catch(Exception err){ error=true;}
-		try{ if(rs!=null) rs.close(); } catch(SQLException err){;}
+		try{ if(rs != null) rs.close(); } catch(SQLException err){;}
 		if(error){
 			errorImage("Parse Error!", session);
 			return;
@@ -340,7 +341,7 @@ public class AnalysisHandler extends Jorel2Root {
 		 * Loop thru all the news item records
 		 */
 		try{
-			while(rs.next()){
+			while(rs.next()) {
 				long item = rs.getLong(1);
 				String itemDate = rs.getString(2);
 				String source=rs.getString(3);
@@ -1055,7 +1056,7 @@ public class AnalysisHandler extends Jorel2Root {
 	}
 
 	public boolean report_auto_run(Session session) {
-		ResultSet rs=null;
+		ResultSet rs = null;
 		boolean was_auto_run = false;
 		try{
 			String sqlString="select rsn from analysis_graphs where analysis_rsn = " + analysis_rsn + " and image_size = " + image_size + " and font_size = " + font_size + " and was_auto_run = 1";

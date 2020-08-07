@@ -89,9 +89,13 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private AutorunEventProcessor autorunEventProcessor;
 	
-	/** Autorun Event processor service */
+	/** Alert Event processor service */
 	@Inject
     private AlertEventProcessor alertEventProcessor;
+	
+	/** Ldap Event processor service */
+	@Inject
+    private LdapEventProcessor ldapEventProcessor;
 	
 	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
@@ -185,6 +189,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case EXPIRE3GP -> expire3gpEventProcessor.processEvents(eventTypeName, session);
 	        		case AUTORUN -> autorunEventProcessor.processEvents(eventTypeName, session);
 	        		case ALERT -> alertEventProcessor.processEvents(eventTypeName, session);
+	        		case LDAP -> ldapEventProcessor.processEvents(eventTypeName, session);
 			        default -> Optional.empty();
 	        	};
 	        }

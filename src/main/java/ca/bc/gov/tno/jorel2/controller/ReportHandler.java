@@ -122,14 +122,14 @@ public class ReportHandler {
 			}
 			rs.close();
 		} catch (Exception mex) {
-			ok=false;
+			ok = false;
 			usermsg = "Exception: "+mex.toString();
 		}
 
 		if (ok) {
 			
-			Random rnd=new Random();
-			String randomStr=Integer.toString(Math.abs(rnd.nextInt()));
+			Random rnd = new Random();
+			String randomStr = Integer.toString(Math.abs(rnd.nextInt()));
 			
 			// format the report and save it later for use on a blackberry
 			format(sb, pagebreak, false, randomStr, hSession);
@@ -157,7 +157,7 @@ public class ReportHandler {
 					StringTokenizer st1 = new StringTokenizer( to, "\n" );
 					int tokens = st1.countTokens();
 					InternetAddress[] address = new InternetAddress[tokens];
-					for (int j=0; j<tokens; j++) {
+					for (int j = 0; j<tokens; j++) {
 						String emailAddress = st1.nextToken();
 						address[j] = new InternetAddress(emailAddress);
 					}
@@ -210,10 +210,10 @@ public class ReportHandler {
 							if ( !(tempdir.endsWith("/") || tempdir.endsWith("\\")) )
 								   tempdir = tempdir + System.getProperty("file.separator");
 	
-							DataSource fds = new FileDataSource(tempdir+analysis_rsn+"_"+image_size+"_"+font_size+"_"+randomStr+".gif");
+							DataSource fds = new FileDataSource(tempdir + analysis_rsn + "_" + image_size + "_" + font_size + "_" + randomStr + ".gif");
 							mbp2.setDataHandler(new DataHandler(fds));
-							mbp2.setHeader("Content-ID","<analysis_"+analysis_rsn+"_"+image_size+"_"+font_size+"_"+randomStr+">");
-							mbp2.setHeader("Content-Disposition", "attachment; filename=analysis"+count_suffix+".gif");
+							mbp2.setHeader("Content-ID","<analysis_" + analysis_rsn + "_" + image_size + "_" + font_size + "_" + randomStr + ">");
+							mbp2.setHeader("Content-Disposition", "attachment; filename=analysis" + count_suffix + ".gif");
 							mp.addBodyPart(mbp2);
 							
 						}
@@ -492,11 +492,11 @@ public class ReportHandler {
 				}
 
 			} else {
-				sb.append("Report "+rsn+" not found!");
+				sb.append("Report " + rsn + " not found!");
 				ok = false;
 			}
 		} catch (Exception err) {
-			sb.append("Report error "+err.toString()+"<br>"+select);
+			sb.append("Report error " + err.toString() + "<br>" + select);
 			ok = false;
 		}
 		try { if (rs != null) rs.close(); } catch (SQLException err) {;}
@@ -513,7 +513,7 @@ public class ReportHandler {
 			
 			// ====== FRONT PAGE IMAGES
 			if (pref_frontpage_section) {
-				ResultSet fp_rs=null;
+				ResultSet fp_rs = null;
 				StringBuilder imgs = new StringBuilder();
 				try {
 					String sql = "select * from source_paper_images i, sources s where i.source_rsn = s.rsn and i.paper_date = to_date(sysdate) order by s.rsn";
@@ -525,7 +525,7 @@ public class ReportHandler {
 					sb.append("Front Page Images format error " + err.toString() + "<br>");
 				}
 
-				if (imgs.length()>0) {
+				if (imgs.length() > 0) {
 					StringBuilder frontPagesSection = new StringBuilder(getPublishedPartByName("V9REPORTFRONTPAGES", "", hSession));
 					StringUtil.replace(frontPagesSection,"<**images**>",imgs.toString());
 					if (pageBreak) ssb.append(newPage);
@@ -540,7 +540,7 @@ public class ReportHandler {
 			
 			// 1. top BC
 			if (pref_top_bc) {
-				ResultSet sm_rs=null;
+				ResultSet sm_rs = null;
 				StringBuilder sm = new StringBuilder();
 				Calendar cal = Calendar.getInstance();
 				
@@ -576,7 +576,7 @@ public class ReportHandler {
 					sm = new StringBuilder(getPublishedPartByName(("_AUTO_TRENDING_BC"), "", hSession));
 				}
 
-				if (sm.length()>0) {
+				if (sm.length() > 0) {
 					StringBuilder topBCSection = new StringBuilder(getPublishedPartByName("V9REPORTTOPBC", "", hSession));
 					StringUtil.replace(topBCSection,"<**data**>", sm.toString());
 					smsb.append(topBCSection);
@@ -597,7 +597,7 @@ public class ReportHandler {
 			
 			// 3. most shared
 			if (pref_most_shared) {
-				ResultSet sm_rs=null;
+				ResultSet sm_rs = null;
 				StringBuilder sm = new StringBuilder();
 				try {
 					String sql = "select * from " +
@@ -614,7 +614,7 @@ public class ReportHandler {
 					sb.append("Social Media MostShared format error "+err.toString()+"<br>");
 				}
 
-				if (sm.length()>0) {
+				if (sm.length() > 0) {
 					StringBuilder mostSharedSection = new StringBuilder(getPublishedPartByName("V9REPORTMOSTSHARED", "", hSession));
 					StringUtil.replace(mostSharedSection,"<**data**>", sm.toString());
 					smsb.append(mostSharedSection);
@@ -623,7 +623,7 @@ public class ReportHandler {
 			}
 			
 			// wrap social media in a section
-			if (smsb.length()>0) {
+			if (smsb.length() > 0) {
 				StringBuilder sm = new StringBuilder(getPublishedPartByName("V9REPORTSOCIALMEDIA", "", hSession));
 				StringUtil.replace(sm,"<**data**>",smsb.toString());
 				if (pageBreak) ssb.append(newPage);
@@ -648,7 +648,7 @@ public class ReportHandler {
 					}
 
 					// social media
-					if (smsb.length()>0) {
+					if (smsb.length() > 0) {
 						StringBuilder f = new StringBuilder(storyFormatD);
 						StringUtil.replace(f, "<**headline**>", "Social media" ) ;
 						StringUtil.replace(f, "<**section_name**>", "" ) ;
@@ -753,10 +753,10 @@ public class ReportHandler {
 					//" where s.rsn(+) = h.report_section_rsn and h.report_rsn = "+rsn+
 					//" order by s.sort_position, s.name, h.sort_position, h.headline";
 
-					select = "select s.*,h.*, st.tab "+
-					"from report_stories h, report_sections s, source_types st "+
-					"where h.report_rsn = "+rsn+" and h.report_section_rsn = s.rsn(+) and h.source_type_rsn = st.rsn(+) "+
-					"order by "+primarySort+"h.sort_position";
+					select = "select s.*,h.*, st.tab " +
+					"from report_stories h, report_sections s, source_types st " +
+					"where h.report_rsn = " + rsn + " and h.report_section_rsn = s.rsn(+) and h.source_type_rsn = st.rsn(+) " +
+					"order by " + primarySort + "h.sort_position";
 
 					String previous_content = "";
 					String previousStoryrsn = "~";
@@ -979,10 +979,12 @@ public class ReportHandler {
 						long storylinersn = rs.getLong(1);
 						if(listRSNs.contains(storylinersn))
 						{
+							String substituted = updateSql;
+							
 							// update this story with a sort position
-							updateSql = updateSql.replaceAll("?1", Long.toString(last_sort + sort_inc));
-							updateSql = updateSql.replaceAll("?2", Long.toBinaryString(storylinersn));
-							DbUtil.runUpdateSql(updateSql, hSession);
+							substituted = substituted.replaceAll("aaa", Long.toString(last_sort + sort_inc));
+							substituted = substituted.replaceAll("bbb", Long.toString(storylinersn));
+							DbUtil.runUpdateSql(substituted, hSession);
 							
 							sort_inc++;
 						}
@@ -1018,10 +1020,12 @@ public class ReportHandler {
 						long storylinersn = rs.getLong(1);
 						if(listRSNs.contains(storylinersn))
 						{
+							String substituted = updateSql;
+							
 							// update this story with a sort position
-							updateSql = updateSql.replaceAll("?1", Long.toString(last_sort + sort_inc));
-							updateSql = updateSql.replaceAll("?2", Long.toBinaryString(storylinersn));
-							DbUtil.runUpdateSql(updateSql, hSession);
+							substituted = substituted.replaceAll("aaa", Long.toString(last_sort + sort_inc));
+							substituted = substituted.replaceAll("bbb", Long.toString(storylinersn));
+							DbUtil.runUpdateSql(substituted, hSession);
 							
 							sort_inc++;
 						}
@@ -1083,10 +1087,12 @@ public class ReportHandler {
 						 */
 						if(listRSNs.contains(storylinersn))
 						{
+							String substituted = updateSql;
+							
 							// update this story with a sort position
-							updateSql = updateSql.replaceAll("?1", Long.toString(last_sort + sort_inc));
-							updateSql = updateSql.replaceAll("?2", Long.toBinaryString(storylinersn));
-							DbUtil.runUpdateSql(updateSql, hSession);
+							substituted = substituted.replaceAll("aaa", Long.toString(last_sort + sort_inc));
+							substituted = substituted.replaceAll("bbb", Long.toString(storylinersn));
+							DbUtil.runUpdateSql(substituted, hSession);
 
 							sort_inc++;
 							
