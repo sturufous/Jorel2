@@ -69,6 +69,8 @@ public class Jorel2Root {
     protected static final String V61TOS_SCRUM_DFLT = "This e-mail is a service provided by the Public Affairs Bureau and is only intended for the original addressee.";
     
     protected static String rootInstanceName = "";
+    protected static final int LDAP_PAGE_SIZE = 500;
+    protected static final String LDAP_SERVER_URL = "ldap://umbrella.idir.bcgov:389";
     
     public enum EventType {
 		

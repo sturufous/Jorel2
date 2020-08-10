@@ -88,5 +88,4 @@ public class AlertTriggerDao implements java.io.Serializable {
 		syncQuery.executeUpdate();
 		session.getTransaction().commit();
 	}
-
 }
