@@ -284,7 +284,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	public void addHttpFailure(String message) {
 		
-		httpFailures.put(DateUtil.getTimeNow(), message);
+		httpFailures.put(DateUtil.getLoggerKeyDateTimeNow(), message);
 	}
 	
 	/**
@@ -596,7 +596,7 @@ public class Jorel2Instance extends Jorel2Root {
 	 */
 	public void addDatabaseInterruption() {
 		
-		String interruptionTime = DateUtil.getTimeNow();
+		String interruptionTime = DateUtil.getLoggerKeyDateTimeNow();
 		databaseInterruptions.put(interruptionTime, "In progress");
 		lastInterruptionKey = interruptionTime;
 	}

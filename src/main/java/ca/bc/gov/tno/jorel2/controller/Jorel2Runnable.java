@@ -23,6 +23,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.

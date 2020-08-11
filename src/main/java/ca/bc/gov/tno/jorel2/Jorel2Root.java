@@ -60,6 +60,9 @@ public class Jorel2Root {
     protected static final int URL_CONNECTION_TIMEOUT = 10000;
     protected static final BigDecimal PREFERENCES_RSN = BigDecimal.valueOf(0L);
     protected static final String GANDM_DEFINITION_ID_STRING = "Globe and Mail XML";
+    protected static final String LOCALFILE_SOURCE = "localfile";
+    protected static final String LDAP_SOURCE = "ldap";
+
     
     protected static final String TOS_MSG_DFLT = "This e-mail is a service provided by the Public Affairs Bureau and is only intended for the original addressee. All content is the copyrighted property of a third party creator of the material. Copying, retransmitting, redistributing, selling, licensing, or emailing the material to any third party or any employee of the Province who is not authorized to access the material is prohibited.";
     protected static final String V35ALERTSEMAIL_DFLT = "<html>The Following (<**num**>) story(s) were added to TNO: <br><**story_links**></html>";
@@ -70,7 +73,7 @@ public class Jorel2Root {
     
     protected static String rootInstanceName = "";
     protected static final int LDAP_PAGE_SIZE = 500;
-    protected static final String LDAP_SERVER_URL = "ldap://umbrella.idir.bcgov:389";
+    protected static final String LDAP_SERVER_URL = "ldap://idir.bcgov:389";
     
     public enum EventType {
 		

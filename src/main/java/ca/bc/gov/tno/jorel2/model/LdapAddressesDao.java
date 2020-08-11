@@ -20,19 +20,22 @@ import org.hibernate.query.Query;
 @Table(name = "LDAP_ADDRESSES", schema = "TNO")
 public class LdapAddressesDao implements java.io.Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String displayName;
 	private String displayUppername;
 	private String emailAddress;
+	private String source;
 
 	public LdapAddressesDao() {
 	}
 
-	public LdapAddressesDao(BigDecimal rsn, String displayName, String displayUppername, String emailAddress) {
+	public LdapAddressesDao(BigDecimal rsn, String displayName, String displayUppername, String emailAddress, String source) {
 		this.rsn = rsn;
 		this.displayName = displayName;
 		this.displayUppername = displayUppername;
 		this.emailAddress = emailAddress;
+		this.source = source;
 	}
 
 	@Id
@@ -70,6 +73,15 @@ public class LdapAddressesDao implements java.io.Serializable {
 		return this.emailAddress;
 	}
 
+	@Column(name = "SOURCE", nullable = false, length = 10)
+	public String getSource() {
+		return this.source;
+	}
+	
+	public void setSource(String source) {
+		this.source = source;
+	}
+
 	public void setEmailAddress(String emailAddress) {
 		this.emailAddress = emailAddress;
 	}
@@ -79,13 +91,14 @@ public class LdapAddressesDao implements java.io.Serializable {
 	 * 
 	 * @param session The current Hibernate persistence context.
 	 */
-	public static void deleteAllRecords(Session session) {
+	public static void deleteAllRecords(String source, Session session) {
 		
-		String sqlStmt = "delete from LdapAddressesDao";
+		String sqlStmt = "delete from LdapAddressesDao where source=:source";
 		
 		session.beginTransaction();
-		Query<?> syncQuery = session.createQuery(sqlStmt);
-		syncQuery.executeUpdate();
+		Query<?> deleteQuery = session.createQuery(sqlStmt);
+		deleteQuery.setParameter("source", source);
+		deleteQuery.executeUpdate();
 		session.getTransaction().commit();
 	}
 }
