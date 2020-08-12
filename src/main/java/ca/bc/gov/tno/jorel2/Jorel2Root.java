@@ -1,7 +1,6 @@
 package ca.bc.gov.tno.jorel2;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,7 +13,6 @@ import ca.bc.gov.tno.jorel2.model.EventActivityLogDao;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
 
 import org.hibernate.Session;
-import org.hibernate.Transaction;
 import org.hibernate.annotations.NamedQueries;
 
 @NamedQueries({
@@ -96,7 +94,7 @@ public class Jorel2Root {
 	}
 	
     /** Map used to record the start times of each thread. This is used for logging and the enforcement of the maxThreadRuntime property. */
-	protected static Map<Thread, Instant> threadStartTimestamps = new ConcurrentHashMap<>();
+	protected static Map<Jorel2ThreadInstance, String> activeThreads = new ConcurrentHashMap<>();
 	
 	protected static void skip() {
 		

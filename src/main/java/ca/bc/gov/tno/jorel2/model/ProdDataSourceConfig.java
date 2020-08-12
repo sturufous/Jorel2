@@ -12,7 +12,7 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.service.ServiceRegistry;
 import org.springframework.context.annotation.*;
 import org.springframework.stereotype.Component;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import org.hibernate.cfg.Configuration;
 
 /**
@@ -34,7 +34,7 @@ final class ProdDataSourceConfig extends DataSourceConfig {
 		
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	private Jorel2Instance instance;
+	private Jorel2ServerInstance instance;
 	
 	/** Cached SessionFactory used to create a new session for each Jorel2Runnable thread */
 	private Optional<SessionFactory> sessionFactoryOptional = Optional.empty();

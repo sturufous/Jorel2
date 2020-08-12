@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 
 import com.vdurmont.emoji.EmojiParser;
 
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.AlertTriggerDao;
 import ca.bc.gov.tno.jorel2.model.AlertsDao;
@@ -51,7 +51,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	Jorel2ServerInstance instance;
 	
 	static final String excludeTranscriptRequest = "chmb, chkg, cjvb, chnm, cftv, ckye, krpi, cjrj";
 	
@@ -63,12 +63,12 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
     	
     	try {
     		decoratedTrace(INDENT1, "Starting Alert event processing");
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 			for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];

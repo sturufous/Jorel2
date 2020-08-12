@@ -37,7 +37,7 @@ import static java.util.Map.Entry.*;
         description="Jorel2 Managed Bean",
         currencyTimeLimit=15)
 
-public class Jorel2Instance extends Jorel2Root {
+public class Jorel2ServerInstance extends Jorel2Root {
 	
 	Map<String, Long> threadDurations = new ConcurrentHashMap<>();
 	Map<String, Integer> articleCounts = new ConcurrentHashMap<>();
@@ -71,7 +71,7 @@ public class Jorel2Instance extends Jorel2Root {
 	/**
 	 * Construct this object and set the startTime to the time now.
 	 */
-	Jorel2Instance() {
+	Jorel2ServerInstance() {
 		startTime = LocalDateTime.now();
 	}
 	

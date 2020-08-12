@@ -29,7 +29,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.AutoRunDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
@@ -57,7 +57,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	Jorel2ServerInstance instance;
 	
 	/**
 	 * 
@@ -66,7 +66,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
     			
     	try {
     		if (instance.isExclusiveEventActive(EventType.AUTORUN)) {
@@ -75,7 +75,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
     			instance.addExclusiveEvent(EventType.AUTORUN);
     			decoratedTrace(INDENT1, "Starting Autorun event processing");
 	    		
-		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 		        
 		        for (Object[] entityPair : results) {
 		        	if (entityPair[0] instanceof EventsDao) {

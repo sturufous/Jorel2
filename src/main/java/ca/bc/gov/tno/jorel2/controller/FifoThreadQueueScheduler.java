@@ -1,6 +1,5 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-import java.time.Instant;
 import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -10,7 +9,8 @@ import javax.inject.Inject;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
+import ca.bc.gov.tno.jorel2.Jorel2ThreadInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -25,13 +25,12 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
  * runs again, it will wait for the <code>notifyComplete()</code> method to push a new thread onto the queue. This happens when a previously executed
  * thread completes. It is the last call from the Jorel2Runnable <code>run()</code> method.
  * </p>
- * <p>An entry is added to the <code>threadStartTimestamps</code> map each time a thread is started in the <code>run()</code> method. The key for this
- * map is the thread itself, the value is a <code>java.time Instant</code> representing the time at which the thread was started. When the thread 
- * terminates, and <code>notifyComplete()</code> is called, the start time for the thread is compared with the current time and the run time for
- * the thread is written to the log file.
+ * <p>An entry is added to the <code>activeThreads</code> map each time a thread is started in the <code>run()</code> method. This manages the
+ * <code>Thread</code> object that is currently running and allows a separate timeout to be defined for each thread. This is necessary due to the
+ * wide range of execution times expected for individual events. For instance, it might be perfectly reasonable for the LDAP event to complete in
+ * over 45 minutes, while an execution time of five minutes might be excessive for the RSS event.
  * </p>
- * <p><code>notifyComplete()</code> also checks all running threads to make sure no thread's run time has exceeded <code>maxThreadRuntime</code> 
- * seconds. 
+ * <p><code>notifyComplete()</code> also checks all running threads to make sure no thread's run time has exceeded it's configured timeout period.
  * </p>
  * <p>The blocking function of the threadQueue ensures that the scheduled process waits until one of the three threads completes, thus avoiding the 
  * proliferation of blocked threads.
@@ -47,10 +46,10 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     private ApplicationContext ctx;
     
     @Inject
-    private Jorel2Instance instance;
+    private Jorel2ServerInstance instance;
     
 	/** Queue that lets Jorel2 push threads in one end and pull them out the other. If there are none the scheduler blocks. */
-	private ArrayBlockingQueue<Thread> threadQueue = null;
+	private ArrayBlockingQueue<Jorel2ThreadInstance> threadQueue = null;
 	
 	/** Used to cycle through the thread names Jorel2Thread-0, -1 and -2. A maximum of three threads can run concurrently. */
 	private volatile int threadCounter = 3;
@@ -58,6 +57,9 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
 	@Inject
 	public PropertiesConfiguration config;
+	
+	/** The default thread timeout as defined in the properties file */
+	private long dfltTimeout = 0;
 
 	/**
 	 * Adds the initial three threads and their associated runnable objects to the <code>threadQueue</code>. This is done <code>PostConstruct</code>
@@ -67,27 +69,30 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	public void init() {
 		
 		threadQueue = new ArrayBlockingQueue<>(THREAD_POOL_SIZE);
+		dfltTimeout = instance.config.getLong("maxThreadRuntime");
 		for (int count=0; count < THREAD_POOL_SIZE; count++) {
 			
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
+			Jorel2ThreadInstance jorelThread = new Jorel2ThreadInstance(thread, runnable, dfltTimeout);
+			runnable.setJorel2ThreadInstance(jorelThread);
 			thread.setName("Jorel2Thread-" + count + " [" + count + "]");
-			threadQueue.add(thread);
+			threadQueue.add(jorelThread);
 		}
 	}
 	
 	/**
-	 * Takes a thread from the threadQueue (if one is available) starts it, and stores it's start time in the <code>threadStartTimestamps</code> map.
-	 * If no thread is available this method blocks until <code>notifyThreadComplete()</code> pushes a new thred onto the queue.
+	 * Takes a <code>Jorel2ThreadInstance</code> from the threadQueue (if one is available) starts it, and stores it's start time in the object.
+	 * If no thread is available this method blocks until <code>notifyThreadComplete()</code> pushes a new thread onto the queue.
 	 * 
 	 * Waiting for too long for a new thread indicates that a pathological condition exists, so the thread is retrieved from the queue using 
-	 * <code>ArrayBlockingQueue</code>'s <code>poll(long timeout, TimeUnit unit)</code> method which will timeout after <code>maxThreadRuntime</code>
-	 * seconds. In this case an error is logged and the VM will shut down.
+	 * <code>ArrayBlockingQueue</code>'s <code>poll(long timeout, TimeUnit unit)</code> method which will timeout after the global property
+	 * <code>maxThreadRuntime</code> seconds. In this case an error is logged and the VM will shut down.
 	 */
 	@Scheduled(cron = "0/30 * * * * ?") // When testing is finished, uncomment @PropertySource(value = "file:properties/jorel.properties")
 	public void run() {
 		try {
-			Thread currentThread = threadQueue.poll(instance.getMaxThreadRuntime(), TimeUnit.SECONDS);
+			Jorel2ThreadInstance currentThread = threadQueue.poll(instance.getMaxThreadRuntime(), TimeUnit.SECONDS);
 			
 			if (currentThread == null) { // Timeout occurred
     			IllegalStateException e = new IllegalStateException("Waited too long to obtain a new thread from the thread queue.");
@@ -95,7 +100,7 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     			System.exit(FATAL_CONDITION);
     		} else {
     			currentThread.start();
-    		   	threadStartTimestamps.put((Thread) currentThread, Instant.now());    			
+    		   	activeThreads.put(currentThread, "");    			
     		}
 		} catch (InterruptedException e) {
 			logger.error("Attempting to get head entry in the thread pool.", e);
@@ -114,13 +119,13 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 	 * 
 	 * @param initiator The thread who's <code>run()</code> method just completed.
 	 */
-    public void notifyThreadComplete(Thread initiator) {
+    public void notifyThreadComplete(Jorel2ThreadInstance initiator) {
     	
     	try {
-    		// If any thread has been running for more than 30 minutes, shut down this Jorel2 process.
-    		if (getMaxRunTime() > instance.getMaxThreadRuntime()) {
+    		// If any thread has been running for more than 30 minutes (the max runtime property), shut down this Jorel2 process.
+    		if (threadTimeoutOccurred()) {
     			IllegalStateException e = new IllegalStateException("Maximum thread run time exceeded.");
-    			logger.error("A Jorel 2 processing thread ran for more than " + (instance.getMaxThreadRuntime()/60) + " minutes.", e);
+    			logger.error("A Jorel 2 processing thread ran for more than its defined timeout period.", e);
     			System.exit(FATAL_CONDITION);
     		}
     		
@@ -128,32 +133,32 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
 			thread.setName("Jorel2Thread-" + (threadCounter % THREAD_POOL_SIZE) + " [" + (threadCounter++) + "]");
-			threadQueue.put(thread);
+			Jorel2ThreadInstance jorelThread = new Jorel2ThreadInstance(thread, runnable, dfltTimeout);
+			runnable.setJorel2ThreadInstance(jorelThread);
+			threadQueue.put(jorelThread);
 			
-			threadStartTimestamps.remove(initiator);
+			activeThreads.remove(initiator);
 		} catch (InterruptedException e) {
 			logger.error("Attempting to store the tail of the thread pool.", e);
 		}
-    	
-    	threadStartTimestamps.remove(initiator);
     }
     
     /**
-     * Loops through the <code>threadStartTimestamps</code> map and determines which thread has been running for the longest time. This info is used
-     * to determine if any thread has been running for longer than <code>maxThreadRuntime</code> seconds.
+     * Loops through the <code>activeThreads</code> map and determines if any active threads have exceeded their maximum runTimes.
      * 
-     * @return The run-time of the longest running thread.
+     * @return Whether any thread in the activeThreads map has timed out.
      */
-    public long getMaxRunTime() {
+    public boolean threadTimeoutOccurred() {
     	
-    	long maxRunTime = 0;
+    	boolean timedOut = false;
     	
-    	for (Entry < Thread, Instant > entry : threadStartTimestamps.entrySet()) {
-    		long runTime = Instant.now().getEpochSecond() - entry.getValue().getEpochSecond();
-    		if (runTime > maxRunTime) {
-    			maxRunTime = runTime;
+    	for (Entry <Jorel2ThreadInstance, String> entry : activeThreads.entrySet()) {
+    		Jorel2ThreadInstance currentThread = entry.getKey();
+    		if (currentThread.hasTimedOut()) {
+    			timedOut = true;
     		}
     	}
-		return maxRunTime;
+    	
+		return timedOut;
     }
 }

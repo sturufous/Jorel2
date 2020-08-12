@@ -17,7 +17,7 @@ import javax.inject.Inject;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FilesImportedDao;
@@ -36,7 +36,7 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	private Jorel2Instance instance;
+	private Jorel2ServerInstance instance;
 	
 	/** Handler for processing front page images */
 	@Inject
@@ -59,12 +59,12 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
     	
     	try {
     		decoratedTrace(INDENT1, "Starting Monitor event processing");
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 	        
 	        // Because the getElligibleEventsByEventType method executes a join query it returns an array containing EventsDao and EventTypesDao objects
 	        for (Object[] entityPair : results) {

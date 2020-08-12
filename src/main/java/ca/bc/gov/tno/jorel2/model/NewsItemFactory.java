@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import com.sun.syndication.feed.synd.SyndEntry;
 
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Nitf;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
@@ -184,7 +184,7 @@ public class NewsItemFactory extends Jorel2Root {
 	 * @param instance Used to track timeout events when retrieving a news item.
 	 * @return A NewsItemsDao object instantiated with the data contained in <code>item</code>
 	 */
-	public static NewsItemsDao createCPNewsItem(SyndEntry item, String source, Jorel2Instance instance) {
+	public static NewsItemsDao createCPNewsItem(SyndEntry item, String source, Jorel2ServerInstance instance) {
 		
 		String content;
 		NewsItemsDao newsItem = createNewsItemTemplate();

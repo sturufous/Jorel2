@@ -13,7 +13,7 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
@@ -30,7 +30,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	Jorel2ServerInstance instance;
 	
 	/** The home directory of the current user */
 	private String userDir = "";
@@ -66,7 +66,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
 		
     	try {
     		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
@@ -75,7 +75,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
     			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
     			decoratedTrace(INDENT1, "Starting ShellCommand event processing");
 	    		
-		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 		        
 		        // Because the getElligibleEventsByEventType method executes a join query it returns an array containing EventsDao and EventTypesDao objects
 		        for (Object[] entityPair : results) {

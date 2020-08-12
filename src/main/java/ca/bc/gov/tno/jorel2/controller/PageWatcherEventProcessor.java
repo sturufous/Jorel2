@@ -8,7 +8,7 @@ import java.util.Optional;
 import javax.inject.Inject;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.PagewatchersDao;
@@ -29,7 +29,7 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	Jorel2ServerInstance instance;
 	
 	/**
 	 * Process all eligible PageWatcher events.
@@ -39,12 +39,12 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
 		
     	try {
     		decoratedTrace(INDENT1, "Starting PageWatcher event processing");
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 	        
 	        // Because the getElligibleEventsByEventType method executes a join query it returns an array containing EventsDao and EventTypesDao objects
 	        for (Object[] entityPair : results) {

@@ -1,9 +1,6 @@
 package ca.bc.gov.tno.jorel2.controller;
 
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,12 +15,12 @@ import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
+import ca.bc.gov.tno.jorel2.Jorel2ThreadInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
-import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.
@@ -33,6 +30,12 @@ import ca.bc.gov.tno.jorel2.util.DateUtil;
  */
 
 public final class Jorel2Runnable extends Jorel2Root implements Runnable {
+	
+	/** Gives access to the thread and other metrics associated with this Jorel2Runnable */
+	private Jorel2ThreadInstance jorelThread = null;
+	
+	/** The case-dependent name of this event type */
+	private String eventTypeName = "";
 	
 	/** Configuration object for the active data source. Contains system_name, port etc. */
 	@Inject
@@ -100,7 +103,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	
 	/** Info regarding the process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	private Jorel2Instance instance;
+	private Jorel2ServerInstance instance;
 	
 	/** Task scheduler used to manage CronTrigger based scheduling */    
 	@Inject
@@ -122,9 +125,8 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	public void run() {
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
     	Session session = sessionFactory.get().openSession();
-    	LocalDateTime startTime = null;
 				
-		startTime = logThreadStartup();
+		logThreadStartup();
 		
     	if(instance.getConnectionStatus() == ConnectionStatus.ONLINE) {
     		processOnlineEvents(session);
@@ -147,7 +149,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     		}
     	}
     	
-    	logThreadCompletion(startTime);
+    	logThreadCompletion(jorelThread);
 	}
 	
 	/**
@@ -172,25 +174,25 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        // Trigger processing of each event type in eventMap
 	        for (Entry<EventType, String> eventEntry : eventMap.entrySet()) {
 	        	EventType eventEnum = eventEntry.getKey();
-	        	String eventTypeName = eventEntry.getValue();
+	        	eventTypeName = eventEntry.getValue();
 	        	
 	        	switch (eventEnum) {
-	        		case NEWRSS -> rssEventProcessor.processEvents(eventTypeName, session);
-	        		case RSS -> rssEventProcessor.processEvents(eventTypeName, session);
-	        		case SYNDICATION -> syndicationEventProcessor.processEvents(eventTypeName, session);
-	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(eventTypeName, session);
-	        		case SHELLCOMMAND -> shellCommandEventProcessor.processEvents(eventTypeName, session);
-	        		case DURATION -> durationEventProcessor.processEvents(eventTypeName, session);
-	        		case CLEANBINARYROOT -> cleanBinaryRootEventProcessor.processEvents(eventTypeName, session);
-	        		case MONITOR -> monitorEventProcessor.processEvents(eventTypeName, session);
-	        		case SYNC -> syncEventProcessor.processEvents(eventTypeName, session);
-	        		case PLSQL -> plSqlEventProcessor.processEvents(eventTypeName, session);
-	        		case ARCHIVER -> archiverEventProcessor.processEvents(eventTypeName, session);
-	        		case EXPIRE -> expireEventProcessor.processEvents(eventTypeName, session);
-	        		case EXPIRE3GP -> expire3gpEventProcessor.processEvents(eventTypeName, session);
-	        		case AUTORUN -> autorunEventProcessor.processEvents(eventTypeName, session);
-	        		case ALERT -> alertEventProcessor.processEvents(eventTypeName, session);
-	        		case LDAP -> ldapEventProcessor.processEvents(eventTypeName, session);
+	        		case NEWRSS -> rssEventProcessor.processEvents(this, session);
+	        		case RSS -> rssEventProcessor.processEvents(this, session);
+	        		case SYNDICATION -> syndicationEventProcessor.processEvents(this, session);
+	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(this, session);
+	        		case SHELLCOMMAND -> shellCommandEventProcessor.processEvents(this, session);
+	        		case DURATION -> durationEventProcessor.processEvents(this, session);
+	        		case CLEANBINARYROOT -> cleanBinaryRootEventProcessor.processEvents(this, session);
+	        		case MONITOR -> monitorEventProcessor.processEvents(this, session);
+	        		case SYNC -> syncEventProcessor.processEvents(this, session);
+	        		case PLSQL -> plSqlEventProcessor.processEvents(this, session);
+	        		case ARCHIVER -> archiverEventProcessor.processEvents(this, session);
+	        		case EXPIRE -> expireEventProcessor.processEvents(this, session);
+	        		case EXPIRE3GP -> expire3gpEventProcessor.processEvents(this, session);
+	        		case AUTORUN -> autorunEventProcessor.processEvents(this, session);
+	        		case ALERT -> alertEventProcessor.processEvents(this, session);
+	        		case LDAP -> ldapEventProcessor.processEvents(this, session);
 			        default -> Optional.empty();
 	        	};
 	        }
@@ -243,21 +245,16 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	}
 	
 	/**
-	 * Create an entry in the log file recording the start of a new thread's execution. Return the start time of the thread for storage
-	 * in the <code>threadStartTimestamps</code> hash.
+	 * Create an entry in the log file recording the start of a new thread's execution.
 	 * 
 	 * @return The start time of this thread.
 	 */
-	public LocalDateTime logThreadStartup() {
-		// Get the start time
-		LocalDateTime start = LocalDateTime.now();
-		
+	public void logThreadStartup() {
+				
       	String name = Thread.currentThread().getName();
       	System.out.println("Starting thread:   " + name);
    	   			
 		logger.trace("Starting thread:   " + name);
-		
-		return start;
 	}
 	
 	/**
@@ -266,16 +263,15 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	 * 
 	 * @param startTime The time when this thread commenced execution.
 	 */
-	private void logThreadCompletion(LocalDateTime startTime) {
-    	LocalDateTime stop = LocalDateTime.now();
-	    long diff = ChronoUnit.SECONDS.between(startTime, stop);		
+	private void logThreadCompletion(Jorel2ThreadInstance jorelThread) {
+	    long duration = jorelThread.getDurationSeconds();		
       	String name = Thread.currentThread().getName();
 
-      	instance.addThreadDuration(Thread.currentThread().getName(), diff);
-		logger.trace("Completing thread: " + name + ", task took " + diff + " seconds");
+      	instance.addThreadDuration(Thread.currentThread().getName(), duration);
+		logger.trace("Completing thread: " + name + ", task took " + duration + " seconds");
       	System.out.println("Completing thread: " + name);
 	
-		jorelScheduler.notifyThreadComplete(Thread.currentThread());
+		jorelScheduler.notifyThreadComplete(jorelThread);
 	}
 	
 	/**
@@ -305,5 +301,39 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * Instantiates the class variable <code>jorelThread</code> to the value of the single parameter <code>thread</code>. This gives event
+	 * processors access to the Jorel2ThreadInstance associated with this runnable, so that the thread timeout period can be updated to match
+	 * the one configured for the event currently being processed.
+	 * 
+	 * @param thread The thread meta-data object associated with this runnable.
+	 */
+	public void setJorel2ThreadInstance(Jorel2ThreadInstance thread) {
+		         
+		this.jorelThread = thread;
+	}
+	
+	/**
+	 * Gets the thread meta-data object associated with this runnable.
+	 * 
+	 * @return The thread meta-data
+	 */
+	public Jorel2ThreadInstance getJorel2ThreadInstance() {
+		
+		return jorelThread;
+	}
+	
+	/**
+	 * Provides a case-dependent event type name for use by event processors when matching elligible events in the EVENTS table. Keeping it in 
+	 * the Jorel2Runnable class reduces the number of parameters that need to be included in the <code>processEvents()</code> method of the 
+	 * <code>EventProcessor</code> interface.
+	 * 
+	 * @return The eventTypeName of the event currently being processed.
+	 */
+	public String getEventTypeName() {
+		
+		return eventTypeName;
 	}
 }

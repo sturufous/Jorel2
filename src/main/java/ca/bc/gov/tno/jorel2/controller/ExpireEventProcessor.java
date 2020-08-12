@@ -15,7 +15,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.HnewsItemsDao;
@@ -39,7 +39,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	Jorel2ServerInstance instance;
 	
 	/** Apache commons object that loads the contents of jorel.properties and watches it for changes */
 	@Inject
@@ -55,12 +55,12 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
    
     	try {
     		decoratedTrace(INDENT1, "Starting Expire event processing");
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];

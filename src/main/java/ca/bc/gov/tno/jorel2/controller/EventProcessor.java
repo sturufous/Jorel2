@@ -12,5 +12,5 @@ import org.hibernate.Session;
 
 public interface EventProcessor {
 
-	Optional<String> processEvents(String eventType, Session session);
+	Optional<String> processEvents(Jorel2Runnable runnable, Session session);
 }

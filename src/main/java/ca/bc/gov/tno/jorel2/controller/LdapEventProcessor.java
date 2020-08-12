@@ -25,7 +25,7 @@ import javax.naming.ldap.PagedResultsResponseControl;
 
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.LdapAddressesDao;
@@ -45,7 +45,7 @@ public class LdapEventProcessor extends Jorel2Root implements EventProcessor {
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	Jorel2ServerInstance instance;
 	
 	/**
 	 * Processes all LDAP events that are eligible for execution (based on the event's FREQUENCY) and have not yet been executed today.
@@ -65,7 +65,7 @@ public class LdapEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
     	
     	try {
     		decoratedTrace(INDENT1, "Starting LDAP event processing");
@@ -75,12 +75,13 @@ public class LdapEventProcessor extends Jorel2Root implements EventProcessor {
     		} else {
     			instance.addExclusiveEvent(EventType.LDAP);
     			
-		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 		        for (Object[] entityPair : results) {
 		        	if (entityPair[0] instanceof EventsDao) {
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
 		        
 		        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+		        			runnable.getJorel2ThreadInstance().setTimeoutSeconds(currentEvent.getTimeout().longValue());
 			        		ldapEvent(currentEvent, session);
 		        		}
 		        	}

@@ -10,7 +10,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.FtpDataSource;
@@ -39,7 +39,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	Jorel2ServerInstance instance;
 	
 	/** Service that provides access to an FTP data source as configured in jorel2.properties */
 	@Inject
@@ -58,14 +58,14 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	 * @param session The current Hibernate persistence context
 	 * @return Optional object containing the results of the action taken.
 	 */
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
 		
 		EventsDao currentEvent = null;
     	
     	try {
     		decoratedTrace(INDENT1, "Starting Archiver event processing");
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 	        
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {

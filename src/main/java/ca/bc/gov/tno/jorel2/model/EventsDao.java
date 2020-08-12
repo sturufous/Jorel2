@@ -15,7 +15,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
@@ -58,6 +58,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	private String clipCommand;
 	private Boolean ccCapture;
 	private EventTypesDao eventType;
+	private BigDecimal timeout;
 	
 	@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
 	@JoinColumn(name = "EVENT_TYPE_RSN")
@@ -302,6 +303,15 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 		this.ccCapture = ccCapture;
 	}
 	
+	@Column(name = "TIMEOUT", precision = 38, scale = 0)
+	public BigDecimal getTimeout() {
+		return this.timeout;
+	}
+
+	public void setTimeout(BigDecimal timeout) {
+		this.timeout = timeout;
+	}
+	
 	public String toString() {
 		return "Name = " + name;
 	}
@@ -338,7 +348,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
 	 */
-	public static List<Object[]> getEventsByEventType(Jorel2Instance process, String eventType, Session session) {
+	public static List<Object[]> getEventsByEventType(Jorel2ServerInstance process, String eventType, Session session) {
 
 		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createNamedQuery("Events_FindEventsByEventType");
@@ -358,7 +368,7 @@ public class EventsDao extends Jorel2Root implements java.io.Serializable {
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
 	 */
-	public static List<Object[]> getElligibleEventsByEventType(Jorel2Instance process, String eventType, Session session) {
+	public static List<Object[]> getElligibleEventsByEventType(Jorel2ServerInstance process, String eventType, Session session) {
 
 		@SuppressWarnings("unchecked")
 		Query<Object[]> query = session.createNamedQuery("Events_FindElligibleEventsByEventType");

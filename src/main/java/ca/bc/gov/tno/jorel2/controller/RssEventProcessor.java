@@ -16,7 +16,7 @@ import javax.inject.Inject;
 import javax.xml.bind.Unmarshaller;
 import org.hibernate.Session;
 import org.springframework.stereotype.Service;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.JaxbUnmarshallerFactory;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
@@ -40,7 +40,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	Jorel2Instance instance;
+	Jorel2ServerInstance instance;
 	
 	/** Quote extractor for processing article text  */
 	@Inject
@@ -62,14 +62,14 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	 * @return Optional object containing the results of the action taken.
 	 */
 	
-	public Optional<String> processEvents(String eventType, Session session) {
+	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
     	
 		Rss rssContent = null;
 		
     	try {
     		logger.trace(StringUtil.getLogMarker(INDENT1) + "Starting RSS event processing" + StringUtil.getThreadNumber());
     		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, eventType, session);
+	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 	        List<Rss.Channel.Item> newRssItems;
 	        quoteExtractor.init();
 	        

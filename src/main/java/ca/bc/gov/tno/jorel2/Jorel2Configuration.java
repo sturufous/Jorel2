@@ -112,8 +112,8 @@ public class Jorel2Configuration extends Jorel2Root {
      */
     @Bean("jorel2Instance")
     @Scope("singleton")
-    public Jorel2Instance getInstance() {
+    public Jorel2ServerInstance getInstance() {
     	
-		return new Jorel2Instance();
+		return new Jorel2ServerInstance();
     }
 }

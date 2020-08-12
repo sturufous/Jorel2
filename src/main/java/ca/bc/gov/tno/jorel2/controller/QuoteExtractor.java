@@ -16,7 +16,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.stereotype.Component;
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.WordsDao;
@@ -41,7 +41,7 @@ public class QuoteExtractor extends Jorel2Root {
 	
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
-	private Jorel2Instance instance;
+	private Jorel2ServerInstance instance;
 	
 	/** Configuration object for the active data source. Contains system_name, port etc. */
 	@Inject

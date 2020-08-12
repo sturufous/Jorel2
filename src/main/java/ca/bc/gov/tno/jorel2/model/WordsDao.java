@@ -15,7 +15,7 @@ import javax.persistence.Table;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
 
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -81,7 +81,7 @@ public class WordsDao extends Jorel2Root implements java.io.Serializable {
 	 * @param session - The currently active Hibernate DB session
 	 * @return List of EventsDao objects that match the Events_FindRssEvents named query.
 	 */
-	public static List<WordsDao> getWords(Jorel2Instance process, WordType wordType, Session session) {
+	public static List<WordsDao> getWords(Jorel2ServerInstance process, WordType wordType, Session session) {
 
 		BigDecimal type = BigDecimal.valueOf(wordType.ordinal()+1);
 		

@@ -8,7 +8,7 @@ import java.net.URL;
 
 import com.sun.syndication.feed.synd.SyndEntry;
 
-import ca.bc.gov.tno.jorel2.Jorel2Instance;
+import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -29,7 +29,7 @@ public class UrlUtil extends Jorel2Root {
 	 * @param instance Used to track timeouts when retrieving page content.
 	 * @return The complete article text retrieved from the item's link.
 	 */
-	public static String retrieveCPNewsItem(SyndEntry item, String source, Jorel2Instance instance) {
+	public static String retrieveCPNewsItem(SyndEntry item, String source, Jorel2ServerInstance instance) {
 		
 		String currentUrl = item.getLink();
 		String articlePage = new String("");
@@ -53,7 +53,7 @@ public class UrlUtil extends Jorel2Root {
 	 * @param url The url from which content should be retrieved.
 	 * @return The page content.
 	 */
-	public static String retrievePageContent(String url, Jorel2Instance instance) {
+	public static String retrievePageContent(String url, Jorel2ServerInstance instance) {
 		
 		String inputLine;
 		String articlePage = new String("");

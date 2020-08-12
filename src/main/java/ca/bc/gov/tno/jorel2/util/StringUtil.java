@@ -264,15 +264,15 @@ public class StringUtil extends Jorel2Root {
 	 */
 	public static String getLogMarker(String indent) {
 		
-		if (threadStartTimestamps.size() == 1) {
+		if (activeThreads.size() == 1) {
 			return "***** " + indent;
 		} 
 		else 
-		if (threadStartTimestamps.size() == 2) {
+		if (activeThreads.size() == 2) {
 			return "+++++ " + indent;
 		}
 		else
-		if (threadStartTimestamps.size() == 3) {
+		if (activeThreads.size() == 3) {
 			return "!!!!! " + indent;
 		}
 		else {
