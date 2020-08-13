@@ -78,6 +78,7 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        		String currentSource = currentEvent.getSource();
+        			setThreadTimeout(runnable, currentEvent, instance);
 		    		
 		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
 		    			decoratedTrace(INDENT1, "Two (or more) threads attempting to process the " + currentSource + " feed - skipping.");

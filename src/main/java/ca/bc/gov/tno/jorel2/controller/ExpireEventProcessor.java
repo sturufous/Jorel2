@@ -64,6 +64,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
+        			setThreadTimeout(runnable, currentEvent, instance);
 	        
 	        		expireEvent(currentEvent, session);
 	        		updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);	        		

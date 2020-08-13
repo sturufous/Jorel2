@@ -75,8 +75,8 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
 			Jorel2ThreadInstance jorelThread = new Jorel2ThreadInstance(thread, runnable, dfltTimeout);
+			jorelThread.setName(thread, count);
 			runnable.setJorel2ThreadInstance(jorelThread);
-			thread.setName("Jorel2Thread-" + count + " [" + count + "]");
 			threadQueue.add(jorelThread);
 		}
 	}
@@ -132,8 +132,8 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
     		// Create a new runnable and add it to the tail of the thread pool to replace the one that terminated
 			Jorel2Runnable runnable = ctx.getBean(Jorel2Runnable.class);
 			Thread thread = new Thread(runnable);
-			thread.setName("Jorel2Thread-" + (threadCounter % THREAD_POOL_SIZE) + " [" + (threadCounter++) + "]");
 			Jorel2ThreadInstance jorelThread = new Jorel2ThreadInstance(thread, runnable, dfltTimeout);
+			jorelThread.setName(thread, threadCounter++);
 			runnable.setJorel2ThreadInstance(jorelThread);
 			threadQueue.put(jorelThread);
 			

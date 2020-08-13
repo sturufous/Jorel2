@@ -55,7 +55,10 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 	        
 	        // Because the getRssEvents method executes a join query it returns an array containing EventsDao and EventTypesDao objects
 	        for (Object[] entityPair : results) {
-	        	if (entityPair[0] instanceof EventsDao) {	        		
+	        	if (entityPair[0] instanceof EventsDao) {	
+	        		EventsDao currentEvent = (EventsDao) entityPair[0];
+        			setThreadTimeout(runnable, currentEvent, instance);
+
 	    			if (instance.isExclusiveEventActive(EventType.SYNC)) {
 	    				decoratedTrace(INDENT1, "Sync event processing already active. Skipping."); 
 	    			} else {

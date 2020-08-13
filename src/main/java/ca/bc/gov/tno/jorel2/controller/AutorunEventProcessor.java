@@ -80,6 +80,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		        for (Object[] entityPair : results) {
 		        	if (entityPair[0] instanceof EventsDao) {
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
+	        			setThreadTimeout(runnable, currentEvent, instance);
 		        		
 		        		DbUtil.updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
 		        		autorunEvent(currentEvent, session);

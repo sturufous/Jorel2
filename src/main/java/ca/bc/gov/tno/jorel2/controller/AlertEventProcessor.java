@@ -72,7 +72,8 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 			for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
-	        
+        			setThreadTimeout(runnable, currentEvent, instance);
+        			
 	    			alertEvent(currentEvent, session);
 	        		//DbUtil.updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);	        		
 	        	}

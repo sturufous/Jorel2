@@ -81,6 +81,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		        for (Object[] entityPair : results) {
 		        	if (entityPair[0] instanceof EventsDao) {
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
+	        			setThreadTimeout(runnable, currentEvent, instance);
 		        		
 		        		shellCommandEventOnline(currentEvent, session);
 		        	}

@@ -57,6 +57,7 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
+        			setThreadTimeout(runnable, currentEvent, instance);
 	        		
 	        		cleanBinaryRootEvent(currentEvent, session);
 	        		

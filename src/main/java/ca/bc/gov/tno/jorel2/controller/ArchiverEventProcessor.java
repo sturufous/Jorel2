@@ -70,6 +70,7 @@ public class ArchiverEventProcessor extends Jorel2Root implements EventProcessor
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		currentEvent = (EventsDao) entityPair[0];
+        			setThreadTimeout(runnable, currentEvent, instance);
 	        		
 	        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
 	        			archiverEvent(currentEvent, session);

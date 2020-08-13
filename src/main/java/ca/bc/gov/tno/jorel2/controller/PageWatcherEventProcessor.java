@@ -50,9 +50,9 @@ public class PageWatcherEventProcessor extends Jorel2Root implements EventProces
 	        for (Object[] entityPair : results) {
 	        	if (entityPair[0] instanceof EventsDao) {
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
-	        		boolean runToday = DateUtil.runnableToday(currentEvent.getFrequency());
+        			setThreadTimeout(runnable, currentEvent, instance);
 	        		
-	        		if (runToday) {
+	        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
 	        			processPageWatchers(session);
 	        		}
 	        		

@@ -81,7 +81,7 @@ public class LdapEventProcessor extends Jorel2Root implements EventProcessor {
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
 		        
 		        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
-		        			runnable.getJorel2ThreadInstance().setTimeoutSeconds(currentEvent.getTimeout().longValue());
+		        			setThreadTimeout(runnable, currentEvent, instance);
 			        		ldapEvent(currentEvent, session);
 		        		}
 		        	}
