@@ -13,7 +13,7 @@ import ca.bc.gov.tno.jorel2.controller.Jorel2Runnable;
  */
 public class Jorel2ThreadInstance extends Jorel2Root {
     	
-	/** The UNIX Epoch time in seconds when this thread started */
+	/** The UNIX Epoch time in seconds at which this thread started executing */
 	long startTime = 0;
 	
 	/** The thread instance managed by this object */
@@ -25,8 +25,6 @@ public class Jorel2ThreadInstance extends Jorel2Root {
 	/** The timeout, in seconds, of this thread (updatable based on the current event) */
 	long timeoutSeconds = 0;
 	
-	long cyclePosition = 0;
-
 	/**
 	 * Create a Jorel2ThreadInstance containing a not-yet-started thread, the runnable object it executes and a default
 	 * timeout in seconds (which is retrieved from the properties file's maxThreadRuntime attribute).

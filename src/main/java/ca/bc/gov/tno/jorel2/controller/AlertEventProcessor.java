@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.StringTokenizer;
 import java.util.Vector;
 
 import javax.inject.Inject;
@@ -33,7 +34,6 @@ import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.model.SavedEmailAlertsDao;
 import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
 import ca.bc.gov.tno.jorel2.util.Base64Util;
-import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
 import ca.bc.gov.tno.jorel2.util.EmailUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
@@ -615,6 +615,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 					decoratedTrace(INDENT2, "Sending alerts...", session);
 
 					// Send the emails
+					Vector msgs = new Vector(5,10);
 					String msg = "";
 					if(! stopAlertProcessing) {
 						for (int ii=0; ii < myEmailVector.size(); ii++) {

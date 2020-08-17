@@ -1,8 +1,12 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import static java.util.Map.Entry.comparingByKey;
+import static java.util.stream.Collectors.toMap;
+
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -21,6 +25,9 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
+
+import static java.util.stream.Collectors.*;
+import static java.util.Map.Entry.*;
 
 /**
  * Implementation of Runnable interface that performs the long-running Jorel scheduler loop.
@@ -161,7 +168,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	 */
 	private void processOnlineEvents(Session session) {
 		
-        Map<EventType, String> eventMap = new HashMap<>();
+        Map<EventType, String> eventMap = null;
         
 		try {
 			// This is the first query to run in Jorel2Runnable. It is used to determine the offline status of the system.
@@ -169,7 +176,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 			rootInstanceName = instance.getAppInstanceName();
 	        List<EventsDao> results = EventsDao.getEventsForProcessing(instance.getAppInstanceName(), session);
 	        
-	        getUniqueEventTypes(eventMap, results);
+	        eventMap = getUniqueEventTypes(results);
 	        
 	        // Trigger processing of each event type in eventMap
 	        for (Entry<EventType, String> eventEntry : eventMap.entrySet()) {
@@ -221,6 +228,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	 */
 	private void postProcessOfflineEvents(Session session) {
 		
+		decoratedTrace(INDENT2, "Post-processing Offline events using shellCommandEventProcessor.");
 		shellCommandEventProcessor.shellCommandEventUpdate(session);
 	}
 	
@@ -230,18 +238,35 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	 * key to eventMap, and the case dependent event type name is stored as the value. This case-dependent string is used in later
 	 * processing.
 	 * 
+	 * Some events are dependent on the prior execution of other events. For example, the Sync event inserts a record in the
+	 * ALERT_TRIGGER table that the Alert event requires in order to run. In the same way, the Alert event inserts a record in
+	 * the AUTO_RUN table which triggers Autorun event processing. The order in which events execute in a thread is important in
+	 * ensuring that dependent events will run in that same thread. If, for example, the Alert event ran before the Sync event it will 
+	 * not benefit from the the Sync event's insertion of the ALERT_TRIGGER record within that same thread. The Alert event will not
+	 * be processed until the next scheduled execution cycle (currently 30 seconds). For this reason entries in the Map returned by
+	 * this method are sorted by the ordinal value of their enum keys. The order of execution is therefore determined by the order in
+	 * which Event enums are defined in the EventType enumeration.
+	 * 
 	 * @param eventMap Map of Unique event types to be processed by this runnable.
 	 * @param results The query results, potentially containing multiple entries for each event type.
 	 */
-	private void getUniqueEventTypes(Map<EventType, String> eventMap, List<EventsDao> results) {
+	private Map<EventType, String> getUniqueEventTypes(List<EventsDao> results) {
         String taskUpperCase;
+        Map<EventType, String> eventMap = new HashMap<>();
         
+        // Populate eventMap
         for(EventsDao event : results) {
         	EventTypesDao thisEvent = event.getEventType();
         	String eventTypeName = thisEvent.getEventType();
 			taskUpperCase = eventTypeName.toUpperCase().replace("/", "");
 			eventMap.put(EventType.valueOf(taskUpperCase), eventTypeName);
         } 
+        
+        // Sort eventMap - ensures event execution occurs in the right order 
+		Map<EventType, String> sorted = eventMap.entrySet().stream().sorted(comparingByKey())
+				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+		
+		return sorted;
 	}
 	
 	/**

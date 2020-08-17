@@ -15,8 +15,7 @@ import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
  * Manages the re-indexing of the NEWS_ITEMS table. Re-indexing occurs when an event adds content to the NEWS_ITEMS table and then
  * requests that this sync event processor call the DOSYNCINDEX stored procedure. This is achieved by adding a record to the SYNC_INDEX 
  * table. Simply put, this processor ensures that no other event handler is currently importing data into NEWS_ITEMS, if no import is in
- * progress, it checks 
- * SYNC_INDEX for records. If records exist it calls DOSYNCINDEX.
+ * progress, it checks SYNC_INDEX for records. If records exist it calls DOSYNCINDEX.
  * 
  * Records are added to SYNC_INDEX by the Monitor event and the REINDEX_CONTENT stored procedure. REINDEX_CONTENT is called in response
  * to a PL/SQL event with a FILE_NAME value of REINDEX_CONTENT. There are currently 105 events of this type which run at the designated

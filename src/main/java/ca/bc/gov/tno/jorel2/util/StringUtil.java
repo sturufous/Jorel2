@@ -289,7 +289,7 @@ public class StringUtil extends Jorel2Root {
 	public static String getThreadNumber() {
 		
 		String threadName = Thread.currentThread().getName();
-		String number = threadName.substring(13, 14);
+		String number = threadName.substring(13, threadName.length());
 		
 		return " [" + number + "]";
 	}

@@ -219,6 +219,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 				decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping."); 
 			} else {
 				instance.addExclusiveEvent(EventType.SHELLCOMMAND);
+				decoratedTrace(INDENT2, "Updating lastFtpRun field for all commands in offline directory: " + offlineDir);
 				
 				for(File offlineFile: offlineDir.listFiles()) {
 					if (offlineFile.getName().startsWith("shellcmd_")) {

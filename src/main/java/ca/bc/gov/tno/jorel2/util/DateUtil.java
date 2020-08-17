@@ -253,7 +253,7 @@ public class DateUtil extends Jorel2Root {
 	public static String getLoggerKeyDateTimeNow() {
 		
 		LocalDateTime date = LocalDateTime.now();
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss");
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 		String strDate = date.format(formatter);
 		
 		return strDate.toUpperCase();

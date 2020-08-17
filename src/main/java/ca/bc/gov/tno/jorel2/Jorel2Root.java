@@ -79,8 +79,8 @@ public class Jorel2Root {
     /** Enumeration containing entries for all event types processed by Jorel2 */
     public enum EventType {
 		
-		DURATION, CHANNELWATCHER, ARCHIVER, USER, HTML, PLSQL, MONITOR, SYNC, EXPIRE, CLEANBINARYROOT, ALERT, 
-		CONVERTER, EXPIRE3GP, PAGEWATCHER, RSS, NEWRSS, CAPTURE, SHELLCOMMAND, AUTORUN, SYNDICATION, LDAP
+		DURATION, CHANNELWATCHER, ARCHIVER, USER, HTML, PLSQL, SYNC, ALERT, AUTORUN, MONITOR, EXPIRE, CLEANBINARYROOT, 
+		CONVERTER, EXPIRE3GP, PAGEWATCHER, RSS, NEWRSS, CAPTURE, SHELLCOMMAND, SYNDICATION, LDAP
 	}
 	
     /** Enumeration used to categorize different words in the quote extractor object */
