@@ -51,6 +51,7 @@ public class UrlUtil extends Jorel2Root {
 	 * html tags, style sheets and scripts.
 	 * 
 	 * @param url The url from which content should be retrieved.
+	 * @param instance An object representing the current server instance
 	 * @return The page content.
 	 */
 	public static String retrievePageContent(String url, Jorel2ServerInstance instance) {

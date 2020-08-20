@@ -36,7 +36,7 @@ public class DbUtil {
 	 * @param query The query to run
 	 * @param session The current Hibernate presistence context
 	 * @return The result set containing the list of rows matched by the statement.
-	 * @throws SQLException
+	 * @throws SQLException If the statement create or query execution fails.
 	 */
 	public static ResultSet runSql(String query, Session session) throws SQLException {
 		
@@ -67,7 +67,7 @@ public class DbUtil {
 	 * @param query The query to run
 	 * @param session The current Hibernate presistence context
 	 * @return The result set containing the list of rows matched by the statement.
-	 * @throws SQLException
+	 * @throws SQLException If the statement create or query execution fails.
 	 */
 	public static ResultSet runSqlFlags(String query, Session session) throws SQLException {
 		
@@ -95,7 +95,7 @@ public class DbUtil {
 	 * @param query The update query to run.
 	 * @param session The current Hibernate presistence context
 	 * @return The number of records affected by the update statement.
-	 * @throws SQLException
+	 * @throws SQLException If the statement creation or query execution fails.
 	 */
 	public static Integer runUpdateSql(String query, Session session) throws SQLException {
 		

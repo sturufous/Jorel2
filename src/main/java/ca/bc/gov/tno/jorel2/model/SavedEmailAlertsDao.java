@@ -146,8 +146,8 @@ public class SavedEmailAlertsDao implements java.io.Serializable {
 	/**
 	 * Delete all records in the SAVED_EMAIL_ALERTS table. 
 	 * 
-	 * @param session The current Hibernate persistence context
-	 * @return A list containing all records in the SAVED_EMAIL_ALERTS table.
+	 * @param rsnList The list of rsn's that should be deleted from SavedEmailAlertsDao.
+	 * @param session The current Hibernate persistence context.
 	 */
 	public static void deleteSavedEmailAlerts(String rsnList, Session session) {
 		

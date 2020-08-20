@@ -266,10 +266,10 @@ public class DateUtil extends Jorel2Root {
 	
 	/**
 	 * Returns a Date() object parsed from one of two date formats. BCNG articles represent the date as MM-DD-YYYY, while
-	 * Informat articles use YYYYMMDD.
+	 * Informart articles use YYYYMMDD.
 	 * 
 	 * @param dateString The string representation of the date for conversion.
-	 * @return
+	 * @return a Date object representing the input string.
 	 */
 	public static Date formatFreeFormDate(String dateString) {
 		

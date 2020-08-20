@@ -124,10 +124,9 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 	 *
 	 * @param name The name of the published part.
 	 * @param deflt The default value for the key <code>name</code>
-	 * @param key to be associated with the result in the parts map.
+	 * @param keyStr key to be associated with the result in the parts map.
 	 * @param parts Map that contains all published parts obtained during this run.
 	 * @param session The current Hibernate persistence context
-	 * @return The published part that matches the name.
 	 */
 	public static void getPublishedPartByName(String name, String deflt, String keyStr, Map<String, String> parts, Session session) {
 		

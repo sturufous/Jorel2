@@ -19,14 +19,14 @@ import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
- * Processes the list of shell command events for this Jorel2 instance as described in the EVENTS table.
+ * Processes the list of Capture events for this Jorel2 instance as described in the EVENTS table.
  * 
  * @author Stuart Morse
  * @version 0.0.1
  */
 
 @Service
-public class ShellCommandEventProcessor extends Jorel2Root implements EventProcessor {
+public class CaptureEventProcessor extends Jorel2Root implements EventProcessor {
 
 	/** Process we're running as (e.g. "jorel", "jorelMini3") */
 	@Inject
@@ -38,14 +38,14 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	/** The system's file separator. */
 	private String fileSep = "";
 	
-	/** The full path to the directory containing offline shell command files */
+	/** The full path to the directory containing offline capture command files */
 	private String offlineDirPath = "";
 	
 	/** java.io.File object used to list the offline files to be processed */
 	private File offlineDir = null;
 	
 	/**
-	 * Initializes the instance variables used to retrieve text files that describe offline shell commands. 
+	 * Initializes the instance variables used to retrieve text files that describe offline capture commands. 
 	 */
 	@PostConstruct
 	private void init() {
@@ -69,11 +69,11 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
 		
     	try {
-    		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
-    			decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping.");    			
+    		if (instance.isExclusiveEventActive(EventType.CAPTURE)) {
+    			decoratedTrace(INDENT1, "Capture event processing already active. Skipping.");    			
     		} else {
-    			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
-    			decoratedTrace(INDENT1, "Starting ShellCommand event processing");
+    			instance.addExclusiveEvent(EventType.CAPTURE);
+    			decoratedTrace(INDENT1, "Starting Capture event processing");
 	    		
 		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 		        
@@ -83,45 +83,45 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        			setThreadTimeout(runnable, currentEvent, instance);
 		        		
-		        		shellCommandEventOnline(currentEvent, session);
+		        		captureEventOnline(currentEvent, session);
 		        	}
 		        }
 		        
-		        instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+		        instance.removeExclusiveEvent(EventType.CAPTURE);
 	    	} 
     	}
     	catch (Exception e) {
-    		instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
-    		logger.error("Processing shell command entries.", e);
+    		instance.removeExclusiveEvent(EventType.CAPTURE);
+    		logger.error("Processing Capture entries.", e);
     	}
     	
-    	decoratedTrace(INDENT1, "Completing ShellCommand event processing");
+    	decoratedTrace(INDENT1, "Completing Capture event processing");
     	return Optional.of("complete");
 	}
 	
 	/**
-	 * Executes the shell command event described by the <code>shellEvent</code> parameter. 
+	 * Executes the capture event described by the <code>captureEvent</code> parameter. 
 	 * 
-	 * @param shellEvent Entity describing the event to run locally.
+	 * @param captureEvent Entity describing the event to run locally.
 	 * @param session The current Hibernate persistence context.
 	 */
-	private void shellCommandEventOnline(EventsDao shellEvent, Session session) {
+	private void captureEventOnline(EventsDao captureEvent, Session session) {
 
-		ShellCommand shell = new ShellCommand(shellEvent);
+		CaptureCommand capture = new CaptureCommand(captureEvent);
 
 		PrintWriter offlineWriter = null;
-		if (offlineDir!=null) {
+		if (offlineDir != null) {
 			try {
-				offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator")+"shellcmd_" + shell.event_name + ".txt");
+				offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator") + "capturecmd_" + capture.event_name + ".txt");
 			} catch (Exception ex) {
 				offlineWriter = null;
 			}
 		}
 
-		shell.doCommand(shellEvent, session); // do the command (if it is time)
-		shell.writeOffline(offlineWriter); // write to the offline cache
+		capture.doCapture(captureEvent, session); // do the command (if it is time)
+		capture.writeOffline(offlineWriter); // write to the offline cache
 
-		if (offlineWriter!=null) {
+		if (offlineWriter != null) {
 			try {
 				offlineWriter.close();
 			} catch (Exception ex) { ; }
@@ -129,11 +129,11 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	}
 	
 	/**
-	 * Executes shell command events when the connection to the database is down. The commands are read from files in the <code>offline</code>
-	 * directory which have the following naming convention: <code>shellcmd_[event-name].txt</code>. These files are created when 
-	 * <code>shellCommandEventOnline()</code> is executed. 
+	 * Executes capture command events when the connection to the database is down. The commands are read from files in the <code>offline</code>
+	 * directory which have the following naming convention: <code>capturecmd_[event-name].txt</code>. These files are created when 
+	 * <code>captureCommandEventOnline()</code> is executed. 
 	 */
-	public void shellCommandEventOffline() {
+	public void captureEventOffline() {
 
 		decoratedTrace(INDENT1, "Starting offline ShellCommand event processing");
 		
@@ -144,24 +144,24 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
     			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
 				for(File offlineFile : offlineDir.listFiles()) {
 					
-					if (offlineFile.getName().startsWith("shellcmd_")) {
+					if (offlineFile.getName().startsWith("capturecmd_")) {
 		
 						ArrayDeque<String> adq = new ArrayDeque<>();
 						loadOffline(offlineFile, adq);
 		
-						ShellCommand shell = new ShellCommand(adq);
+						CaptureCommand capture = new CaptureCommand(adq);
 		
 						PrintWriter offlineWriter = null;
-						if (offlineDir!=null) {
+						if (offlineDir != null) {
 							try {
-								offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator") + "shellcmd_" + shell.event_name + ".txt");
+								offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator") + "capturecmd_" + capture.event_name + ".txt");
 							} catch (Exception ex) {
 								offlineWriter = null;
 							}
 						}
 		
-						shell.doCommand(null, null); // do the command (if it is time)
-						shell.writeOffline(offlineWriter); // write to the offline cache
+						capture.doCapture(null, null); // do the command (if it is time)
+						capture.writeOffline(offlineWriter); // write to the offline cache
 		
 						if (offlineWriter!=null) {
 							try {
@@ -174,11 +174,11 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 			}
 			catch (Exception e) {
     			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
-	    		logger.error("While processing offline shell command.", e); 				
+	    		logger.error("While processing offline capture command.", e); 				
 			}
 		}
 		
-		decoratedTrace(INDENT1, "Completing offline ShellCommand event processing");
+		decoratedTrace(INDENT1, "Completing offline Capture event processing");
 	}
 		
 	/**
@@ -212,7 +212,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	 * 
 	 * @param session The current Hibernate persistence context.
 	 */
-	public void shellCommandEventUpdate(Session session) {
+	public void captureCommandEventUpdate(Session session) {
 
 		try {
 			if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
@@ -222,20 +222,20 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 				decoratedTrace(INDENT2, "Updating lastFtpRun field for all commands in offline directory: " + offlineDir);
 				
 				for(File offlineFile: offlineDir.listFiles()) {
-					if (offlineFile.getName().startsWith("shellcmd_")) {
+					if (offlineFile.getName().startsWith("capturecmd_")) {
 		
 						ArrayDeque<String> adq = new ArrayDeque<>();
 						loadOffline(offlineFile, adq);
 		
-						ShellCommand shell = new ShellCommand(adq);
+						CaptureCommand capture = new CaptureCommand(adq);
 		
-						decoratedTrace(INDENT1, "Update shell event, set lastFtpRun='" + shell.lastFtpRun + "' for rsn=" + shell.rsn);
+						decoratedTrace(INDENT1, "Update capture event, set lastFtpRun='" + capture.lastFtpRun + "' for rsn=" + capture.rsn);
 		
 						// update event
-						EventsDao shellEvt = EventsDao.getEventByRsn(shell.rsn, session).get(0);
-						shellEvt.setLastFtpRun(shell.lastFtpRun);
+						EventsDao captureEvt = EventsDao.getEventByRsn(capture.rsn, session).get(0);
+						captureEvt.setLastFtpRun(capture.lastFtpRun);
 						session.getTransaction().begin();
-						session.persist(shellEvt);
+						session.persist(captureEvt);
 						session.getTransaction().commit();
 					}
 				}
@@ -245,19 +245,19 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		}
 		catch (Exception e) {
 			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
-    		logger.error("While post-processing shell command after network reconnect.", e); 							
+    		logger.error("While post-processing capture event after network reconnect.", e); 							
 		}
 	}
 	
 	/**
-	 * Nested class that provides the functionality and data storage required to process both offline and online shell command events.
+	 * Nested class that provides the functionality and data storage required to process both offline and online capture events.
 	 * 
 	 * @author StuartM
 	 * @version 0.0.1
 	 */
 	
 	@SuppressWarnings("unused")
-	private class ShellCommand {
+	private class CaptureCommand {
 		
 		BigDecimal rsn = BigDecimal.valueOf(0.0D);
 		String event_name="";
@@ -269,16 +269,16 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 
 		/**
 		 * Create an online ShellCommand object using an EventsDao object retrieved from the database.
-		 * @param shellEvt A shell event record retrieved from the EVENTS table.
+		 * @param captureEvt A capture event record retrieved from the EVENTS table.
 		 */
-		private ShellCommand(EventsDao shellEvt) {
+		private CaptureCommand(EventsDao captureEvt) {
 			
-			rsn = shellEvt.getRsn();
-			event_name = shellEvt.getName();
-			cmd = shellEvt.getTitle();
-			startTime = shellEvt.getStartTime();
-			frequency = shellEvt.getFrequency();
-			lastFtpRun = shellEvt.getLastFtpRun();
+			rsn = captureEvt.getRsn();
+			event_name = captureEvt.getName();
+			cmd = captureEvt.getCaptureCommand();
+			startTime = captureEvt.getStartTime();
+			frequency = captureEvt.getFrequency();
+			lastFtpRun = captureEvt.getLastFtpRun();
 			now = DateUtil.getDateNow();
 		}
 
@@ -286,7 +286,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		 * Create an offline ShellCommand object using commands stored in the queue parameter.
 		 * @param queue Queue containing the command to execute locally.
 		 */
-		private ShellCommand(ArrayDeque<String> queue) {
+		private CaptureCommand(ArrayDeque<String> queue) {
 			
 			try {
 				String rsnStr = (String) queue.removeFirst();
@@ -298,7 +298,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 				lastFtpRun = (String) queue.removeFirst();
 			} 
 			catch (Exception ex) { 
-				decoratedError(INDENT0, "Error reading offline shell command data.", ex); 
+				decoratedError(INDENT0, "Error reading offline Capture data.", ex); 
 			}
 		}
 
@@ -323,10 +323,10 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		 * Execute the command represented by this ShellCommand object. If the database connection is online the first parameter will be
 		 * a valid EventsDao object which is used when updating the lastFtpRun time. If it is running offline, both parameters will be null.
 		 * 
-		 * @param shellEvent The EVENTS table record representing the shell command, or null if offline.
+		 * @param captureEvent The EVENTS table record representing the capture command, or null if offline.
 		 * @param session The current Hibernate persistence context, or null if offline.
 		 */
-		void doCommand(EventsDao shellEvent, Session session) {
+		void doCapture(EventsDao captureEvent, Session session) {
 			
 			String now = DateUtil.getDateNow();
 			
@@ -344,7 +344,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 				// Is it time to start this event?
 				if ( seconds < 120 ) // Less than two minutes until start time
 				{
-					if (seconds > 0) cmd = "sleep " + seconds+"; " + cmd;
+					if (seconds > 0) cmd = "sleep " + seconds + "; " + cmd;
 
 					String[] cmda = {
 							"/bin/sh",
@@ -363,13 +363,13 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 
 					if (session != null) {
 						//Update this record to reflect that it has run
-						shellEvent.setLastFtpRun(this.lastFtpRun);
+						captureEvent.setLastFtpRun(this.lastFtpRun);
 						session.beginTransaction();
-						session.persist(shellEvent);
+						session.persist(captureEvent);
 						session.getTransaction().commit();
 					}
 
-					decoratedTrace(INDENT1, "Shell command executed '" + cmd + "'");
+					decoratedTrace(INDENT2, "Capture command executed '" + cmd + "'");
 				}
 			}
 		}

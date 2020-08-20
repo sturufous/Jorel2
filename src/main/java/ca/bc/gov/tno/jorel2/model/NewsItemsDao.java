@@ -828,7 +828,7 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	 * 
 	 * @param rsnList The list of NEWS_ITEMS rsn to clear.
 	 * @param useLastDoSyncIndex Use the date in LastDoSyncIndexDao to filter the list of records updated.
-	 * @param session
+	 * @param session The current Hibernate persistence context
 	 */
 	public static void clearAlertNewsItems(String rsnList, boolean useLastDoSyncIndex, Session session){
 		if (rsnList.length() == 0) return;

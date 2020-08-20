@@ -29,6 +29,9 @@ public class EmailUtil extends Jorel2Root {
 	 * 
 	 * @param watcher The PageWatcher event being processed.
 	 * @param changes A description of the changes made to the page being watched.
+	 * @param hostAddress The address of the mail server to connect to.
+	 * @param portNumber The port number on the host on which the smtp server is listening.
+	 * @param fromAddress The sender's email address.
 	 */
 	public static void pageWatcherSendMail (PagewatchersDao watcher, String changes, String hostAddress, String portNumber, String fromAddress) {
 	
@@ -158,6 +161,9 @@ public class EmailUtil extends Jorel2Root {
 	
 	/**
 	 * Returns an email session for use in creating a Mime message.
+	 * 
+	 * @param hostAddress The address of the email host to connect to.
+	 * @param portNumber The port number of the host on which the smtp server is listening.
 	 * @return The session instantiated with host name and port.
 	 */
 	public static javax.mail.Session getEmailSession(String hostAddress, String portNumber) {
