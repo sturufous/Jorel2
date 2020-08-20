@@ -23,17 +23,21 @@ import org.springframework.stereotype.Service;
 import com.vdurmont.emoji.EmojiParser;
 
 import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
+import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.AlertTriggerDao;
 import ca.bc.gov.tno.jorel2.model.AlertsDao;
 import ca.bc.gov.tno.jorel2.model.AutoRunDao;
+import ca.bc.gov.tno.jorel2.model.EventActivityLogDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.JorelDao;
+import ca.bc.gov.tno.jorel2.model.LogMessage;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
 import ca.bc.gov.tno.jorel2.model.PreferencesDao;
 import ca.bc.gov.tno.jorel2.model.SavedEmailAlertsDao;
 import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
 import ca.bc.gov.tno.jorel2.util.Base64Util;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
 import ca.bc.gov.tno.jorel2.util.EmailUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
@@ -66,25 +70,31 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
     	
     	try {
-    		decoratedTrace(INDENT1, "Starting Alert event processing");
-    		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
-			for (Object[] entityPair : results) {
-	        	if (entityPair[0] instanceof EventsDao) {
-	        		EventsDao currentEvent = (EventsDao) entityPair[0];
-        			setThreadTimeout(runnable, currentEvent, instance);
-        			
-	    			alertEvent(currentEvent, session);
-	        		//DbUtil.updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);	        		
-	        	}
-			}
-			
-    		decoratedTrace(INDENT1, "Completed Alert event processing");
+    		if (instance.isExclusiveEventActive(EventType.ALERT)) {
+    			decoratedTrace(INDENT1, "Alert event processing already active. Skipping.");    			
+    		} else {
+    			instance.addExclusiveEvent(EventType.ALERT);
+	    		decoratedTrace(INDENT1, "Starting Alert event processing");
+	    		
+		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
+				for (Object[] entityPair : results) {
+		        	if (entityPair[0] instanceof EventsDao) {
+		        		EventsDao currentEvent = (EventsDao) entityPair[0];
+	        			setThreadTimeout(runnable, currentEvent, instance);
+	        			
+		    			alertEvent(currentEvent, session);
+		        	}
+				}
+				
+		        instance.removeExclusiveEvent(EventType.ALERT);
+    		}
     	} 
     	catch (Exception e) {
     		logger.error("Processing user directory entries.", e);
     	}
     	
+		decoratedTrace(INDENT1, "Completed Alert event processing");
+		
     	return Optional.of("complete");
 	}
 	
@@ -344,7 +354,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 										
 										} else {
 											emailLine = StringUtil.replace(emailLine, "<**transcript/content**>", transcript);
-											transcript_icon = parts.get("transcript_emoji");
+											transcript_icon = parts.get("transcriptEmoji");
 										}
 										emailLine = StringUtil.replace(emailLine, "<**request_transcript**>", rtUrl);
 
@@ -612,7 +622,7 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 						}
 					}
 					
-					decoratedTrace(INDENT2, "Sending alerts...", session);
+					decoratedTrace(INDENT2, "Sending alerts (See event activity log for details)", session);
 
 					// Send the emails
 					Vector msgs = new Vector(5,10);
@@ -630,13 +640,19 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 									saveEmailAlert(em, session);
 								}
 
-								if(msg.length() > 0) {
-									decoratedTrace(INDENT0, msg, session);
+								StringTokenizer st1 = new StringTokenizer(msg, "\n");
+								int tokens = st1.countTokens();
+								for (int j = 0; j < tokens; j++) {
+									String tmsg = st1.nextToken();
+									if (tmsg.length() != 0) {
+										msgs.addElement(new LogMessage(tmsg));
+									}
 								}
 							}
 						}
 					}
 					
+					EventActivityLogDao.insertMultiple(msgs, instance.getAppInstanceName(), session);
 					myEmailVector.removeAllElements();
 				} catch (SQLException e) {
 					decoratedError(INDENT0, "Processing Alert records.", e);
@@ -904,8 +920,8 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 			
 			String msg = "";
 			try {
-				msg = EmailUtil.sendAlertEmail(hostAddress, mailPort, username, recipients, from, subject, message);
-				decoratedTrace(INDENT2, "Email sent to: " + recipients + " : " + subject, session);
+				msg = EmailUtil.sendAlertEmail(hostAddress, mailPort, username, bccRecipients, from, subject, message);
+				decoratedTrace(INDENT2, "Sending alerts for: " + subject);
 				instance.incrementAlertCounter();
 			} catch (Exception ex) {
 				msg =  "Exception sendEmail: " + ex.toString() + " bcc: " + bccRecipients + ", re: " + subject;

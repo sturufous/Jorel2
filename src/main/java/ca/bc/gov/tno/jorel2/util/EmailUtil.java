@@ -133,10 +133,11 @@ public class EmailUtil extends Jorel2Root {
 				logger.error("Attempting to send alert email.", new IllegalStateException("The email recipients list is null."));
 			} else {
 				ArrayList<InternetAddress> addresses = new ArrayList<>();
-				String[] emailRecipients = recipients.split(",");
+				String[] emailRecipients = recipients.split("~");
 				
 				for (String emailAddress : emailRecipients) {
 					addresses.add(new InternetAddress(emailAddress));
+					result = result + "Email sent to: " + emailAddress + " : " + subject + "\n";
 				}
 				
 				MimeMessage msg = new MimeMessage(session);
