@@ -133,9 +133,9 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 	 * directory which have the following naming convention: <code>shellcmd_[event-name].txt</code>. These files are created when 
 	 * <code>shellCommandEventOnline()</code> is executed. 
 	 */
-	public void shellCommandEventOffline() {
+	public void shellCommandEventOffline(Session session) {
 
-		decoratedTrace(INDENT1, "Starting offline ShellCommand event processing");
+		decoratedTrace(INDENT1, "Starting offline ShellCommand event processing", session);
 		
 		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
 			decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping."); 
@@ -178,7 +178,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 			}
 		}
 		
-		decoratedTrace(INDENT1, "Completing offline ShellCommand event processing");
+		decoratedTrace(INDENT1, "Completing offline ShellCommand event processing", session);
 	}
 		
 	/**

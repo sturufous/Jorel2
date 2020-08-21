@@ -87,8 +87,9 @@ public class LdapAddressesDao implements java.io.Serializable {
 	}
 	
 	/**
-	 * Delete all records in the LDAP_ADDRESSES table.
+	 * Delete all records in the LDAP_ADDRESSES table that match source.
 	 * 
+	 * @param source The source from which the record was imported ("ldap" or "localfile")
 	 * @param session The current Hibernate persistence context.
 	 */
 	public static void deleteAllRecords(String source, Session session) {

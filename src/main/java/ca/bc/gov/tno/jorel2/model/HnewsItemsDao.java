@@ -677,7 +677,9 @@ public class HnewsItemsDao implements java.io.Serializable {
 	 * Get expired news items for ExpireEventProcessor.clearExpiringSourceTypes().
 	 * 
 	 * @param sourceType The type of source for which news items should be retrieved.
+	 * @param tvSources Ignore any hnews_items records with sources in this list.
 	 * @param retainDays The number of days before the news item expires.
+	 * @param expireRule Only retrieve hnews_items that match this expire rule.
 	 * @param session The current Hibernate persistence context.
 	 * @return A list containing all the records that meet the expiry criteria.
 	 */
@@ -706,6 +708,8 @@ public class HnewsItemsDao implements java.io.Serializable {
 	/**
 	 * Get expired items for ExpireEventProcessor.clearExpiringSources(). 
 	 * 
+	 * @param source Only retrieve hnews_items that match this source.
+	 * @param days Return only items that are at least "days" old.
 	 * @param session The current Hibernate persistence context.
 	 * @return A list containing all the records that meet the expiry criteria.
 	 */

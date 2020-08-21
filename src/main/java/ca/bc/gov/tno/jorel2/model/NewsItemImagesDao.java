@@ -249,8 +249,6 @@ public class NewsItemImagesDao implements java.io.Serializable {
 	/**
 	 * Get the NEWS_ITEM_IMAGES record(s) matching the fileName.
 	 *
-	 * @param fileName The fileName to match.
-	 * @param avPath The path to the web directory for the image.
 	 * @param session The current Hibernate persistence context
 	 * @return The record(s) matching fileName
 	 */

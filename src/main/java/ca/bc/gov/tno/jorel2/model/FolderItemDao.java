@@ -78,7 +78,7 @@ public class FolderItemDao implements java.io.Serializable {
 	
 	/**
 	 * 
-	 * @param rsn The list of NEWS_ITEMS rsn to clear.
+	 * @param frsn The list of NEWS_ITEMS rsn to clear.
 	 * @param useLastDoSyncIndex Use the date in LastDoSyncIndexDao to filter the list of records updated.
 	 * @param session
 	 */

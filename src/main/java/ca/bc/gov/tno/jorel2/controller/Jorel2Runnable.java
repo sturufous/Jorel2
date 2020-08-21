@@ -153,12 +153,12 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
         			postProcessOfflineEvents(session);
     			} else {
     				decoratedTrace(INDENT1, "Connection to TNO database is still offline.");
-    				processOfflineEvents();
+    				processOfflineEvents(session);
     			}
     		} else {
     			// Unlikely to happen as c3p0 always returns a session factory
     			decoratedTrace(INDENT1, "Connection to TNO database is still offline");
-    			processOfflineEvents();
+    			processOfflineEvents(session);
     		}
     	}
     	
@@ -223,9 +223,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	/**
 	 * Processes all events that support offline processing. At present this includes ShellCommand and Capture events.
 	 */
-	private void processOfflineEvents() {
+	private void processOfflineEvents(Session session) {
 		
-		shellCommandEventProcessor.shellCommandEventOffline();
+		shellCommandEventProcessor.shellCommandEventOffline(session);
+		captureEventProcessor.captureEventOffline(session);
 	}
 	
 	/**
@@ -237,6 +238,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 		
 		decoratedTrace(INDENT2, "Post-processing Offline events using shellCommandEventProcessor.");
 		shellCommandEventProcessor.shellCommandEventUpdate(session);
+		captureEventProcessor.captureCommandEventUpdate(session);
 	}
 	
 	/**

@@ -5,10 +5,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
+import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.util.ArrayDeque;
 import java.util.Calendar;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -16,6 +18,7 @@ import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
+import ca.bc.gov.tno.jorel2.model.EventClipsDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
@@ -74,7 +77,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
     			decoratedTrace(INDENT1, "Capture event processing already active. Skipping.");    			
     		} else {
     			instance.addExclusiveEvent(EventType.CAPTURE);
-    			decoratedTrace(INDENT1, "Starting Capture event processing");
+    			decoratedTrace(INDENT1, "Starting Capture event processing", session);
 	    		
 		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 		        
@@ -84,7 +87,9 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        			setThreadTimeout(runnable, currentEvent, instance);
 		        		
-		        		captureEventOnline(currentEvent, session);
+		        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+		        			captureEventOnline(currentEvent, session);
+		        		}
 		        	}
 		        }
 		        
@@ -96,7 +101,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
     		logger.error("Processing Capture entries.", e);
     	}
     	
-    	decoratedTrace(INDENT1, "Completing Capture event processing");
+    	decoratedTrace(INDENT1, "Completing Capture event processing", session);
     	return Optional.of("complete");
 	}
 	
@@ -121,6 +126,16 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 
 		capture.doCapture(captureEvent, session); // do the command (if it is time)
 		capture.writeOffline(offlineWriter); // write to the offline cache
+		
+		List<EventClipsDao> results = EventClipsDao.getClipsByEventRsn(captureEvent.getRsn(), session);
+		
+		for (EventClipsDao clipEntry : results) {
+			Clip clip = new Clip(captureEvent);
+
+			clip.doClip(capture, captureEvent, session); // do the clip (if it is time)
+
+			clip.writeOffline(offlineWriter); // write to the offline cache
+		}
 
 		if (offlineWriter != null) {
 			try {
@@ -163,6 +178,8 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		
 						capture.doCapture(null, null); // do the command (if it is time)
 						capture.writeOffline(offlineWriter); // write to the offline cache
+						
+						//List<EventClipsDao> results = EventClipsDao.getClipsByEventRsn(eventRsn, session)
 		
 						if (offlineWriter!=null) {
 							try {
@@ -381,7 +398,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 
 		void writeOffline(PrintWriter offlineWriter) {
-			if (offlineWriter!=null) {
+			if (offlineWriter != null) {
 				try {
 					offlineWriter.println(rsn);
 					offlineWriter.println(eventName);
@@ -397,6 +414,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 					offlineWriter.println(stopTime);
 					offlineWriter.println(launchTime);
 					offlineWriter.println(lastFtpRun);
+					offlineWriter.flush();
 				} catch (Exception ex) { ; }
 			}
 		}
@@ -412,7 +430,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 				long startMS = this.startCal.getTime().getTime(); // system milliseconds at which this should start
 				long nowMS = (new java.util.Date()).getTime(); // current system milliseconds
 				long seconds = (startMS - nowMS) / 1000;
-				if (seconds<0) seconds = 0;
+				if (seconds < 0) seconds = 0;
 
 				//frame.addJLog(eventLog("Capture event '"+cmd+"' to execute in "+seconds+" seconds"), true);
 
@@ -422,10 +440,10 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 					nowMS = (new java.util.Date()).getTime(); // current system milliseconds
 					long startSec = (this.startCal.getTime().getTime() - nowMS)/1000; // seconds from now until start
 					long stopSec = (this.stopCal.getTime().getTime() - nowMS)/1000; // seconds from now until stop
-					if (startSec<0) startSec = 0;
+					if (startSec < 0) startSec = 0;
 					long duration = (stopSec - startSec);
 
-					boolean launch_ok = false;
+					boolean launchOk = false;
 
 					String cmd = this.cmd;
 					if (!cmd.equals("")) {
@@ -433,14 +451,14 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						cmd = cmd.replace("[channel]", this.channel);
 						cmd = cmd.replace("[capture]", this.fullOutput);
 						cmd = cmd.replace("[output]", this.fullOutput);
-						cmd = cmd.replace("[start]", ""+startSec);
-						cmd = cmd.replace("[duration]", ""+duration);
+						cmd = cmd.replace("[start]", "" + startSec);
+						cmd = cmd.replace("[duration]", "" + duration);
 						cmd = cmd.replace("[stream]", this.streamOutput);
 						cmd = cmd.replace("[streamlocal]", this.streamLocal);
 						cmd = cmd.replace("[streamfile]", this.streamFile);
 						cmd = cmd.replace("[nas]", this.nasFolder);
 
-						if (seconds > 0) this.cmd = "sleep "+seconds+"; "+cmd;
+						if (seconds > 0) this.cmd = "sleep " + seconds + "; " + cmd;
 
 						String[] cmda = {
 								"/bin/sh",
@@ -449,14 +467,14 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						};
 
 						try {
-							Process p=new ProcessBuilder(cmda).start();
+							Process p = new ProcessBuilder(cmda).start();
+							launchOk = true;
+							decoratedTrace(INDENT2, "Capture command executed '" + cmd + "'", session);
 						} catch (Exception e) {
 							decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception launching capture command '" + cmd + "': '" + e.getMessage() + "'", e);
+							launchOk = false;
 						}
 
-						launch_ok = true;
-
-						decoratedTrace(INDENT2, "Capture command executed '" + cmd + "'", session);
 					}
 
 					// capture cc
@@ -479,18 +497,18 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						decoratedTrace(INDENT2, "CC command executed '" + ccCmd+"'", session);
 					}
 
-					if (launch_ok) {
+					if (launchOk) {
 						this.launchCal = Calendar.getInstance();
-						this.launchCal.setTimeInMillis(nowMS+seconds*1000);
-						long launchSecs = this.launchCal.get(Calendar.HOUR_OF_DAY)*3600+this.launchCal.get(Calendar.MINUTE)*60+this.launchCal.get(Calendar.SECOND);
+						this.launchCal.setTimeInMillis(nowMS + seconds * 1000);
+						long launchSecs = this.launchCal.get(Calendar.HOUR_OF_DAY) * 3600 + this.launchCal.get(Calendar.MINUTE) * 60 + this.launchCal.get(Calendar.SECOND);
 						this.launchTime = DateUtil.secs2Time(launchSecs);
 					}
 
 					this.lastFtpRun = now + " ";
 
-					if (captureEvt!=null) {
+					if (captureEvt != null) {
 						//Update this record to reflect that it has run
-						if (launch_ok)
+						if (launchOk)
 							captureEvt.setLaunchTime(this.launchTime);
 						captureEvt.setLastFtpRun(this.lastFtpRun);
 						session.beginTransaction();
@@ -501,6 +519,218 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 				} // if time to start
 
 			} // not run today
+		}
+	}
+	
+	private class Clip {
+		BigDecimal rsn = null;
+		String name="";
+		String frequency="";
+		String startTime="";
+		String stopTime="";
+		String lastRun="";
+
+		boolean valid=true;
+
+		private Clip(EventsDao captureEvt) {
+			rsn = captureEvt.getRsn();
+			name = captureEvt.getName();
+			frequency = captureEvt.getFrequency();
+			startTime = captureEvt.getStartTime();
+			stopTime = captureEvt.getStopTime();
+			lastRun = captureEvt.getLastFtpRun();
+		}
+
+		private Clip(ArrayDeque adq) {
+			try {
+
+				try {
+					String test = "";
+					do {
+						test = (String)adq.removeFirst();
+					} while (!test.equalsIgnoreCase("---"));
+
+				} catch (NoSuchElementException ex) {
+					valid = false;
+					return;
+				}
+
+				String rsnStr = (String) adq.removeFirst();
+				try { rsn = new BigDecimal(rsnStr); } catch (Exception ex) {;}
+				name = (String)adq.removeFirst();
+				frequency = (String)adq.removeFirst();
+				startTime = (String)adq.removeFirst();
+				stopTime = (String)adq.removeFirst();
+				lastRun = (String)adq.removeFirst();
+			} catch (Exception ex) { 
+				decoratedError(INDENT0, "Error reading offline clip data", ex); 
+			}
+		}
+
+		void writeOffline(PrintWriter offlineWriter) {
+			if (offlineWriter!=null) {
+				try {
+					offlineWriter.println("---");
+					offlineWriter.println(rsn);
+					offlineWriter.println(name);
+					offlineWriter.println(frequency);
+					offlineWriter.println(startTime);
+					offlineWriter.println(stopTime);
+					offlineWriter.println(lastRun);
+					offlineWriter.flush();
+				} catch (Exception ex) { ; }
+			}
+		}
+
+		void doClip(Capture capture, EventsDao captureEvt, Session session) {
+			
+			String now = DateUtil.localDateToTnoDateFormat(LocalDate.now());
+			
+			if (!this.lastRun.equalsIgnoreCase(now)) { // already run?
+
+				Calendar clipStartCal = DateUtil.createTime(this.startTime, this.frequency); // when this clip starts next
+				Calendar clipStopCal = DateUtil.createTime(this.stopTime, this.frequency); // when this clip stops next
+
+				long clipStopMS = clipStopCal.getTime().getTime(); // system milliseconds at which this should stop
+				long nowMS = (new java.util.Date()).getTime(); // current system milliseconds
+				//long fudgeMS = (long)((clipStopMS - clipStartCal.getTime().getTime())*((float)frame.getClipHeadstartPcnt()/100));
+				long fudgeMS = (long)((clipStopMS - clipStartCal.getTime().getTime())*(0));
+
+				// Is it time to make this clip?
+				//  take into account the fudge-factor which is a headstart into making the clip. This is a percentage of the clip
+				//  duration and is set in the properties file
+				if ( clipStopMS <= (nowMS+fudgeMS) ) { // stop time is past
+
+					String fullClipCmd = capture.clipCmd; // full_clip_cmd will be cloaked
+
+					long startSec = (clipStartCal.getTime().getTime() - capture.launchCal.getTime().getTime())/1000; // offset from start of capture
+					long stopSec = (clipStopCal.getTime().getTime() - capture.launchCal.getTime().getTime())/1000; // offset from start of capture
+					if (startSec<0) startSec = 0;
+					long duration = (stopSec - startSec);
+
+					if ((stopSec>=0) && (duration>0)) {
+
+						// construct full file path + create directory if neccessary
+						String output = clipPath(clipStartCal, capture.source, this.name, session);
+
+						// if the clip name ends in _cc, then don't take the video clip, and insert the cc text into the DB
+						boolean cc_insert = this.name.endsWith("(cc)");
+
+						// clip video
+						if ( (!fullClipCmd.equals("")) && (!cc_insert) ) {
+
+							fullClipCmd = fullClipCmd.replace("[channel]", capture.channel);
+							fullClipCmd = fullClipCmd.replace("[capture]", capture.fullOutput);
+							fullClipCmd = fullClipCmd.replace("[input]", capture.fullOutput);
+							fullClipCmd = fullClipCmd.replace("[stream]", capture.streamOutput);
+							fullClipCmd = fullClipCmd.replace("[streamlocal]", capture.streamLocal);
+							fullClipCmd = fullClipCmd.replace("[streamfile]", capture.streamFile);
+							fullClipCmd = fullClipCmd.replace("[nas]", capture.nasFolder);
+							fullClipCmd = fullClipCmd.replace("[start]", ""+startSec);
+							fullClipCmd = fullClipCmd.replace("[duration]", ""+duration);
+							fullClipCmd = fullClipCmd.replace("[output]", output);
+							fullClipCmd = fullClipCmd.replace("[clip]", output);
+
+							String[] cmda = {
+									"/bin/sh",
+									"-c",
+									fullClipCmd
+							};
+
+							try {
+								Process p1=new ProcessBuilder(cmda).start();
+							} catch (Exception e) {
+								decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception launching clip command '" + fullClipCmd + "': '" + e.getMessage() + "'", e);
+							}
+
+							decoratedTrace(INDENT2, "Clip command executed '" + fullClipCmd + "'", session);
+						}
+
+						// clip cc
+						/*if (capture.ccCapture) {
+
+							// milliseconds from midnight to launch of the capture
+							long launchMS = 1000 * (capture.launchCal.get(Calendar.HOUR_OF_DAY) * 3600 + capture.launchCal.get(Calendar.MINUTE) * 60 + capture.launchCal.get(Calendar.SECOND));
+
+							// temp file name - needed by the fix script
+							String tempFile = frame.getCaptureDir()+"/"+new File(output).getName();
+
+							String cc_cmd = frame.getCCCommand();
+							cc_cmd = cc_cmd.replace("[input]", capture.fullOutput);
+							cc_cmd = cc_cmd.replace("[start]", secs2Time(startSec));
+							cc_cmd = cc_cmd.replace("[stop]", secs2Time(stopSec));
+							cc_cmd = cc_cmd.replace("[delay]", launchMS+"");
+							cc_cmd = cc_cmd.replace("[output]", output);
+							cc_cmd = cc_cmd.replace("[ext]", frame.getCCExtension());
+							cc_cmd = cc_cmd.replace("[tempfile]", tempFile);
+							cc_cmd = cc_cmd.replace("[nas]", capture.nasFolder);
+
+							String[] cmda = {
+									"/bin/sh",
+									"-c",
+									cc_cmd
+							};
+
+							try {
+								Process p2=new ProcessBuilder(cmda).start();
+
+								if ((cc_insert) && (!offline)) {
+									p2.waitFor();
+
+									File cc_file = new File(output+frame.getCCExtension());
+
+									if (cc_file.exists()) {
+
+										BufferedReader in = new BufferedReader(new FileReader(cc_file));
+										StringBuffer contents = new StringBuffer();
+										String line;
+										while ((line = in.readLine()) != null) {
+											contents.append(line);
+											contents.append("\r\n<p>");
+										}
+										in.close();
+
+										dbNews_Items news = new dbNews_Items(frame);
+										news.initialize();
+										news.setItem_date(new java.sql.Date((new java.util.Date()).getTime()));
+										news.setItem_time(this.start_time);
+										news.setSource(capture.source);
+										news.setTitle(this.name.substring(0, this.name.length()-4));
+										news.setType("CC News");
+										news.setNumber1(cc_file.length());
+										news.setDate2(new java.sql.Date((new java.util.Date()).getTime()));
+										news.setExpireRule(3);
+										news.setContent(contents.toString());
+										news.insert(false);
+
+										if (news.getLastError().equals(""))
+											frame.addJLog(eventLog("CC record inserted "+news.getRsn()), true);
+										else
+											frame.addJLog(eventLog("Error inserting CC record: "+news.getLastError()), true);
+
+									}
+								}
+							} catch (Exception e) {
+								frame.addJLog(eventLog("DailyFunctions.captureEvent(): Exception launching cc command '"+cc_cmd+"': '"+e.getMessage()+"'"), true);
+							}
+
+							frame.addJLog(eventLog("CC command executed '"+cc_cmd+"'"), true);
+						}*/
+
+						this.lastRun = now;
+
+						if (captureEvt != null) {
+							//Update this record to reflect that it has run
+							captureEvt.setLastFtpRun(this.lastRun);
+							session.beginTransaction();
+							session.persist(captureEvt);
+							session.getTransaction().commit();
+						}
+					}
+
+				} // if time to start
+
+			} // not alreay run
 		}
 	}
 }

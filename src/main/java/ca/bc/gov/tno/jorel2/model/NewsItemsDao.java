@@ -739,7 +739,9 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	 * Get expired news items for ExpireEventProcessor.clearExpiringSourceTypes(). 
 	 * 
 	 * @param sourceType The type of source for which news items should be retrieved.
+	 * @param tvSources Don't retrieve items with sources in this list.
 	 * @param retainDays The number of days before the news item expires.
+	 * @param expireRule Only retrieve news_items with this expire rule.
 	 * @param session The current Hibernate persistence context.
 	 * @return A list containing all the records that meet the expiry criteria.
 	 */
@@ -768,6 +770,8 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	/**
 	 * Get expired items for ExpireEventProcessor.clearExpiringSources(). 
 	 * 
+	 * @param source Restrict the results to news_items that match this source.
+	 * @param days Look for items that are more than "days" old.
 	 * @param session The current Hibernate persistence context.
 	 * @return A list containing all the records that meet the expiry criteria.
 	 */
@@ -808,6 +812,7 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	/**
 	 * Get the rsns for all news items with their alert flag set to true as a comma delimited list. 
 	 * 
+	 * @param rsnList The list of news_items rsn's against which to check the alert flag.
 	 * @param session The current Hibernate persistence context.
 	 * @return A list containing all the records that meet the selection criteria.
 	 */
