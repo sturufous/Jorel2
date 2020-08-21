@@ -443,4 +443,22 @@ public class DateUtil extends Jorel2Root {
 		full.set(y,m,d);
 		return full;
 	}
+	
+	// go from seconds since midnight (long) -> HH:MM:SS (string)
+	public static String secs2Time(long seconds) {
+		String time="";
+		String t;
+
+		t = "00"+(seconds/3600);
+		time = time+t.substring(t.length()-2);
+		seconds = seconds % 3600;
+
+		t = "00"+(seconds/60);
+		time = time+":"+t.substring(t.length()-2);
+
+		t = "00"+(seconds % 60);
+		time = time+":"+t.substring(t.length()-2);
+
+		return time;
+	}
 }

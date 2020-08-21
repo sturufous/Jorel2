@@ -568,6 +568,17 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	}
 	
 	/**
+	 * Exposes the archiveTo property as a JMX attribute.
+	 * 
+	 * @return The archiveTo property.
+	 */
+	@ManagedAttribute(description="Location into which captured media are stored", currencyTimeLimit=15)
+	public String getStorageCaptureDir() {
+		
+		return config.getString("captureDir");
+	}
+	
+	/**
 	 * Exposes the maxCdSize property as a JMX attribute.
 	 * 
 	 * @return The maxCdSize property.

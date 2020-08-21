@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayDeque;
 import java.util.Calendar;
 import java.util.List;
@@ -55,7 +56,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		offlineDirPath = userDir + fileSep + "offline" + fileSep;
 		offlineDir = new File(offlineDirPath);
 		if (!offlineDir.isDirectory()) offlineDir = null;
-		logger.trace("Setting offline directory to: " + offlineDir);
+		logger.trace("Capture Event Processor: Setting offline directory to: " + offlineDir);
 	}
 	
 	/**
@@ -107,12 +108,12 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	 */
 	private void captureEventOnline(EventsDao captureEvent, Session session) {
 
-		CaptureCommand capture = new CaptureCommand(captureEvent);
+		Capture capture = new Capture(captureEvent, session);
 
 		PrintWriter offlineWriter = null;
 		if (offlineDir != null) {
 			try {
-				offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator") + "capturecmd_" + capture.event_name + ".txt");
+				offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator") + "capturecmd_" + capture.eventName + ".txt");
 			} catch (Exception ex) {
 				offlineWriter = null;
 			}
@@ -133,15 +134,15 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	 * directory which have the following naming convention: <code>capturecmd_[event-name].txt</code>. These files are created when 
 	 * <code>captureCommandEventOnline()</code> is executed. 
 	 */
-	public void captureEventOffline() {
+	public void captureEventOffline(Session session) {
 
 		decoratedTrace(INDENT1, "Starting offline ShellCommand event processing");
 		
-		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
+		if (instance.isExclusiveEventActive(EventType.CAPTURE)) {
 			decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping."); 
 		} else {
 			try {
-    			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
+    			instance.addExclusiveEvent(EventType.CAPTURE);
 				for(File offlineFile : offlineDir.listFiles()) {
 					
 					if (offlineFile.getName().startsWith("capturecmd_")) {
@@ -149,12 +150,12 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						ArrayDeque<String> adq = new ArrayDeque<>();
 						loadOffline(offlineFile, adq);
 		
-						CaptureCommand capture = new CaptureCommand(adq);
+						Capture capture = new Capture(adq, session);
 		
 						PrintWriter offlineWriter = null;
 						if (offlineDir != null) {
 							try {
-								offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator") + "capturecmd_" + capture.event_name + ".txt");
+								offlineWriter = new PrintWriter(offlineDir.getPath() + System.getProperty("file.separator") + "capturecmd_" + capture.eventName + ".txt");
 							} catch (Exception ex) {
 								offlineWriter = null;
 							}
@@ -227,7 +228,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						ArrayDeque<String> adq = new ArrayDeque<>();
 						loadOffline(offlineFile, adq);
 		
-						CaptureCommand capture = new CaptureCommand(adq);
+						Capture capture = new Capture(adq, session);
 		
 						decoratedTrace(INDENT1, "Update capture event, set lastFtpRun='" + capture.lastFtpRun + "' for rsn=" + capture.rsn);
 		
@@ -249,129 +250,257 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 	}
 	
-	/**
-	 * Nested class that provides the functionality and data storage required to process both offline and online capture events.
-	 * 
-	 * @author StuartM
-	 * @version 0.0.1
-	 */
-	
-	@SuppressWarnings("unused")
-	private class CaptureCommand {
-		
-		BigDecimal rsn = BigDecimal.valueOf(0.0D);
-		String event_name="";
-		String cmd="";
-		String startTime="";
-		String frequency="";
-		String lastFtpRun="";
-		String now = "";
+	// create a full file path based on date and source for use in captureEvent()
+	// does NOT include file extension
+	private String clipPath(Calendar cal, String source, String name, Session session) {
+		String path;
 
-		/**
-		 * Create an online ShellCommand object using an EventsDao object retrieved from the database.
-		 * @param captureEvt A capture event record retrieved from the EVENTS table.
-		 */
-		private CaptureCommand(EventsDao captureEvt) {
-			
-			rsn = captureEvt.getRsn();
-			event_name = captureEvt.getName();
-			cmd = captureEvt.getCaptureCommand();
-			startTime = captureEvt.getStartTime();
-			frequency = captureEvt.getFrequency();
-			lastFtpRun = captureEvt.getLastFtpRun();
-			now = DateUtil.getDateNow();
-		}
+		source = source.replace(' ', '_').replaceAll("[^a-zA-Z0-9\\_]", "");		
+		name = name.replace(' ', '_').replaceAll("[^a-zA-Z0-9\\_]", "");		
 
-		/**
-		 * Create an offline ShellCommand object using commands stored in the queue parameter.
-		 * @param queue Queue containing the command to execute locally.
-		 */
-		private CaptureCommand(ArrayDeque<String> queue) {
-			
+		String xyear = "00" + (cal.get(Calendar.YEAR) % 100);
+		xyear = xyear.substring(xyear.length()-2);
+		String xmonth = "00" + (cal.get(Calendar.MONTH) + 1);
+		xmonth = xmonth.substring(xmonth.length()-2);
+		String xday = "00" + cal.get(Calendar.DAY_OF_MONTH);
+		xday = xday.substring(xday.length()-2);
+		String xhour = "00" + cal.get(Calendar.HOUR_OF_DAY);
+		xhour = xhour.substring(xhour.length()-2);
+		String xminute = "00" + cal.get(Calendar.MINUTE);
+		xminute = xminute.substring(xminute.length()-2);
+		String xsecond = "00" + cal.get(Calendar.SECOND);
+		xsecond = xsecond.substring(xsecond.length()-2);
+
+		// directory
+		path = instance.getStorageBinaryRoot() + "/" + xyear + xmonth + xday + "/" + source.replace(' ', '_').replace('.', '_') + "/";
+
+		// create directory if neccessary
+		File dirTarget = new File(path);
+		if (!dirTarget.isDirectory()) {
 			try {
-				String rsnStr = (String) queue.removeFirst();
-				try { rsn = new BigDecimal(rsnStr); } catch (Exception ex) {;}
-				event_name = (String) queue.removeFirst();
-				cmd = (String)queue.removeFirst();
-				startTime = (String) queue.removeFirst();
-				frequency = (String) queue.removeFirst();
-				lastFtpRun = (String) queue.removeFirst();
-			} 
-			catch (Exception ex) { 
-				decoratedError(INDENT0, "Error reading offline Capture data.", ex); 
+				if (!(dirTarget.mkdirs())) {
+					decoratedTrace(INDENT2, "DailyFunctions.captureEvent(): Could not create directory '"+path+"'", session);
+				}
+			} catch (Exception ex) {
+				decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception creating directory '"+path+"': '", ex);
 			}
 		}
 
-		/**
-		 * Writes a representation of this ShellCommand to the file managed by the PrintWriter parameter.
-		 * @param offlineWriter PrintWriter used to store a representation of this object in the <code>offline</code> directory.
-		 */
+		// file name
+		path = path + source;		
+		if (!name.equals("")) {
+			path = path + "_" + name;
+		}
+		path = path + "_" + xyear + xmonth + xday + "_" + xhour + xminute + xsecond;
+
+		return path;
+	}
+		
+	private class Capture {
+		BigDecimal rsn = null;
+		String cmd = "";
+		String eventName = "";
+		String clipCmd = "";
+		boolean ccCapture = false;
+		String title = "";
+		String type = "";
+		String channel = "";
+		String source = "";
+		String frequency = "";
+		String startTime = "";
+		String stopTime = "";
+		String launchTime = "";
+		String lastFtpRun = "";
+
+		String fullOutputFilename = "";
+		String fullOutput = "";
+		Calendar startCal; // when this event starts next
+		Calendar stopCal; // when this event stops next
+		Calendar launchCal; // when this event was launched
+		String streamOutput = ""; // full path to the streaming file if stored on the NAS (minus extension)
+		String streamFile = ""; // file name of the streaming file (minus extension)
+		String nasFolder = ""; 
+		String streamLocal = ""; // full path to the streaming file if stored locally (minus extension)	
+
+		private Capture(EventsDao captureEvt, Session session) {
+			rsn = captureEvt.getRsn();
+			eventName = captureEvt.getName();
+			cmd = captureEvt.getCaptureCommand();
+			clipCmd = captureEvt.getClipCommand();
+			ccCapture = captureEvt.getCcCapture();
+			title = captureEvt.getTitle();
+			type = captureEvt.getFileName();
+			channel = captureEvt.getChannel();
+			source = captureEvt.getSource();
+			frequency = captureEvt.getFrequency();
+			startTime = captureEvt.getStartTime();
+			stopTime = captureEvt.getStopTime();
+			launchTime = captureEvt.getLaunchTime();
+			lastFtpRun = captureEvt.getLastFtpRun();
+			this.setUp(session);
+		}
+
+		private Capture(ArrayDeque adq, Session session) {
+			try {
+				String rsnStr = (String)adq.removeFirst();
+				try { rsn = new BigDecimal(rsnStr); } catch (Exception ex) {;}
+				eventName = (String)adq.removeFirst();
+				cmd = (String)adq.removeFirst();
+				clipCmd = (String)adq.removeFirst();
+				String ccCaptureStr = (String)adq.removeFirst();
+				try { ccCapture = Boolean.parseBoolean(ccCaptureStr); } catch (Exception ex) {;}
+				title = (String)adq.removeFirst();
+				type = (String)adq.removeFirst();
+				channel = (String)adq.removeFirst();
+				source = (String)adq.removeFirst();
+				frequency = (String)adq.removeFirst();
+				startTime = (String)adq.removeFirst();
+				stopTime = (String)adq.removeFirst();
+				launchTime = (String)adq.removeFirst();
+				lastFtpRun = (String)adq.removeFirst();
+				this.setUp(session);
+			} catch (Exception ex) { 
+				decoratedError(INDENT0, "Error reading offline capture data", ex); 
+			}
+		}
+
+		void setUp(Session session) {
+			// full path to the capture file
+			fullOutputFilename = this.channel.replace(' ', '_').replace('/', '_').replaceAll("[^a-zA-Z0-9\\_]", "");
+			fullOutput = instance.getStorageCaptureDir() + "/" + fullOutputFilename + ".mpg";
+
+			startCal = DateUtil.createTime(this.startTime, this.frequency); // when this event starts next
+			stopCal = DateUtil.createTime(this.stopTime, this.frequency); // when this event stops next
+			launchCal = DateUtil.createTime(this.launchTime, this.frequency); // when this event was launched
+
+			// full file path for the stream + create directory if neccessary
+			streamOutput = clipPath(startCal, this.source, "full", session); // full path to the streaming file if stored on the NAS (minus extension)
+			streamFile = new File(streamOutput).getName(); // file name of the streaming file (minus extension)
+			nasFolder = new File(streamOutput).getParent(); 
+			streamLocal = instance.getStorageCaptureDir() + "/" + streamFile; // full path to the streaming file if stored locally (minus extension)	
+		}
+
 		void writeOffline(PrintWriter offlineWriter) {
 			if (offlineWriter!=null) {
 				try {
 					offlineWriter.println(rsn);
-					offlineWriter.println(event_name);
+					offlineWriter.println(eventName);
 					offlineWriter.println(cmd);
-					offlineWriter.println(startTime);
+					offlineWriter.println(clipCmd);
+					offlineWriter.println(ccCapture);
+					offlineWriter.println(title);
+					offlineWriter.println(type);
+					offlineWriter.println(channel);
+					offlineWriter.println(source);
 					offlineWriter.println(frequency);
+					offlineWriter.println(startTime);
+					offlineWriter.println(stopTime);
+					offlineWriter.println(launchTime);
 					offlineWriter.println(lastFtpRun);
 				} catch (Exception ex) { ; }
 			}
 		}
 
-		/**
-		 * Execute the command represented by this ShellCommand object. If the database connection is online the first parameter will be
-		 * a valid EventsDao object which is used when updating the lastFtpRun time. If it is running offline, both parameters will be null.
-		 * 
-		 * @param captureEvent The EVENTS table record representing the capture command, or null if offline.
-		 * @param session The current Hibernate persistence context, or null if offline.
-		 */
-		void doCapture(EventsDao captureEvent, Session session) {
+		void doCapture(EventsDao captureEvt, Session session) {
 			
-			String now = DateUtil.getDateNow();
+			String now = DateUtil.localDateToTnoDateFormat(LocalDate.now());
 			
-			// Add space because we want to check this event (to write to offline cache) even if it has run already
-			if ((!this.lastFtpRun.equals(now)) && (!this.lastFtpRun.equals(now + " "))) { 
-				String cmd = this.cmd;
+			// has not run today --- add space because we want to check this event (for clips) even if it has run already
+			//  or the channel file does not exist - probably because of restart
+			if ( (!this.lastFtpRun.equals(now + " ")) || (!new File(this.fullOutput).exists()) ) { 
 
-				// What time is the event to start?
-				Calendar startCal = DateUtil.createTime(this.startTime, this.frequency);
-
-				long startMS = startCal.getTime().getTime(); // system milliseconds at which this should start
+				long startMS = this.startCal.getTime().getTime(); // system milliseconds at which this should start
 				long nowMS = (new java.util.Date()).getTime(); // current system milliseconds
 				long seconds = (startMS - nowMS) / 1000;
+				if (seconds<0) seconds = 0;
+
+				//frame.addJLog(eventLog("Capture event '"+cmd+"' to execute in "+seconds+" seconds"), true);
 
 				// Is it time to start this event?
-				if ( seconds < 120 ) // Less than two minutes until start time
-				{
-					if (seconds > 0) cmd = "sleep " + seconds + "; " + cmd;
+				if ( seconds < 120 ) { // less than two minutes until start time
 
-					String[] cmda = {
-							"/bin/sh",
-							"-c",
-							cmd
-					};
+					nowMS = (new java.util.Date()).getTime(); // current system milliseconds
+					long startSec = (this.startCal.getTime().getTime() - nowMS)/1000; // seconds from now until start
+					long stopSec = (this.stopCal.getTime().getTime() - nowMS)/1000; // seconds from now until stop
+					if (startSec<0) startSec = 0;
+					long duration = (stopSec - startSec);
 
-					try {
-						Runtime.getRuntime().exec(cmda);
-						System.out.println("Filler.");
-					} catch (Exception e) {
-						logger.error("Exception launching command '" + cmd + "'", e);
+					boolean launch_ok = false;
+
+					String cmd = this.cmd;
+					if (!cmd.equals("")) {
+
+						cmd = cmd.replace("[channel]", this.channel);
+						cmd = cmd.replace("[capture]", this.fullOutput);
+						cmd = cmd.replace("[output]", this.fullOutput);
+						cmd = cmd.replace("[start]", ""+startSec);
+						cmd = cmd.replace("[duration]", ""+duration);
+						cmd = cmd.replace("[stream]", this.streamOutput);
+						cmd = cmd.replace("[streamlocal]", this.streamLocal);
+						cmd = cmd.replace("[streamfile]", this.streamFile);
+						cmd = cmd.replace("[nas]", this.nasFolder);
+
+						if (seconds > 0) this.cmd = "sleep "+seconds+"; "+cmd;
+
+						String[] cmda = {
+								"/bin/sh",
+								"-c",
+								cmd
+						};
+
+						try {
+							Process p=new ProcessBuilder(cmda).start();
+						} catch (Exception e) {
+							decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception launching capture command '" + cmd + "': '" + e.getMessage() + "'", e);
+						}
+
+						launch_ok = true;
+
+						decoratedTrace(INDENT2, "Capture command executed '" + cmd + "'", session);
+					}
+
+					// capture cc
+					if (this.ccCapture) {
+						String ccCmd = "ccextractor -i " + this.fullOutput + " -s -out=bin -o " + this.fullOutput + ".cc &> /dev/null";
+						ccCmd = "sleep " + (seconds + 30) + "; " + ccCmd; // start a little bit later - it can catch up
+
+						String[] cmda = {
+								"/bin/sh",
+								"-c",
+								ccCmd
+						};
+
+						try {
+							Process p2 = new ProcessBuilder(cmda).start();
+						} catch (Exception e) {
+							decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception launching cc command '" + ccCmd + "': '", e);
+						}
+
+						decoratedTrace(INDENT2, "CC command executed '" + ccCmd+"'", session);
+					}
+
+					if (launch_ok) {
+						this.launchCal = Calendar.getInstance();
+						this.launchCal.setTimeInMillis(nowMS+seconds*1000);
+						long launchSecs = this.launchCal.get(Calendar.HOUR_OF_DAY)*3600+this.launchCal.get(Calendar.MINUTE)*60+this.launchCal.get(Calendar.SECOND);
+						this.launchTime = DateUtil.secs2Time(launchSecs);
 					}
 
 					this.lastFtpRun = now + " ";
 
-					if (session != null) {
+					if (captureEvt!=null) {
 						//Update this record to reflect that it has run
-						captureEvent.setLastFtpRun(this.lastFtpRun);
+						if (launch_ok)
+							captureEvt.setLaunchTime(this.launchTime);
+						captureEvt.setLastFtpRun(this.lastFtpRun);
 						session.beginTransaction();
-						session.persist(captureEvent);
+						session.persist(captureEvt);
 						session.getTransaction().commit();
 					}
 
-					decoratedTrace(INDENT2, "Capture command executed '" + cmd + "'");
-				}
-			}
+				} // if time to start
+
+			} // not run today
 		}
 	}
 }

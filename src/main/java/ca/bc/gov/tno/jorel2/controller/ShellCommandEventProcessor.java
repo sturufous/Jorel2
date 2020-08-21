@@ -55,7 +55,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		offlineDirPath = userDir + fileSep + "offline" + fileSep;
 		offlineDir = new File(offlineDirPath);
 		if (!offlineDir.isDirectory()) offlineDir = null;
-		logger.trace("Setting offline directory to: " + offlineDir);
+		logger.trace("Shell Command Event Processor: Setting offline directory to: " + offlineDir);
 	}
 	
 	/**
