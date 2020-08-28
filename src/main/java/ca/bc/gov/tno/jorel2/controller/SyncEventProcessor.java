@@ -83,6 +83,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 			decoratedTrace(INDENT1, "Completing Sync event processing");
     	} 
     	catch (Exception e) {
+			instance.removeExclusiveEvent(EventType.SYNC);
     		logger.error("Processing sync event.", e);
     	}
     	

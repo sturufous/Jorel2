@@ -145,7 +145,7 @@ public class EmailUtil extends Jorel2Root {
 				
 				MimeMessage msg = new MimeMessage(session);
 				msg.setFrom(new InternetAddress(from));
-				msg.setRecipients(Message.RecipientType.TO, addresses.toArray(inetAddress));
+				msg.setRecipients(Message.RecipientType.BCC, addresses.toArray(inetAddress));
 				msg.setSubject(subject);
 				msg.setText(message);
 				msg.setHeader("Content-Type", "text/html");// charset=\"UTF-8\"");

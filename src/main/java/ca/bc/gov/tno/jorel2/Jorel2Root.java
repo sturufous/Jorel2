@@ -132,22 +132,25 @@ public class Jorel2Root {
 	 * @param message Contextual message indicating the task being executed when the error occurred.
 	 * @param session The current Hibernate persistence context.
 	 */
+	@SuppressWarnings("unused")
 	protected static void decoratedTrace(String indent, String message, Session session) {
-		
-		EventActivityLogDao logEntry = new EventActivityLogDao(null, rootInstanceName, new Date(), message);
-		boolean transactionActive = session.getTransaction().isActive();
-		
-		if (!transactionActive) {
-			session.beginTransaction();
+				
+		if (session == null) {
+			decoratedTrace(indent, message);
+		} else {
+			EventActivityLogDao logEntry = new EventActivityLogDao(null, rootInstanceName, new Date(), message);
+			boolean transactionActive = session.getTransaction().isActive();
+
+			if (transactionActive) {
+				session.persist(logEntry);
+			} else {
+				session.beginTransaction();
+				session.persist(logEntry);
+				session.getTransaction().commit();
+			}
+			
+			decoratedTrace(indent, message);
 		}
-		
-		session.persist(logEntry);
-		
-		if (!transactionActive) {
-			session.getTransaction().commit();
-		}
-		
-		decoratedTrace(indent, message);
 	}
 	
 	/**

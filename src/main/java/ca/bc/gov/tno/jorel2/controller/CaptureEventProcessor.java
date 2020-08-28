@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
-import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.util.ArrayDeque;
 import java.util.Calendar;
@@ -63,7 +62,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 	
 	/**
-	 * Process all eligible ShellCommand events from the EVENTS table.
+	 * Process all eligible Capture events from the EVENTS table.
 	 * 
 	 * @param eventType The type of event we're processing (e.g. "RSS", "Monitor")
 	 * @param session The current Hibernate persistence context
@@ -77,7 +76,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
     			decoratedTrace(INDENT1, "Capture event processing already active. Skipping.");    			
     		} else {
     			instance.addExclusiveEvent(EventType.CAPTURE);
-    			decoratedTrace(INDENT1, "Starting Capture event processing", session);
+    			decoratedTrace(INDENT1, "Starting Capture event processing");
 	    		
 		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
 		        
@@ -101,14 +100,17 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
     		logger.error("Processing Capture entries.", e);
     	}
     	
-    	decoratedTrace(INDENT1, "Completing Capture event processing", session);
+    	decoratedTrace(INDENT1, "Completing Capture event processing");
     	return Optional.of("complete");
 	}
 	
 	/**
-	 * Executes the capture event described by the <code>captureEvent</code> parameter. 
+	 * Executes the capture event described by the <code>captureEvent</code> parameter and any associated clip events. This method opens a PrintWriter 
+	 * to a file in the offline directory and writes the details of any Capture and Clip events to it for consumption by the <code>captureEventsOffline()</code> 
+	 * method. The capture event is executed first, and its <code>launchTime</code> attribute may be used by any subsequent clip events to determine 
+	 * whether the content on which they rely has been captured.
 	 * 
-	 * @param captureEvent Entity describing the event to run locally.
+	 * @param captureEvent Entity describing the event to run.
 	 * @param session The current Hibernate persistence context.
 	 */
 	private void captureEventOnline(EventsDao captureEvent, Session session) {
@@ -130,10 +132,8 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		List<EventClipsDao> results = EventClipsDao.getClipsByEventRsn(captureEvent.getRsn(), session);
 		
 		for (EventClipsDao clipEntry : results) {
-			Clip clip = new Clip(captureEvent);
-
-			clip.doClip(capture, captureEvent, session); // do the clip (if it is time)
-
+			Clip clip = new Clip(clipEntry);
+			clip.doClip(capture, clipEntry, session); // do the clip (if it is time)
 			clip.writeOffline(offlineWriter); // write to the offline cache
 		}
 
@@ -149,12 +149,12 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	 * directory which have the following naming convention: <code>capturecmd_[event-name].txt</code>. These files are created when 
 	 * <code>captureCommandEventOnline()</code> is executed. 
 	 */
-	public void captureEventOffline(Session session) {
+	public void captureEventOffline() {
 
-		decoratedTrace(INDENT1, "Starting offline ShellCommand event processing");
+		decoratedTrace(INDENT1, "Starting offline Capture event processing");
 		
 		if (instance.isExclusiveEventActive(EventType.CAPTURE)) {
-			decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping."); 
+			decoratedTrace(INDENT1, "Capture event offline processing already active. Skipping."); 
 		} else {
 			try {
     			instance.addExclusiveEvent(EventType.CAPTURE);
@@ -165,7 +165,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						ArrayDeque<String> adq = new ArrayDeque<>();
 						loadOffline(offlineFile, adq);
 		
-						Capture capture = new Capture(adq, session);
+						Capture capture = new Capture(adq, null);
 		
 						PrintWriter offlineWriter = null;
 						if (offlineDir != null) {
@@ -179,7 +179,13 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						capture.doCapture(null, null); // do the command (if it is time)
 						capture.writeOffline(offlineWriter); // write to the offline cache
 						
-						//List<EventClipsDao> results = EventClipsDao.getClipsByEventRsn(eventRsn, session)
+						// get clips
+						Clip clip = new Clip(adq);
+						while (clip.valid) {
+							clip.doClip(capture, null, null); // do the clip (if it is time)
+							clip.writeOffline(offlineWriter); // write to the offline cache
+							clip = new Clip(adq);
+						}
 		
 						if (offlineWriter!=null) {
 							try {
@@ -188,10 +194,10 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						}
 					}
 				}
-    			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+    			instance.removeExclusiveEvent(EventType.CAPTURE);
 			}
 			catch (Exception e) {
-    			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+    			instance.removeExclusiveEvent(EventType.CAPTURE);
 	    		logger.error("While processing offline capture command.", e); 				
 			}
 		}
@@ -200,7 +206,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 		
 	/**
-	 * Loads the lines of text contained in the offLine file into the Queue variable for storage in a ShellCommand object.
+	 * Loads the lines of text contained in the offLine file into the Queue variable for storage in a Capture object.
 	 * 
 	 * @param offlineFile A java.io.File object identifying the file, in the offline directory, that contains the command.
 	 * @param adq The queue into which the lines are loaded.
@@ -224,7 +230,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 	
 	/**
-	 * Updates the lastFtpRun field for all ShellCommand events in the EVENTS table that correspond with files in the 
+	 * Updates the lastFtpRun field for all Capture events in the EVENTS table that correspond with files in the 
 	 * offline directory. This ensures that, if the command was processed while the database connection was down, the
 	 * command is not run again based on an inaccurate last-run date.
 	 * 
@@ -233,11 +239,11 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	public void captureCommandEventUpdate(Session session) {
 
 		try {
-			if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
-				decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping."); 
+			if (instance.isExclusiveEventActive(EventType.CAPTURE)) {
+				decoratedTrace(INDENT1, "Offline Capture event post-processing already active. Skipping."); 
 			} else {
-				instance.addExclusiveEvent(EventType.SHELLCOMMAND);
-				decoratedTrace(INDENT2, "Updating lastFtpRun field for all commands in offline directory: " + offlineDir);
+				instance.addExclusiveEvent(EventType.CAPTURE);
+				decoratedTrace(INDENT2, "Updating lastFtpRun field for all Capture commands in offline directory: " + offlineDir);
 				
 				for(File offlineFile: offlineDir.listFiles()) {
 					if (offlineFile.getName().startsWith("capturecmd_")) {
@@ -247,7 +253,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		
 						Capture capture = new Capture(adq, session);
 		
-						decoratedTrace(INDENT1, "Update capture event, set lastFtpRun='" + capture.lastFtpRun + "' for rsn=" + capture.rsn);
+						decoratedTrace(INDENT2, "Update capture event, set lastFtpRun='" + capture.lastFtpRun + "' for rsn = " + capture.rsn);
 		
 						// update event
 						EventsDao captureEvt = EventsDao.getEventByRsn(capture.rsn, session).get(0);
@@ -258,18 +264,18 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 					}
 				}
 				
-				instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+				instance.removeExclusiveEvent(EventType.CAPTURE);
 			}
 		}
 		catch (Exception e) {
-			instance.removeExclusiveEvent(EventType.SHELLCOMMAND);
+			instance.removeExclusiveEvent(EventType.CAPTURE);
     		logger.error("While post-processing capture event after network reconnect.", e); 							
 		}
 	}
 	
 	// create a full file path based on date and source for use in captureEvent()
 	// does NOT include file extension
-	private String clipPath(Calendar cal, String source, String name, Session session) {
+	private String clipPath(Calendar cal, String source, String name) {
 		String path;
 
 		source = source.replace(' ', '_').replaceAll("[^a-zA-Z0-9\\_]", "");		
@@ -296,10 +302,10 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		if (!dirTarget.isDirectory()) {
 			try {
 				if (!(dirTarget.mkdirs())) {
-					decoratedTrace(INDENT2, "DailyFunctions.captureEvent(): Could not create directory '"+path+"'", session);
+					decoratedTrace(INDENT2, "CaptureEventProcessor: Could not create directory '" + path + "'");
 				}
 			} catch (Exception ex) {
-				decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception creating directory '"+path+"': '", ex);
+				decoratedError(INDENT0, "CaptureEventProcessor: Exception creating directory '" + path + "': '", ex);
 			}
 		}
 
@@ -318,7 +324,6 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		String cmd = "";
 		String eventName = "";
 		String clipCmd = "";
-		boolean ccCapture = false;
 		String title = "";
 		String type = "";
 		String channel = "";
@@ -344,7 +349,6 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			eventName = captureEvt.getName();
 			cmd = captureEvt.getCaptureCommand();
 			clipCmd = captureEvt.getClipCommand();
-			ccCapture = captureEvt.getCcCapture();
 			title = captureEvt.getTitle();
 			type = captureEvt.getFileName();
 			channel = captureEvt.getChannel();
@@ -359,22 +363,20 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 
 		private Capture(ArrayDeque adq, Session session) {
 			try {
-				String rsnStr = (String)adq.removeFirst();
+				String rsnStr = (String) adq.removeFirst();
 				try { rsn = new BigDecimal(rsnStr); } catch (Exception ex) {;}
-				eventName = (String)adq.removeFirst();
-				cmd = (String)adq.removeFirst();
-				clipCmd = (String)adq.removeFirst();
-				String ccCaptureStr = (String)adq.removeFirst();
-				try { ccCapture = Boolean.parseBoolean(ccCaptureStr); } catch (Exception ex) {;}
-				title = (String)adq.removeFirst();
-				type = (String)adq.removeFirst();
-				channel = (String)adq.removeFirst();
-				source = (String)adq.removeFirst();
-				frequency = (String)adq.removeFirst();
-				startTime = (String)adq.removeFirst();
-				stopTime = (String)adq.removeFirst();
-				launchTime = (String)adq.removeFirst();
-				lastFtpRun = (String)adq.removeFirst();
+				eventName = (String) adq.removeFirst();
+				cmd = (String) adq.removeFirst();
+				clipCmd = (String) adq.removeFirst();
+				title = (String) adq.removeFirst();
+				type = (String) adq.removeFirst();
+				channel = (String) adq.removeFirst();
+				source = (String) adq.removeFirst();
+				frequency = (String) adq.removeFirst();
+				startTime = (String) adq.removeFirst();
+				stopTime = (String) adq.removeFirst();
+				launchTime = (String) adq.removeFirst();
+				lastFtpRun = (String) adq.removeFirst();
 				this.setUp(session);
 			} catch (Exception ex) { 
 				decoratedError(INDENT0, "Error reading offline capture data", ex); 
@@ -391,7 +393,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			launchCal = DateUtil.createTime(this.launchTime, this.frequency); // when this event was launched
 
 			// full file path for the stream + create directory if neccessary
-			streamOutput = clipPath(startCal, this.source, "full", session); // full path to the streaming file if stored on the NAS (minus extension)
+			streamOutput = clipPath(startCal, this.source, "full"); // full path to the streaming file if stored on the NAS (minus extension)
 			streamFile = new File(streamOutput).getName(); // file name of the streaming file (minus extension)
 			nasFolder = new File(streamOutput).getParent(); 
 			streamLocal = instance.getStorageCaptureDir() + "/" + streamFile; // full path to the streaming file if stored locally (minus extension)	
@@ -404,7 +406,6 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 					offlineWriter.println(eventName);
 					offlineWriter.println(cmd);
 					offlineWriter.println(clipCmd);
-					offlineWriter.println(ccCapture);
 					offlineWriter.println(title);
 					offlineWriter.println(type);
 					offlineWriter.println(channel);
@@ -438,8 +439,8 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 				if ( seconds < 120 ) { // less than two minutes until start time
 
 					nowMS = (new java.util.Date()).getTime(); // current system milliseconds
-					long startSec = (this.startCal.getTime().getTime() - nowMS)/1000; // seconds from now until start
-					long stopSec = (this.stopCal.getTime().getTime() - nowMS)/1000; // seconds from now until stop
+					long startSec = (this.startCal.getTime().getTime() - nowMS) / 1000; // seconds from now until start
+					long stopSec = (this.stopCal.getTime().getTime() - nowMS) / 1000; // seconds from now until stop
 					if (startSec < 0) startSec = 0;
 					long duration = (stopSec - startSec);
 
@@ -471,30 +472,10 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 							launchOk = true;
 							decoratedTrace(INDENT2, "Capture command executed '" + cmd + "'", session);
 						} catch (Exception e) {
-							decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception launching capture command '" + cmd + "': '" + e.getMessage() + "'", e);
+							decoratedError(INDENT0, "CaptureEventProcessor: Exception launching capture command '" + cmd + "': '" + e.getMessage() + "'", e);
 							launchOk = false;
 						}
 
-					}
-
-					// capture cc
-					if (this.ccCapture) {
-						String ccCmd = "ccextractor -i " + this.fullOutput + " -s -out=bin -o " + this.fullOutput + ".cc &> /dev/null";
-						ccCmd = "sleep " + (seconds + 30) + "; " + ccCmd; // start a little bit later - it can catch up
-
-						String[] cmda = {
-								"/bin/sh",
-								"-c",
-								ccCmd
-						};
-
-						try {
-							Process p2 = new ProcessBuilder(cmda).start();
-						} catch (Exception e) {
-							decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception launching cc command '" + ccCmd + "': '", e);
-						}
-
-						decoratedTrace(INDENT2, "CC command executed '" + ccCmd+"'", session);
 					}
 
 					if (launchOk) {
@@ -530,15 +511,15 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		String stopTime="";
 		String lastRun="";
 
-		boolean valid=true;
+		boolean valid = true;
 
-		private Clip(EventsDao captureEvt) {
-			rsn = captureEvt.getRsn();
-			name = captureEvt.getName();
-			frequency = captureEvt.getFrequency();
-			startTime = captureEvt.getStartTime();
-			stopTime = captureEvt.getStopTime();
-			lastRun = captureEvt.getLastFtpRun();
+		private Clip(EventClipsDao clipData) {
+			rsn = clipData.getRsn();
+			name = clipData.getName();
+			frequency = clipData.getFrequency();
+			startTime = clipData.getStartTime();
+			stopTime = clipData.getStopTime();
+			lastRun = clipData.getLastRun();
 		}
 
 		private Clip(ArrayDeque adq) {
@@ -547,7 +528,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 				try {
 					String test = "";
 					do {
-						test = (String)adq.removeFirst();
+						test = (String) adq.removeFirst();
 					} while (!test.equalsIgnoreCase("---"));
 
 				} catch (NoSuchElementException ex) {
@@ -557,11 +538,11 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 
 				String rsnStr = (String) adq.removeFirst();
 				try { rsn = new BigDecimal(rsnStr); } catch (Exception ex) {;}
-				name = (String)adq.removeFirst();
-				frequency = (String)adq.removeFirst();
-				startTime = (String)adq.removeFirst();
-				stopTime = (String)adq.removeFirst();
-				lastRun = (String)adq.removeFirst();
+				name = (String) adq.removeFirst();
+				frequency = (String) adq.removeFirst();
+				startTime = (String) adq.removeFirst();
+				stopTime = (String) adq.removeFirst();
+				lastRun = (String) adq.removeFirst();
 			} catch (Exception ex) { 
 				decoratedError(INDENT0, "Error reading offline clip data", ex); 
 			}
@@ -582,9 +563,10 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			}
 		}
 
-		void doClip(Capture capture, EventsDao captureEvt, Session session) {
+		void doClip(Capture capture, EventClipsDao clipEntry, Session session) {
 			
-			String now = DateUtil.localDateToTnoDateFormat(LocalDate.now());
+			String now = DateUtil.getDateNow();
+			boolean success = true;
 			
 			if (!this.lastRun.equalsIgnoreCase(now)) { // already run?
 
@@ -599,25 +581,22 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 				// Is it time to make this clip?
 				//  take into account the fudge-factor which is a headstart into making the clip. This is a percentage of the clip
 				//  duration and is set in the properties file
-				if ( clipStopMS <= (nowMS+fudgeMS) ) { // stop time is past
+				if ( clipStopMS <= (nowMS + fudgeMS) ) { // stop time is past
 
 					String fullClipCmd = capture.clipCmd; // full_clip_cmd will be cloaked
 
-					long startSec = (clipStartCal.getTime().getTime() - capture.launchCal.getTime().getTime())/1000; // offset from start of capture
-					long stopSec = (clipStopCal.getTime().getTime() - capture.launchCal.getTime().getTime())/1000; // offset from start of capture
-					if (startSec<0) startSec = 0;
+					long startSec = (clipStartCal.getTime().getTime() - capture.launchCal.getTime().getTime()) / 1000; // offset from start of capture
+					long stopSec = (clipStopCal.getTime().getTime() - capture.launchCal.getTime().getTime()) / 1000; // offset from start of capture
+					if (startSec < 0) startSec = 0;
 					long duration = (stopSec - startSec);
 
-					if ((stopSec>=0) && (duration>0)) {
+					if ((stopSec >= 0) && (duration > 0)) {
 
 						// construct full file path + create directory if neccessary
-						String output = clipPath(clipStartCal, capture.source, this.name, session);
-
-						// if the clip name ends in _cc, then don't take the video clip, and insert the cc text into the DB
-						boolean cc_insert = this.name.endsWith("(cc)");
+						String output = clipPath(clipStartCal, capture.source, this.name);
 
 						// clip video
-						if ( (!fullClipCmd.equals("")) && (!cc_insert) ) {
+						if ( (!fullClipCmd.equals(""))) {
 
 							fullClipCmd = fullClipCmd.replace("[channel]", capture.channel);
 							fullClipCmd = fullClipCmd.replace("[capture]", capture.fullOutput);
@@ -626,8 +605,8 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 							fullClipCmd = fullClipCmd.replace("[streamlocal]", capture.streamLocal);
 							fullClipCmd = fullClipCmd.replace("[streamfile]", capture.streamFile);
 							fullClipCmd = fullClipCmd.replace("[nas]", capture.nasFolder);
-							fullClipCmd = fullClipCmd.replace("[start]", ""+startSec);
-							fullClipCmd = fullClipCmd.replace("[duration]", ""+duration);
+							fullClipCmd = fullClipCmd.replace("[start]", "" + startSec);
+							fullClipCmd = fullClipCmd.replace("[duration]", "" + duration);
 							fullClipCmd = fullClipCmd.replace("[output]", output);
 							fullClipCmd = fullClipCmd.replace("[clip]", output);
 
@@ -639,91 +618,21 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 
 							try {
 								Process p1=new ProcessBuilder(cmda).start();
+								decoratedTrace(INDENT2, "Clip command executed '" + fullClipCmd + "'", session);
 							} catch (Exception e) {
-								decoratedError(INDENT0, "DailyFunctions.captureEvent(): Exception launching clip command '" + fullClipCmd + "': '" + e.getMessage() + "'", e);
+								success = false;
+								decoratedError(INDENT0, "CaptureEventProcessor: Exception launching clip command '" + fullClipCmd + "': '" + e.getMessage() + "'", e);
 							}
 
-							decoratedTrace(INDENT2, "Clip command executed '" + fullClipCmd + "'", session);
 						}
-
-						// clip cc
-						/*if (capture.ccCapture) {
-
-							// milliseconds from midnight to launch of the capture
-							long launchMS = 1000 * (capture.launchCal.get(Calendar.HOUR_OF_DAY) * 3600 + capture.launchCal.get(Calendar.MINUTE) * 60 + capture.launchCal.get(Calendar.SECOND));
-
-							// temp file name - needed by the fix script
-							String tempFile = frame.getCaptureDir()+"/"+new File(output).getName();
-
-							String cc_cmd = frame.getCCCommand();
-							cc_cmd = cc_cmd.replace("[input]", capture.fullOutput);
-							cc_cmd = cc_cmd.replace("[start]", secs2Time(startSec));
-							cc_cmd = cc_cmd.replace("[stop]", secs2Time(stopSec));
-							cc_cmd = cc_cmd.replace("[delay]", launchMS+"");
-							cc_cmd = cc_cmd.replace("[output]", output);
-							cc_cmd = cc_cmd.replace("[ext]", frame.getCCExtension());
-							cc_cmd = cc_cmd.replace("[tempfile]", tempFile);
-							cc_cmd = cc_cmd.replace("[nas]", capture.nasFolder);
-
-							String[] cmda = {
-									"/bin/sh",
-									"-c",
-									cc_cmd
-							};
-
-							try {
-								Process p2=new ProcessBuilder(cmda).start();
-
-								if ((cc_insert) && (!offline)) {
-									p2.waitFor();
-
-									File cc_file = new File(output+frame.getCCExtension());
-
-									if (cc_file.exists()) {
-
-										BufferedReader in = new BufferedReader(new FileReader(cc_file));
-										StringBuffer contents = new StringBuffer();
-										String line;
-										while ((line = in.readLine()) != null) {
-											contents.append(line);
-											contents.append("\r\n<p>");
-										}
-										in.close();
-
-										dbNews_Items news = new dbNews_Items(frame);
-										news.initialize();
-										news.setItem_date(new java.sql.Date((new java.util.Date()).getTime()));
-										news.setItem_time(this.start_time);
-										news.setSource(capture.source);
-										news.setTitle(this.name.substring(0, this.name.length()-4));
-										news.setType("CC News");
-										news.setNumber1(cc_file.length());
-										news.setDate2(new java.sql.Date((new java.util.Date()).getTime()));
-										news.setExpireRule(3);
-										news.setContent(contents.toString());
-										news.insert(false);
-
-										if (news.getLastError().equals(""))
-											frame.addJLog(eventLog("CC record inserted "+news.getRsn()), true);
-										else
-											frame.addJLog(eventLog("Error inserting CC record: "+news.getLastError()), true);
-
-									}
-								}
-							} catch (Exception e) {
-								frame.addJLog(eventLog("DailyFunctions.captureEvent(): Exception launching cc command '"+cc_cmd+"': '"+e.getMessage()+"'"), true);
-							}
-
-							frame.addJLog(eventLog("CC command executed '"+cc_cmd+"'"), true);
-						}*/
 
 						this.lastRun = now;
 
-						if (captureEvt != null) {
+						if (clipEntry != null && success) {
 							//Update this record to reflect that it has run
-							captureEvt.setLastFtpRun(this.lastRun);
+							clipEntry.setLastRun(this.lastRun);
 							session.beginTransaction();
-							session.persist(captureEvt);
+							session.persist(clipEntry);
 							session.getTransaction().commit();
 						}
 					}

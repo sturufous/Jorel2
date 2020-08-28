@@ -102,7 +102,7 @@ public class DateUtil extends Jorel2Root {
 		
 		// Process the current date using the JDK 1.8 Time API
 		LocalDate now = LocalDate.now();
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy");
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy", Locale.UK);
 		
 		// Format the current date to match values in LAST_FTP_RUN
 		String dateMatch = now.format(formatter);
@@ -244,7 +244,7 @@ public class DateUtil extends Jorel2Root {
 	
 	public static String localDateToTnoDateFormat(LocalDate date) {
 		
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yy");
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yy", Locale.UK);
 		String strDate = date.format(formatter);
 		
 		return strDate.toUpperCase();

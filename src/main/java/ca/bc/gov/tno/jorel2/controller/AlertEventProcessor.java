@@ -90,7 +90,8 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
     		}
     	} 
     	catch (Exception e) {
-    		logger.error("Processing user directory entries.", e);
+    		instance.removeExclusiveEvent(EventType.ALERT);
+    		logger.error("Processing alert events.", e);
     	}
     	
 		decoratedTrace(INDENT1, "Completed Alert event processing");

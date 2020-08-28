@@ -93,6 +93,7 @@ public class LdapEventProcessor extends Jorel2Root implements EventProcessor {
     		decoratedTrace(INDENT1, "Completed LDAP event processing");
     	} 
     	catch (Exception e) {
+	        instance.removeExclusiveEvent(EventType.LDAP);
     		logger.error("Processing  LDAP event entries.", e);
     	}
     	
