@@ -234,7 +234,7 @@ public class DateUtil extends Jorel2Root {
 	
 	public static long secondsSinceTime(String timeString) {
 		
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy, HH:mm:ss");
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 		LocalDateTime then = LocalDateTime.parse(timeString, formatter);
 		LocalDateTime now = LocalDateTime.now();
 		long seconds = ChronoUnit.SECONDS.between(then, now);

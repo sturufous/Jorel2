@@ -106,9 +106,10 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	
 	/**
 	 * Executes the capture event described by the <code>captureEvent</code> parameter and any associated clip events. This method opens a PrintWriter 
-	 * to a file in the offline directory and writes the details of any Capture and Clip events to it for consumption by the <code>captureEventsOffline()</code> 
-	 * method. The capture event is executed first, and its <code>launchTime</code> attribute may be used by any subsequent clip events to determine 
-	 * whether the content on which they rely has been captured.
+	 * to a file in the offline directory and writes the details of any capture and clip events to it for consumption by the <code>captureEventsOffline()</code> 
+	 * method. The capture event is executed first, and its <code>launchTime</code> attribute may be used by any associated clips to determine 
+	 * whether the content on which they rely has been captured. The clips associated with this capture event are retrieved from an 
+	 * <code>EventClipsDao</code> object.
 	 * 
 	 * @param captureEvent Entity describing the event to run.
 	 * @param session The current Hibernate persistence context.
@@ -147,7 +148,13 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	/**
 	 * Executes capture command events when the connection to the database is down. The commands are read from files in the <code>offline</code>
 	 * directory which have the following naming convention: <code>capturecmd_[event-name].txt</code>. These files are created when 
-	 * <code>captureCommandEventOnline()</code> is executed. 
+	 * <code>captureEventOnline()</code> is executed. This method opens a PrintWriter to the file and writes the details of any capture and clip 
+	 * events to it for later consumption by the <code>captureEventsOffline()</code> method.
+	 * 
+	 * The last-run times, for capture and clip, and the launch-time for capture events are written to the file to maintain synchronization
+	 * between consecutive thread executions. The capture event is executed first, and its <code>launchTime</code> attribute may be used by any 
+	 * associated clips to determine whether the content on which they depend has been captured. The clips associated with a capture event are 
+	 * retrieved from the <code>EVENT_CLIPS</code> table.
 	 */
 	public void captureEventOffline() {
 
@@ -206,10 +213,11 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 	}
 		
 	/**
-	 * Loads the lines of text contained in the offLine file into the Queue variable for storage in a Capture object.
+	 * Loads the lines of text contained in the offLine file into the ArrayDeque variable for storage in a Capture object. Any clip entries
+	 * in this file will also be loaded and subsequently stored in Clip objects.
 	 * 
-	 * @param offlineFile A java.io.File object identifying the file, in the offline directory, that contains the command.
-	 * @param adq The queue into which the lines are loaded.
+	 * @param offlineFile A java.io.File object identifying the file containing the Capture event and its clips.
+	 * @param adq The queue into which the lines are to be loaded.
 	 */
 	private void loadOffline(File offlineFile, ArrayDeque<String> adq) {
 		try {
@@ -273,8 +281,15 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 	}
 	
-	// create a full file path based on date and source for use in captureEvent()
-	// does NOT include file extension
+	/**
+	 *  Create a full file path based on date and source for use in captureEvent(). Also create any directories in this path that do not exist
+	 *  at the time of execution. The path does NOT include file extension.
+	 *  
+	 * @param cal Calendar date to use when constructing the directory names and file name.
+	 * @param source The value of the SOURCE column in the current Capture event.
+	 * @param name The value of the NAME column in the current Capture event.
+	 * @return The fully qualified clip path name.
+	 */
 	private String clipPath(Calendar cal, String source, String name) {
 		String path;
 
@@ -361,7 +376,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			this.setUp(session);
 		}
 
-		private Capture(ArrayDeque adq, Session session) {
+		private Capture(ArrayDeque<String> adq, Session session) {
 			try {
 				String rsnStr = (String) adq.removeFirst();
 				try { rsn = new BigDecimal(rsnStr); } catch (Exception ex) {;}
@@ -475,7 +490,6 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 							decoratedError(INDENT0, "CaptureEventProcessor: Exception launching capture command '" + cmd + "': '" + e.getMessage() + "'", e);
 							launchOk = false;
 						}
-
 					}
 
 					if (launchOk) {
@@ -522,7 +536,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			lastRun = clipData.getLastRun();
 		}
 
-		private Clip(ArrayDeque adq) {
+		private Clip(ArrayDeque<String> adq) {
 			try {
 
 				try {
@@ -623,7 +637,6 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 								success = false;
 								decoratedError(INDENT0, "CaptureEventProcessor: Exception launching clip command '" + fullClipCmd + "': '" + e.getMessage() + "'", e);
 							}
-
 						}
 
 						this.lastRun = now;
