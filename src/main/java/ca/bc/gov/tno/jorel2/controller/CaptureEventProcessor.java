@@ -334,6 +334,13 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		return path;
 	}
 		
+	/**
+	 * Class that encapsulates all the data and functionality relating to a capture event. Objects of this class can be created using two data
+	 * sources - either an EventsDao object (representing a record in the EVENTS table) when the database connection is active, or an ArrayDeque
+	 * object containing lines of text from a file in the <code>offline</code> directory if Jorel2 is operating in OFFLINE mode.
+	 * 
+	 * @author StuartM
+	 */
 	private class Capture {
 		BigDecimal rsn = null;
 		String cmd = "";
@@ -358,7 +365,13 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		String streamFile = ""; // file name of the streaming file (minus extension)
 		String nasFolder = ""; 
 		String streamLocal = ""; // full path to the streaming file if stored locally (minus extension)	
-
+		
+		/**
+		 * Create a Capture event from a record in the EVENTS table.
+		 * 
+		 * @param captureEvt Hibernate object representing the EVENTS record.
+		 * @param session The current Hibernate persistence context.
+		 */
 		private Capture(EventsDao captureEvt, Session session) {
 			rsn = captureEvt.getRsn();
 			eventName = captureEvt.getName();
@@ -376,6 +389,12 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			this.setUp(session);
 		}
 
+		/**
+		 * Create a Capture event from lines of text imported from a <code>capturecmd_</code> file in the <code>offline</code> directory.
+		 * 
+		 * @param adq Queue of text lines from which to obtain the event's attributes.
+		 * @param session The current Hibernate persistence context, which will be null in this case as Jorel2 is offline.
+		 */
 		private Capture(ArrayDeque<String> adq, Session session) {
 			try {
 				String rsnStr = (String) adq.removeFirst();
@@ -398,6 +417,11 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			}
 		}
 
+		/**
+		 * Initialize file, folder and date/time variables for this Capture event.
+		 * 
+		 * @param session The current Hibernate persistence context (will be null if Jorel2 is in offline mode).
+		 */
 		void setUp(Session session) {
 			// full path to the capture file
 			fullOutputFilename = this.channel.replace(' ', '_').replace('/', '_').replaceAll("[^a-zA-Z0-9\\_]", "");
@@ -414,6 +438,11 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			streamLocal = instance.getStorageCaptureDir() + "/" + streamFile; // full path to the streaming file if stored locally (minus extension)	
 		}
 
+		/**
+		 * Writes the attributes of this capture event to the offline file.
+		 * 
+		 * @param offlineWriter An open PrintWriter object pointing to the offline file for this Capture event.
+		 */
 		void writeOffline(PrintWriter offlineWriter) {
 			if (offlineWriter != null) {
 				try {
@@ -435,6 +464,27 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			}
 		}
 
+		/**
+		 * Determine if this Capture command should run, based on the lastFtpRun date and the start time of the event, and, if so, run it. 
+		 * Capture events only run once per day, whereas their associated clips must be checked in each Jorel2 execution cycle. If Jorel2 is online 
+		 * the lastFtpRun date is set to the current date, otherwise future offline run cycles retrieve this information from the offline file. If 
+		 * the command was successfully executed, the launch time in the current event (or offline file) is updated to the current time. This is 
+		 * used by any clip commands to determine if the content relating to the clip is present in the captured video.
+		 * 
+		 * Capture events, and ShellCommand events, bypass the normal event filtering process by inserting a space after the date written to the
+		 * lastFtpRun column of the event, or the offline file. Eligible events are normally filtered, in EventsDao.getElligibleEventsByEventType(), 
+		 * based on the value of the lastFtpRun column (e.g. "31-AUG-20"). To qualify, the value of this column must NOT be today's date, allowing 
+		 * once-per-day events to be ignored if they have already run today. Some events force eligibility by setting lastFtpRun to "idle" or "?", 
+		 * Capture events accomplish this, for example, by setting lastFtpRun to "31-AUG-20 ". The appended space allows all Capture events to appear 
+		 * eligible for execution, according to the normal rules, and this doCapture() method will make the determination itself. 
+		 * 
+		 * This non-standard approach is required because of the one-to-many relationship between Captures and Clips, and the fact that they are both
+		 * triggered by a single capture event. If the once-per-day execution of a Capture event were managed in the normal way, its associate Clips 
+		 * would never be processed.
+		 * 
+		 * @param captureEvt Record obtained from the EVENTS table (will be null if Jorel2 is offline)
+		 * @param session Current Hibernate persistence context (will be null if Jorel2 is offline)
+		 */
 		void doCapture(EventsDao captureEvt, Session session) {
 			
 			String now = DateUtil.localDateToTnoDateFormat(LocalDate.now());
@@ -517,6 +567,13 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 	}
 	
+	/**
+	 * Class that encapsulates all the data and functionality relating to a clip event. Objects of this class can be created using two data
+	 * sources - either an EventClipsDao object (representing a record in the EVENTS_CLIPS table) when the database connection is active, or an 
+	 * ArrayDeque object containing lines of text from a file in the <code>offline</code> directory if Jorel2 is operating in OFFLINE mode.
+	 * 
+	 * @author StuartM
+	 */
 	private class Clip {
 		BigDecimal rsn = null;
 		String name="";
@@ -527,6 +584,12 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 
 		boolean valid = true;
 
+		/**
+		 * Create a Clip event from a record in the EVENT_CLIPS table.
+		 * 
+		 * @param captureEvt Hibernate object representing the EVENTS_CLIPS record.
+		 * @param session The current Hibernate persistence context.
+		 */
 		private Clip(EventClipsDao clipData) {
 			rsn = clipData.getRsn();
 			name = clipData.getName();
@@ -536,6 +599,16 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			lastRun = clipData.getLastRun();
 		}
 
+		/**
+		 * Create a Clip event from lines of text imported from a <code>capturecmd_</code> file in the <code>offline</code> directory.
+		 * Because there is a one-to-many relationship between Capture events and Clip events, the Clip attributes are stored as a repeating
+		 * set of lines in the offline file, following the attributes of the Capture command. Each clip entry in the file is delimited by a
+		 * line containing the string "---". If no such line exists in the offline file the <code>valid</code> attribute of the Clip object
+		 * is set to false.
+		 * 
+		 * @param adq Queue of text lines from which to obtain the event's attributes.
+		 * @param session The current Hibernate persistence context, which will be null in this case as Jorel2 is offline.
+		 */
 		private Clip(ArrayDeque<String> adq) {
 			try {
 
@@ -562,6 +635,11 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			}
 		}
 
+		/**
+		 * Writes the attributes of this Clip event to the offline file.
+		 * 
+		 * @param offlineWriter An open PrintWriter object pointing to the offline file for this Capture/Clip event.
+		 */
 		void writeOffline(PrintWriter offlineWriter) {
 			if (offlineWriter!=null) {
 				try {
@@ -577,6 +655,23 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 			}
 		}
 
+		/**
+		 * Determine if this Clip command should run, based on the lastRun date of the EventClipsDao entry, and, if so, run it. Clip events only run 
+		 * once per day, but there may be many Clips associated with each Capture event, so they must all be checked for execution eligibility in each 
+		 * Jorel2 run cycle. If Jorel2 is online the lastRun date in the EventClipsDao object is set to the current date, otherwise future offline run 
+		 * cycles retrieve this information from the offline file.
+		 * 
+		 * The date format of EventClips.lastRun is different from that used in the lastFtpRun column of the EVENTS table, and there is no need to
+		 * append a space to this value, as is done with the lstFtpRun column of the Capture event. To determine the eligibility of this Clip to
+		 * run, it's lastRun value is merely compared with the current date using the format "mmm dd yyyy". If they are the same, the clip is ignored.
+		 * 
+		 * The Clip will only be run if the stop-time of the clip has passed and the entire duration of the clip is since the launchTime of it's 
+		 * parent Capture event.
+		 * 
+		 * @param capture The parent Capture event for this Clip.
+		 * @param clipEntry Record obtained from the EVENT_CLIPS table (will be null if Jorel2 is offline)
+		 * @param session Current Hibernate persistence context (will be null if Jorel2 is offline)
+		 */
 		void doClip(Capture capture, EventClipsDao clipEntry, Session session) {
 			
 			String now = DateUtil.getDateNow();
