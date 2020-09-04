@@ -111,7 +111,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		String nowHoursMinutes = String.format("%02d:%02d", now.getHour(), now.getMinute());
 		
 		if ((nowHoursMinutes.compareTo(startHoursMinutes) >= 0)) {
-			String dateTrigger = AutoRunDao.getDateTrigger(session);
+			String dateTrigger = AutoRunDao.getDateTrigger(session); // "2020-09-04 10:30:00";
 
 			if (!dateTrigger.isEmpty()) {
 				processFilters(dateTrigger, session);
@@ -309,7 +309,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					{
 						status = Integer.toString(itemsInserted) + " item(s) inserted";
 						try {
-							int c = DbUtil.runUpdateSql("update folder set updated = SYSDATE where rsn = " + frsn, session);
+							DbUtil.runUpdateSql("update folder set updated = SYSDATE where rsn = " + frsn, session);
 						} catch (Exception e2) {
 							decoratedError(INDENT0, "Folder update error! ", e2);
 						}
@@ -460,7 +460,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 						 * Find the folder with the data and see if any data has been added since the last time this folder was used in an auto report
 						 */
 						String folder_rsn=getValueByTagName(doc,"a_folder");
-						sql = "select f.rsn from tno.folder f where f.rsn = "+folder_rsn+" and " +
+						sql = "select f.rsn from tno.folder f where f.rsn = " + folder_rsn + " and " +
 						"(f.updated > to_date('" + lastRun + "','YYYY-MM-DD HH24:MI:SS') OR to_date('" + lastRun + "','YYYY-MM-DD HH24:MI:SS') is null OR f.updated is null)";
 						try {
 							rs2 = DbUtil.runSql(sql, session);
@@ -472,7 +472,9 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 								 * Draw the analysis
 								 */
 								AnalysisHandler a = new AnalysisHandler(rsn, userRsn, 14, true); // Current_period defaults to 14 for now
+								decoratedTrace(INDENT2, "About to draw analysis graph (in processAnalysis line 475) for " + rsn);
 								a.draw(false, true, session);
+								decoratedTrace(INDENT2, "Completed drawing analysis graph (in processAnalysis line 477) for " + rsn);
 
 								/*
 								 * Draw any analysis appearing in reports
@@ -484,7 +486,9 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 									long imageSize = rs2.getLong(1);
 									long fontSize = rs2.getLong(2);
 									a = new AnalysisHandler(rsn, userRsn, 14, (int) imageSize, (int) fontSize, true); // Current_period defaults to 14 for now
+									decoratedTrace(INDENT2, "About to draw analysis graph for reports (in processAnalysis) for " + rsn);
 									a.draw(false, true, session);
+									decoratedTrace(INDENT2, "Completed drawing analysis graph for reports (in processAnalysis) for " + rsn);
 								}
 								rs2.close();
 
@@ -517,7 +521,9 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 								 * Draw the analysis
 								 */
 								AnalysisHandler a = new AnalysisHandler(rsn, userRsn, 14L, true); // Current_period defaults to 14 for now
+								decoratedTrace(INDENT2, "About to draw analysis graph for reports (in processAnalysis line 524) for " + rsn);
 								a.draw(false, true, session);
+								decoratedTrace(INDENT2, "Completed drawing analysis graph (in processAnalysis line 526) for " + rsn);
 
 								/*
 								 * Draw any analysis appearing in reports
@@ -622,6 +628,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		"(to_char(r.last_run,'YYYY-MM-DD') < substr('" + dateTrigger + "',1,10) or r.last_run is null)";
 		try {
 			decoratedTrace(INDENT2, "Reports sql... " + sql, session);
+			session.beginTransaction();
 			rs = DbUtil.runSql(sql, session);
 			while (rs.next())
 			{
@@ -629,10 +636,12 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				if(!triggered)
 				{
 					triggered = true;
-					decoratedTrace(INDENT2, "Auto Run Report triggered! " + sql);
+					decoratedTrace(INDENT2, "Auto Run Report triggered! " + sql, session);
 				}
 			}
+			session.getTransaction().commit();
 		} catch (Exception e) {
+			session.getTransaction().rollback();
 			decoratedError(INDENT0, "Report collect RSNs Error! " + e.toString(), e);
 		}
 		try {rs.close();} catch (Exception e) {;}
@@ -895,20 +904,20 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					long userRsn = rs.getLong(2);
 					String name = rs.getString(3);
 					String lastRun = rs.getString(5);
-					if (lastRun==null) lastRun = "";
+					if (lastRun == null) lastRun = "";
 
 					// For some of the form data (most actually), the form data is
 					//    in an XML string
 					Clob cl=rs.getClob(4);
 					long l=cl.length();
 					Document doc=null;
-					String xml="";
-					if(l>0){
-						xml=cl.getSubString(1,(int)l); // scares me here too
-						doc=parseXML(xml);
+					String xml = "";
+					if(l > 0){
+						xml = cl.getSubString(1,(int)l); // scares me here too
+						doc = parseXML(xml);
 					}
 
-					String searchType=getValueByTagName(doc, "a_searchtype");
+					String searchType = getValueByTagName(doc, "a_searchtype");
 
 					/*
 					 * This Analysis graph is for the search type of report
@@ -922,7 +931,9 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 							 * Draw the analysis
 							 */
 							AnalysisHandler a = new AnalysisHandler(rsn, userRsn, 14, true); // Hard code current period to 14 for now
+							decoratedTrace(INDENT2, "About to draw analysis graph for " + rsn);
 							a.draw(false, true, session);
+							decoratedTrace(INDENT2, "Completed drawing analysis graph for " + rsn);
 
 							/*
 							 * Draw any analysis appearing in reports
@@ -934,7 +945,9 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 								long imageSize = rs2.getLong(1);
 								long fontSize = rs2.getLong(2);
 								a = new AnalysisHandler(rsn, userRsn, 14, (int) imageSize, (int) fontSize, true); // Hard code current period for now
+								decoratedTrace(INDENT2, "About to draw analysis graph (in report) for " + rsn);
 								a.draw(false, true, session);
+								decoratedTrace(INDENT2, "Completed drawing analysis graph (in report) for " + rsn);
 							}
 							rs2.close();
 							

@@ -17,7 +17,9 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * </ul>
  * 
  * @author Stuart Morse
- * @version 0.0.1
+ * @version 0.0.1 All previous updates.
+ * @version 0.0.2 03 Sep 20 - Changing the logging rollover policy from size based to time based.
+ * @version 0.0.13 04 Sep 20 - Adding small screen device format to Jorel reports.
  */
 
 //@EnableAspectJAutoProxy

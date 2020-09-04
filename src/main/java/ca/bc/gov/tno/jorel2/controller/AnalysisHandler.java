@@ -143,7 +143,7 @@ public class AnalysisHandler extends Jorel2Root {
 						error = true;
 				}
 			}
-		} catch(Exception err){ error=true;}
+		} catch(Exception err){ error = true;}
 		try{ if(rs != null) rs.close(); } catch(SQLException err){;}
 		if(error){
 			errorImage("Parse Error!", session);
@@ -159,13 +159,13 @@ public class AnalysisHandler extends Jorel2Root {
 		String searchType = getValueByTagName(doc, "a_searchtype");
 		if (searchType.equalsIgnoreCase("report"))
 		{
-			String sum_by_section = getValueByTagName(doc,"b_sum_by_section");
+			String sum_by_section = getValueByTagName(doc, "b_sum_by_section");
 			if(sum_by_section.equalsIgnoreCase("1"))
 			{
 				summarize_by_section = true;
 			}
 		}
-		String a_report = getValueByTagName(doc,"a_report");
+		String a_report = getValueByTagName(doc, "a_report");
 		int p = a_report.indexOf(".");
 		if(p > 0) {
 			report_rsn = a_report.substring(0,p);
@@ -260,7 +260,7 @@ public class AnalysisHandler extends Jorel2Root {
 
 		String mainSQL = "";
 		String sqlDescription = "";
-		if(doc!=null){
+		if(doc != null){
 			Properties pm = new Properties();
 			mainSQL = createSQL(pm, doc, xaxislabel, yaxislabel, session);
 			if(mainSQL.length() < 2)
@@ -277,7 +277,7 @@ public class AnalysisHandler extends Jorel2Root {
 				}
 			}
 
-			sqlDescription = pm.getProperty("sqlDescription").replaceAll("~","\n");
+			sqlDescription = pm.getProperty("sqlDescription").replaceAll("~", "\n");
 
 			/* ------------------------------------------------------------------
 			 * Get the max and min date for the query
@@ -286,7 +286,7 @@ public class AnalysisHandler extends Jorel2Root {
 				min_date = getMinDate(pm, session);
 				max_date = getMaxDate(pm, session);
 				if(over_time.equalsIgnoreCase("1")){
-					title = title + " ("+min_date+" to "+max_date+")";
+					title = title + " (" + min_date + " to " + max_date + ")";
 				}
 
 				min_cal_date = DateUtil.calendarDate(min_date);
@@ -316,10 +316,12 @@ public class AnalysisHandler extends Jorel2Root {
 		 */
 		if(!error){
 			try{
+				decoratedTrace(INDENT2, "Begin running mainSQL in AnalysisHandler.draw()");
 				rs = DbUtil.runSqlFlags(mainSQL, session);
+				decoratedTrace(INDENT2, "Finished running mainSQL in AnalysisHandler.draw()");
 			} catch(Exception err){
 				decoratedError(INDENT0, "Analysis.draw3():", err);
-				error=true;
+				error = true;
 			}
 		}
 		if(error){
@@ -498,12 +500,18 @@ public class AnalysisHandler extends Jorel2Root {
 			boolean prefer3d = prefer_3d.equalsIgnoreCase("1");
 			if (xaxis_over_time.equalsIgnoreCase("")) {
 				if ((prefer_pie.equalsIgnoreCase("1")) && (!yaxislabel.startsWith("Tone"))) {
+					decoratedTrace(INDENT2, "Starting simple pie chart.");
 					jfc = simple_pie_chart(title, xaxis, yaxislabel, prefer3d, reportHashtable, countHashtable);
+					decoratedTrace(INDENT2, "Completing simple pie chart.");
 				} else {
+					decoratedTrace(INDENT2, "Starting simple bar chart.");
 					jfc = simple_bar_chart(title, xaxis, yaxislabel, prefer3d, reportHashtable, countHashtable);
+					decoratedTrace(INDENT2, "Completing simple bar chart.");
 				}
 			} else {
+				decoratedTrace(INDENT2, "Starting simple time series chart.");
 				jfc = simple_time_series_chart(title, xaxis, yaxislabel, line_width, prefer3d, reportHashtable, countHashtable, xaxis_over_time_groupby );
+				decoratedTrace(INDENT2, "Completing simple time series chart.");
 			}			
 		} catch(Exception err){
 			errorImage("draw3() creation error: " + err.toString(), session);
@@ -513,7 +521,9 @@ public class AnalysisHandler extends Jorel2Root {
 
 		try{
 			long s5 = (new java.util.Date()).getTime();
+			decoratedTrace(INDENT2, "Start saving graph.");
 			report_save_graph(jfc, set_auto_run_in_saved_analysis, session);
+			decoratedTrace(INDENT2, "Completed saving graph.");
 			long s6 = (new java.util.Date()).getTime();
 			message = message + " 1: " + (s2-s1) + " 2:" + (s3-s2) + " 3:" + (s4-s3) + " 4:" + (s5-s4) + " 5:" + (s6-s5);
 		} catch(Exception err){
@@ -1614,7 +1624,7 @@ public class AnalysisHandler extends Jorel2Root {
 			try{
 				rs = DbUtil.runSql(sql, session);
 				while(rs.next()){
-					String d=rs.getString(1);
+					String d = rs.getString(1);
 					if(d.length() >= 10) {
 						min = d;
 						rs.next();

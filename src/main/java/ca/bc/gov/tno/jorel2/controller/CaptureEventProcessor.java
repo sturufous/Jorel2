@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.ArrayDeque;
 import java.util.Calendar;
 import java.util.List;
@@ -264,11 +263,15 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 						decoratedTrace(INDENT2, "Update capture event, set lastFtpRun='" + capture.lastFtpRun + "' for rsn = " + capture.rsn);
 		
 						// update event
-						EventsDao captureEvt = EventsDao.getEventByRsn(capture.rsn, session).get(0);
-						captureEvt.setLastFtpRun(capture.lastFtpRun);
-						session.getTransaction().begin();
-						session.persist(captureEvt);
-						session.getTransaction().commit();
+						List<EventsDao> eventList = EventsDao.getEventByRsn(capture.rsn, session);
+						
+						if (eventList != null) {
+							EventsDao captureEvt = eventList.get(0);
+							captureEvt.setLastFtpRun(capture.lastFtpRun);
+							session.getTransaction().begin();
+							session.persist(captureEvt);
+							session.getTransaction().commit();
+						}
 					}
 				}
 				
@@ -487,7 +490,7 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		 */
 		void doCapture(EventsDao captureEvt, Session session) {
 			
-			String now = DateUtil.localDateToTnoDateFormat(LocalDate.now());
+			String now = DateUtil.getDateNow();
 			
 			// has not run today --- add space because we want to check this event (for clips) even if it has run already
 			//  or the channel file does not exist - probably because of restart
@@ -656,10 +659,10 @@ public class CaptureEventProcessor extends Jorel2Root implements EventProcessor 
 		}
 
 		/**
-		 * Determine if this Clip command should run, based on the lastRun date of the EventClipsDao entry, and, if so, run it. Clip events only run 
-		 * once per day, but there may be many Clips associated with each Capture event, so they must all be checked for execution eligibility in each 
-		 * Jorel2 run cycle. If Jorel2 is online the lastRun date in the EventClipsDao object is set to the current date, otherwise future offline run 
-		 * cycles retrieve this information from the offline file.
+		 * Determine if this Clip command should run, based on the lastRun date of the EventClipsDao entry (or the contents of the offline file), and, 
+		 * if so, run it. Clip events only run once per day, but there may be many Clips associated with each Capture event, so they must all be checked 
+		 * for execution eligibility in each Jorel2 run cycle. After execution, if Jorel2 is online the lastRun date in the EventClipsDao object is set
+		 * to the current date, otherwise the date is written to the offline file.
 		 * 
 		 * The date format of EventClips.lastRun is different from that used in the lastFtpRun column of the EVENTS table, and there is no need to
 		 * append a space to this value, as is done with the lstFtpRun column of the Capture event. To determine the eligibility of this Clip to

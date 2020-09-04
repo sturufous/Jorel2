@@ -1,5 +1,7 @@
 package ca.bc.gov.tno.jorel2.controller;
 
+import java.io.Writer;
+import java.math.BigDecimal;
 import java.sql.Clob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,6 +11,7 @@ import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import javax.mail.Message;
+import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
@@ -16,6 +19,10 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
 import static ca.bc.gov.tno.jorel2.model.PublishedPartsDao.getPublishedPartByName;
+
+import ca.bc.gov.tno.jorel2.model.PublishedPartsDao;
+import ca.bc.gov.tno.jorel2.model.ReportForBlackberryDao;
+import ca.bc.gov.tno.jorel2.util.Base64Util;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 import ca.bc.gov.tno.jorel2.util.DbUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
@@ -76,6 +83,10 @@ public class ReportHandler {
 		boolean pagebreak = false;
 		boolean include_analysis = false;
 		boolean ok = true;
+		
+		long key = 0;
+		boolean bbflag = false;  // blackberry test
+		String bbMsg = "";
 
 		try {
 			String select = "select r.email_subject, r.email_from, r.email_recipients, r.pref5, r.pref10, r.email_bcc, r.email_blackberry, " +
@@ -134,10 +145,10 @@ public class ReportHandler {
 			// format the report and save it later for use on a blackberry
 			format(sb, pagebreak, false, randomStr, hSession);
 
-			/* if (bb.length() > 2) {
-				key = saveForBlackbery( bb, sb );
+			if (bb.length() > 2) {
+				key = saveForBlackberry(bb, sb, hSession);
 				if (key > 0) bbflag = true;
-			} */
+			}
 
 			boolean debug = false;
 			// create some properties and get the default Session
@@ -262,7 +273,7 @@ public class ReportHandler {
 						if (tryCount > 1) {
 							sendFailed = false;
 							usermsg = "Sending Report Failed! The mail server is unavailable, please try later again in a few minutes.<!-- "+failMessage+" -->";
-							usermsg = "Sending Report Failed! Details: "+failMessage+"";
+							usermsg = "Sending Report Failed! Details: " + failMessage + "";
 						} else {
 							try { Thread.sleep(1000*3); } catch (InterruptedException e) {;}
 						}
@@ -273,21 +284,17 @@ public class ReportHandler {
 		sb.setLength(0);
 
 		//++++++++++++ BLACKBERRY EMAIL +++++++++++++++
-		/*if (bbflag) {
-			String moreMsg = sendToBlackberry(bbSubject, key, bb, from );
+		if (bbflag) {
+			String moreMsg = sendToBlackberry(bbSubject, key, bb, from, hSession);
 			usermsg = usermsg + " " + moreMsg;
 		} else {
 			if (bb.length() > 2) usermsg = usermsg + " " + bbMsg;
-		}*/
+		}
 		//--------------------------------------------------------------------------
 
 		return usermsg;
 		
 	}
-
-
-
-
 
 	public void format(StringBuilder sb, boolean pageBreak, org.hibernate.Session hSession) {
 		format(sb, pageBreak, false, "", hSession);
@@ -1140,5 +1147,156 @@ public class ReportHandler {
 		catch(Exception err)
 		{ ; }
 		return hasSections;
+	}
+	
+	public long saveForBlackberry(String bbEmailAddresses, StringBuilder originalReport, org.hibernate.Session hSession) {
+
+		BigDecimal key = null;
+		String bbMsg;
+		String reportStr = originalReport.toString();
+
+		if (bbEmailAddresses.length() > 2) {
+			try {
+				String bbHeader = PublishedPartsDao.getPublishedPartByName("V35REPORTPREVIEWH_BB", "", hSession);
+
+				// replace header with BB header
+				int hpos = reportStr.indexOf("<body>");
+				if (hpos > 0) {
+					reportStr = bbHeader + reportStr.substring(hpos + 6);
+				}
+				
+				// strip out the "do not forward" message
+				int spos = reportStr.indexOf("<span class=\"red\">");
+				if (spos > 0) {
+					int epos = reportStr.indexOf("</span>",spos);
+					if (epos > 0) {
+						String part1 = reportStr.substring(0,spos);
+						String part2 = reportStr.substring(epos+7);   // 7 because </span>
+						reportStr = part1 + part2;
+					}
+				}
+
+				// fix the analysis image - it is not attached in the BB version
+				reportStr = reportStr.replaceAll("<img src=\"cid:analysis_([0-9]*)_([0-9]*)_([0-9]*)_([a-zA-Z0-9]*)\">", "<img src=\"tno.otis.wapservlet?command=analysis&subcommand=display_graph&rsn=$1&imagesize=$2&fontsize=$3&rnd=$4\" style=\"max-width:100%;\">");
+				reportStr = reportStr.replaceAll("/tno/servlet/tno.otis.servlet", "/tno/wapservlet/tno.otis.wapservlet");
+				
+				// Save the filter record
+				
+				ReportForBlackberryDao bbRecord = new ReportForBlackberryDao();
+				bbRecord.setReportRsn(BigDecimal.valueOf(rsn));
+				bbRecord.setDateCreated(new Date());
+				bbRecord.setDateLastViewed(new Date());
+
+				Clob cl = new javax.sql.rowset.serial.SerialClob(reportStr.toCharArray());
+				
+				bbRecord.setContent(cl);
+				hSession.beginTransaction();
+				key = (BigDecimal) hSession.save(bbRecord);
+				hSession.getTransaction().commit();
+			}
+			catch (Exception e) {
+				bbMsg = "ERROR creating BB Report: " + e.toString() ;
+			}
+			
+			reportStr = "";
+		}
+		
+		return key.longValue();
+	}
+	
+	public String sendToBlackberry(String subject, long bbreportrsn, String bb, String from, org.hibernate.Session hSession) {
+		String sendMsg = "";
+		String bbSubject = "BB/iPhone " + subject + " - " + DateUtil.yyyymmdd();
+
+		String key = Long.toString(bbreportrsn);
+		key = key + ".tno";
+		key = Base64Util.encode(key);
+		key = key + "tno";
+		String key_encoded = key;
+		try {
+			key_encoded = java.net.URLEncoder.encode(key_encoded, "ISO-8859-1");
+		} catch (Exception ex) { ; }
+
+		StringBuilder bbEmailMessage = new StringBuilder(PublishedPartsDao.getPublishedPartByName("V35REPORTBBEMAIL", "", hSession));
+
+		String wapHost = servlet_url;
+		wapHost = wapHost.replace("servlet", "wapservlet");
+
+		StringUtil.replace(bbEmailMessage, "<**subject**>", subject) ;
+		StringUtil.replace(bbEmailMessage, "<**httphost**>", wapHost ) ;
+		StringUtil.replace(bbEmailMessage, "<**key**>", key ) ;
+
+		boolean debug = false;
+		// create some properties and get the default Session
+		Properties props = System.getProperties();
+		props.put("mail.host", mail_host);
+		Session session = Session.getDefaultInstance(props, null);
+		session.setDebug(debug);
+
+		MimeMessage msgBB = null;
+		boolean sendMsgFlag = true;
+		try {
+			// multiple recipients is possible
+			StringTokenizer st1 = new StringTokenizer( bb, "\n" );
+			int tokens = st1.countTokens();
+			InternetAddress[] address = new InternetAddress[tokens];
+			for (int j=0; j<tokens; j++) {
+				String emailAddress = st1.nextToken();
+				address[j] = new InternetAddress(emailAddress);
+			}
+			InternetAddress fromAddress = new InternetAddress(from);
+
+			msgBB = new MimeMessage(session);
+			msgBB.setFrom(fromAddress);
+			//msgBB.setRecipients(Message.RecipientType.TO, address);
+			msgBB.setRecipients(Message.RecipientType.BCC, address);
+			msgBB.setSubject(bbSubject);
+			msgBB.setText(bbEmailMessage.toString());
+
+			msgBB.setHeader("Content-Type","text/plain;");
+
+		} catch (Exception mex) {
+			sendMsg = sendMsg + "Sending BB Report Failed!" + "\n<!-- "+mex.toString()+" -->";
+			sendMsgFlag = false;
+		}
+
+		// Send the message; try a maximum of 3 times spaced 3 seconds apart
+		if (sendMsgFlag) {
+			int tryCount = 0;
+			boolean sendFailed = true;
+
+			// loop a maximum of 3 times
+			while (sendFailed) {
+				String failMessage = "";
+				try {
+					Transport.send(msgBB);
+					sendFailed = false;
+				} catch (Exception mex) {
+					sendFailed = true;
+					tryCount = tryCount + 1;
+					failMessage = mex.toString();
+					failMessage = failMessage.replaceAll("javax.mail.SendFailedException: ","");
+					if (failMessage.indexOf("User unknown") > 0){
+						tryCount = 99;
+						failMessage = failMessage.replaceAll("nested exception is: ","");
+						failMessage = failMessage.replaceAll("<","");
+						failMessage = failMessage.replaceAll(">","");
+						failMessage = failMessage.replaceAll("550 5.1.1","");
+					}
+				}
+
+				// if the send has failed, try again....
+				if (sendFailed) {
+					if (tryCount > 1) {
+						sendFailed = false;
+						sendMsg = "Sending BB Report Failed! The mail server is unavailable, please try later again in a few minutes.<!-- "+failMessage+" -->";
+						sendMsg = "Sending BB Report Failed! Details: "+failMessage+"";
+					} else {
+						try { Thread.sleep(1000*3); } catch (InterruptedException e) {;}
+					}
+				}
+			}
+		}
+		return sendMsg;
 	}
 }

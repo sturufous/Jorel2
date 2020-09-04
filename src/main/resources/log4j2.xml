@@ -4,13 +4,13 @@
     <RollingFile
       name="rollingFile"
       fileName="logs/jorel2.log"
-      filePattern="logs/jorel2.%i.log.gz"
+      filePattern="logs/jorel2.%d{yyyy-MM-dd}-%i.log.gz"
       ignoreExceptions="false">
       <PatternLayout>
         <Pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %m%n</Pattern>
       </PatternLayout>
       <Policies>
-        <SizeBasedTriggeringPolicy size="1MB" />
+        <TimeBasedTriggeringPolicy interval="24" modulate="true" />
       </Policies>
       <DefaultRolloverStrategy max="20" />
     </RollingFile>

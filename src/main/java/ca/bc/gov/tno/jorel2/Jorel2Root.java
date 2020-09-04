@@ -138,6 +138,10 @@ public class Jorel2Root {
 		if (session == null) {
 			decoratedTrace(indent, message);
 		} else {
+			if (message.length() > 2000) {
+				message = message.substring(1, 1999);
+			}
+			
 			EventActivityLogDao logEntry = new EventActivityLogDao(null, rootInstanceName, new Date(), message);
 			boolean transactionActive = session.getTransaction().isActive();
 

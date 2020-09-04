@@ -65,6 +65,7 @@ public abstract class DataSourceConfig extends Jorel2Root {
         config.addAnnotatedClass(ReportStoriesDao.class);
         config.addAnnotatedClass(LdapAddressesDao.class);
         config.addAnnotatedClass(EventClipsDao.class);
+        config.addAnnotatedClass(ReportForBlackberryDao.class);
         
         return config;
 	}
