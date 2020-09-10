@@ -72,7 +72,7 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
     		if (instance.isExclusiveEventActive(EventType.SHELLCOMMAND)) {
     			decoratedTrace(INDENT1, "ShellCommand event processing already active. Skipping.");    			
     		} else {
-    			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
+     			instance.addExclusiveEvent(EventType.SHELLCOMMAND);
     			decoratedTrace(INDENT1, "Starting ShellCommand event processing");
 	    		
 		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
@@ -83,7 +83,9 @@ public class ShellCommandEventProcessor extends Jorel2Root implements EventProce
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        			setThreadTimeout(runnable, currentEvent, instance);
 		        		
-		        		shellCommandEventOnline(currentEvent, session);
+		        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+		        			shellCommandEventOnline(currentEvent, session);
+		        		}
 		        	}
 		        }
 		        

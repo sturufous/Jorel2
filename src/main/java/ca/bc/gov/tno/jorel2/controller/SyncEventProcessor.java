@@ -10,6 +10,7 @@ import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.SyncIndexDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
  * Manages the re-indexing of the NEWS_ITEMS table. Re-indexing occurs when an event adds content to the NEWS_ITEMS table and then
@@ -64,15 +65,17 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 	    				instance.addExclusiveEvent(EventType.SYNC);
 		        		List<SyncIndexDao> syncIndex = SyncIndexDao.getSyncIndexRecords(session);
 		        		
-		        		if (syncIndex.size() > 0) {
-			        		// Check for any other Jorel2 that is doing a paper import right now.
-		        			List<Object[]> imports = EventsDao.getMonitorEventsRunningNow(session);
-		        			
-		        			if (imports.size() == 0) {
-		        				reIndexNewsItems(session);
-		        			} else {
-		        				decoratedTrace(INDENT2, "Sync: news item import in progress.");
-		        			}
+		        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+			        		if (syncIndex.size() > 0) {
+				        		// Check for any other Jorel2 that is doing a paper import right now.
+			        			List<Object[]> imports = EventsDao.getMonitorEventsRunningNow(session);
+			        			
+			        			if (imports.size() == 0) {
+			        				reIndexNewsItems(session);
+			        			} else {
+			        				decoratedTrace(INDENT2, "Sync: news item import in progress.");
+			        			}
+			        		}
 		        		}
 		        		
 						instance.removeExclusiveEvent(EventType.SYNC);

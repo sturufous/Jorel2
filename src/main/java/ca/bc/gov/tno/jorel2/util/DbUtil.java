@@ -31,7 +31,8 @@ public class DbUtil {
 
 	/**
 	 * Takes an sql statement and uses Hibernate's <code>doReturningWork()</code> method to execute the statement and
-	 * return a result set containing the list of rows matched by the statement.
+	 * return a result set containing the list of rows matched by the statement. Uses the TYPE_FORWARD_ONLY,
+	 * CONCUR_READ_ONLY and HOLD_CURSORS_OVER_COMMIT flags when creating the Statement object
 	 * 
 	 * @param query The query to run
 	 * @param session The current Hibernate presistence context
@@ -45,9 +46,9 @@ public class DbUtil {
             public ResultSet execute(Connection connection) throws SQLException {
  
             	ResultSet rs = null;
-            	
                 Statement stmt = null;
-                stmt = connection.createStatement();
+                
+                stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
                 connection.beginRequest();
                 rs = stmt.executeQuery(query);
                 connection.endRequest();
@@ -61,15 +62,15 @@ public class DbUtil {
 
 	/**
 	 * Takes an sql statement and uses Hibernate's <code>doReturningWork()</code> method to execute the statement and
-	 * return a result set containing the list of rows matched by the statement. Uses the TYPE_SCROLL_INSENSITIVE and
-	 * CONCUR_READ_ONLY flags when creating the Statement object.
+	 * return a result set containing the list of rows matched by the statement. Uses the TYPE_SCROLL_INSENSITIVE,
+	 * CONCUR_READ_ONLY and HOLD_CURSORS_OVER_COMMIT flags when creating the Statement object.
 	 * 
 	 * @param query The query to run
 	 * @param session The current Hibernate presistence context
 	 * @return The result set containing the list of rows matched by the statement.
 	 * @throws SQLException If the statement create or query execution fails.
 	 */
-	public static ResultSet runSqlFlags(String query, Session session) throws SQLException {
+	public static ResultSet runSqlScrollInsensitive(String query, Session session) throws SQLException {
 		
        ResultSet results = session.doReturningWork(new ReturningWork<ResultSet>() {
             
@@ -78,7 +79,7 @@ public class DbUtil {
             	ResultSet rs = null;
             	
                 Statement cstmt = null;
-                cstmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+                cstmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
                 rs = cstmt.executeQuery(query);
                 
                 return rs;

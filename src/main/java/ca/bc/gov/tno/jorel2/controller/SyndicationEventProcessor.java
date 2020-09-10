@@ -24,6 +24,7 @@ import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemFactory;
 import ca.bc.gov.tno.jorel2.model.NewsItemQuotesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
+import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 @Service
 public class SyndicationEventProcessor extends Jorel2Root implements EventProcessor {
@@ -72,22 +73,23 @@ public class SyndicationEventProcessor extends Jorel2Root implements EventProces
 	        		EventsDao currentEvent = (EventsDao) entityPair[0];
         			setThreadTimeout(runnable, currentEvent, instance);
 
-	        		address = currentEvent.getTitle();
-	    			URLConnection feedUrlConnection = new URL(address).openConnection();
-	    			feedUrlConnection.setConnectTimeout(URL_CONNECTION_TIMEOUT);
-	    			feedUrlConnection.setReadTimeout(URL_READ_TIMEOUT);
-	    			String currentSource = currentEvent.getSource();
-	    			
-	    			feedUrlConnection.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
-	    			SyndFeedInput input = new SyndFeedInput();
-	    			XmlReader xmlReader = new XmlReader(feedUrlConnection);
-	    			feed = input.build(xmlReader);
-	    				
-		    		if (sourcesBeingProcessed.containsKey(currentSource)) {
-		    			decoratedTrace(INDENT1, "Two threads attempting to process the " + currentSource + " feed - skipping.");
-		    		} else {
-		    			processSyndFeed(feed, currentSource, session);
-		    		}
+	        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+		    			String currentSource = currentEvent.getSource();
+			    		if (sourcesBeingProcessed.containsKey(currentSource)) {
+			    			decoratedTrace(INDENT1, "Two threads attempting to process the " + currentSource + " feed - skipping.");
+			    		} else {
+			        		address = currentEvent.getTitle();
+			    			URLConnection feedUrlConnection = new URL(address).openConnection();
+			    			feedUrlConnection.setConnectTimeout(URL_CONNECTION_TIMEOUT);
+			    			feedUrlConnection.setReadTimeout(URL_READ_TIMEOUT);
+			    			
+			    			feedUrlConnection.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
+			    			SyndFeedInput input = new SyndFeedInput();
+			    			XmlReader xmlReader = new XmlReader(feedUrlConnection);
+			    			feed = input.build(xmlReader);
+			    			processSyndFeed(feed, currentSource, session);
+			    		}
+	        		}
 		    	} else {
 		    		decoratedError(INDENT0, "Looping through Syndication events.", new IllegalArgumentException("Wrong data type in query results, expecting EventsDao."));    		
 	        	}

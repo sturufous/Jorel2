@@ -73,8 +73,12 @@ public class MonitorEventProcessor extends Jorel2Root implements EventProcessor 
         			setThreadTimeout(runnable, currentEvent, instance);
 	        		
 	        		// Lock out other threads from processing monitor events
-	        		updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);	        		
-	        		monitorEvent(currentEvent, session);
+	        		updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);	 
+	        		
+	        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+	        			monitorEvent(currentEvent, session);
+	        		}
+	        		
 	        		updateLastFtpRun("idle", currentEvent, session);	        		
 	        	}
 	        }

@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ca.bc.gov.tno.jorel2</groupId>
   <artifactId>jorel2</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.13-SNAPSHOT</version>
   <name>Jorel2</name>
   <description>Java 13 rewrite of Jorel</description>
   <properties>

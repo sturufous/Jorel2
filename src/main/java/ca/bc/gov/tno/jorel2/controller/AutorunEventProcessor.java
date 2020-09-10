@@ -82,10 +82,12 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		        		EventsDao currentEvent = (EventsDao) entityPair[0];
 	        			setThreadTimeout(runnable, currentEvent, instance);
 		        		
-		        		DbUtil.updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
-		        		autorunEvent(currentEvent, session);
-		        		AutoRunDao.deleteAllRecords(session);
-		        		DbUtil.updateLastFtpRun("idle", currentEvent, session);
+		        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+			        		DbUtil.updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
+			        		autorunEvent(currentEvent, session);
+			        		AutoRunDao.deleteAllRecords(session);
+			        		DbUtil.updateLastFtpRun("idle", currentEvent, session);
+		        		}
 		        	}
 		        }
 		        
@@ -111,7 +113,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		String nowHoursMinutes = String.format("%02d:%02d", now.getHour(), now.getMinute());
 		
 		if ((nowHoursMinutes.compareTo(startHoursMinutes) >= 0)) {
-			String dateTrigger = AutoRunDao.getDateTrigger(session); // "2020-09-04 10:30:00";
+			String dateTrigger = AutoRunDao.getDateTrigger(session); //"2020-09-04 10:30:00";
 
 			if (!dateTrigger.isEmpty()) {
 				processFilters(dateTrigger, session);
@@ -624,10 +626,12 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		"(r.freq_weekly = 1 and freq_weekly_day = " + day_of_week+")"+
 		") and " +
 		"to_char(r." + runTimeField + ",'HH24:MI') <> '00:00' and " +
-		"to_char(r." + runTimeField+",'HH24:MI') < to_char(sysdate,'HH24:MI') and " +
+		"to_char(r." + runTimeField + ",'HH24:MI') < to_char(sysdate,'HH24:MI') and " +
 		"(to_char(r.last_run,'YYYY-MM-DD') < substr('" + dateTrigger + "',1,10) or r.last_run is null)";
 		try {
 			decoratedTrace(INDENT2, "Reports sql... " + sql, session);
+			
+			// Transaction required to prevent the closing of the result set 'rs' during processing.
 			session.beginTransaction();
 			rs = DbUtil.runSql(sql, session);
 			while (rs.next())
@@ -661,7 +665,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 			decoratedTrace(INDENT2, "Looking for Report " + rRsn, session);
 
 			sql = "select r.rsn,r.user_rsn,r.auto_run_dups,r.auto_run_send,to_char(r.last_run,'YYYY-MM-DD HH24:MI:SS'),r.report_group,r.name,r.auto_bc_update,u.cp,u.scrums,u.social_media,r.pref_sort,r.auto_run_dups_section,to_char(r." + runTimeField + ",'HH24:MI') "+
-			" from tno.reports r, tno.users u where r.rsn = " + rRsn+" and u.rsn = r.user_rsn and (r.last_run < to_date('" + dateTrigger + "','YYYY-MM-DD HH24:MI:SS') or r.last_run is null) order by r." + runTimeField +" for update nowait";
+			" from tno.reports r, tno.users u where r.rsn = " + rRsn + " and u.rsn = r.user_rsn and (r.last_run < to_date('" + dateTrigger + "','YYYY-MM-DD HH24:MI:SS') or r.last_run is null) order by r." + runTimeField +" for update nowait";
 			try {
 				rs = DbUtil.runSql(sql, session);
 
@@ -714,6 +718,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 					/*
 					 * 5) Re-populate report stories for each section using the filter or story line assigned to the section
 					 */
+					
 					reportsRepopulate(rsn, autoRunDups, autoRunDupsSection, lastRun, reportGroup, showCP, showScrums, showSocialMedia, autoBcUpdate, session);
 
 					/*
@@ -830,7 +835,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 		ResultSet rs = null;
 		String sql = "select s.rsn,s.filter_rsn,s.story_line_rsn,s.folder_rsn from tno.report_sections s where s.report_rsn = " + reportRsn + " order by s.sort_position";
 		try {
-			session.beginTransaction();
+			//session.beginTransaction();
 			rs = DbUtil.runSql(sql, session);
 			while (rs.next())
 			{
@@ -839,13 +844,14 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				long storylineRsn = rs.getLong(3);
 				long folderRsn = rs.getLong(4);
 
+				
 				if(filterRsn > 0) reportsByFilter(reportRsn, sectionRsn, filterRsn, autoRunDups, autoRunDupsSection, lastRun, reportGroup, showCP, showScrums, showSocialMedia, autoBcUpdate, session);
 				if(folderRsn > 0) reportsByFolder(reportRsn, sectionRsn, folderRsn, autoRunDups, autoRunDupsSection, lastRun, reportGroup, showCP, showScrums, showSocialMedia, autoBcUpdate, session);
 				if(storylineRsn > 0) reportsByStoryline(reportRsn, sectionRsn, storylineRsn, autoRunDups, autoRunDupsSection, lastRun, reportGroup, showCP, showScrums, showSocialMedia, autoBcUpdate, session);
 			}
-			session.getTransaction().commit();
+			//session.getTransaction().commit();
 		} catch (Exception e) {
-			session.getTransaction().rollback();
+			//session.getTransaction().rollback();
 			decoratedError(INDENT0, "Report repopulate " + reportRsn + " Error! ", e);
 		}
 		try { if (rs != null) rs.close(); } catch (SQLException err) {;}
@@ -1087,13 +1093,13 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				String newsSql = "select n.rsn from tno.news_items n where " + dateWhere + defaultWhere;
 				if(! autoRunDups)
 				{
-					newsSql = newsSql + " and n.rsn not in (select s.item_rsn from reports r, report_stories s "+
-					"where r.rsn = s.report_rsn and r.rsn <> " + Long.toString(reportRsn) + " and r.auto_run = 1 and r.user_rsn = " + Long.toString(userRsn)+" and r.report_group = '" + reportGroup + "')";
+					newsSql = newsSql + " and n.rsn not in (select s.item_rsn from reports r, report_stories s " +
+					"where r.rsn = s.report_rsn and r.rsn <> " + Long.toString(reportRsn) + " and r.auto_run = 1 and r.user_rsn = " + Long.toString(userRsn) + " and r.report_group = '" + reportGroup + "')";
 				}
 				if(!autoRunDupsSection)
 				{
-					newsSql = newsSql + " and n.rsn not in (select s.item_rsn from reports r, report_stories s "+
-					"where r.rsn = s.report_rsn and r.rsn = " + Long.toString(reportRsn) + " and r.auto_run = 1 and r.user_rsn = " + Long.toString(userRsn)+" and r.report_group = '" + reportGroup + "')";
+					newsSql = newsSql + " and n.rsn not in (select s.item_rsn from reports r, report_stories s " +
+					"where r.rsn = s.report_rsn and r.rsn = " + Long.toString(reportRsn) + " and r.auto_run = 1 and r.user_rsn = " + Long.toString(userRsn) + " and r.report_group = '" + reportGroup + "')";
 				}
 				try {
 					decoratedTrace(INDENT2, "Autorun Report: filter sql: " + newsSql, session);
@@ -1367,6 +1373,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 
 			progress = "b";
 
+			session.beginTransaction();
 			rs = DbUtil.runSql(newssql, session);
 			if (rs.next()) {
 				long rsn = rs.getLong(1);
@@ -1548,7 +1555,10 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 
 				progress = "h";
 			}
+			
+			session.getTransaction().commit();
 		} catch (Exception err) { 
+			session.getTransaction().rollback();
 			decoratedError(INDENT0, "Reports add item to report error: " + progress, err); 
 		}
 

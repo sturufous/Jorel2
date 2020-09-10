@@ -664,4 +664,29 @@ public class StringUtil extends Jorel2Root {
 			text = text.replace(0, text.length(), t + " [" + markedUp + "]");
 		}
 	}
+	
+	public static String replace(String src, Properties values) {
+		StringBuilder sb = new StringBuilder();
+		String tag = "";
+		int p = 0;
+		int i = 0;
+		int startTag = 0;
+		int endTag = 0;
+
+		while ((startTag = src.indexOf("<**", p)) != -1) {
+			p = startTag;
+			sb.append(src.substring(i, p));
+			p += 3;
+			endTag = src.indexOf("**>", p);
+			if (endTag == -1)
+				; // what to do?
+			tag = src.substring(p, endTag);
+			if (tag.length() > 0)
+				sb.append(values.getProperty(tag.toLowerCase(),"<**"+tag+"**>"));
+			p = endTag + 3;
+			i = p;
+		}
+		sb.append(src.substring(p));
+		return sb.toString();
+	}
 }

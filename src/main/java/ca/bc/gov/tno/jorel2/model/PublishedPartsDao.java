@@ -186,4 +186,30 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
         
 		return result;
 	}
+	
+	/**
+	 * Get a published part by name. If there is no record in PUBLISHED_PARTS matching the name then return the default value
+	 * provided by the caller in the deflt parameter. Uses the Transactional annotation to ensure any open result sets on the
+	 * session's connection are not closed.
+	 *
+	 * @param name The name of the published part.
+	 * @param deflt The default value for the key <code>name</code>
+	 * @param session The current Hibernate persistence context
+	 * @return The published part that matches the name.
+	 */
+	public static PublishedPartsDao getPublishedPartByName(String name, Session session) {
+		
+		String sqlStmt = "from PublishedPartsDao where name=:name";
+		PublishedPartsDao result = null;
+		
+		Query<PublishedPartsDao> query = session.createQuery(sqlStmt, PublishedPartsDao.class);
+		query.setParameter("name", name);
+        List<PublishedPartsDao> results = query.getResultList();
+        
+        if(results.size() > 0) {
+        	result = (PublishedPartsDao) results.get(0);
+        }
+        
+		return result;
+	}
 }

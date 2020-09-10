@@ -3,8 +3,11 @@ package ca.bc.gov.tno.jorel2.model;
 import java.util.Optional;
 import java.util.Properties;
 import org.hibernate.SessionFactory;
+import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
+import org.hibernate.resource.jdbc.spi.PhysicalConnectionHandlingMode;
+
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 
 /**
@@ -92,6 +95,7 @@ public abstract class DataSourceConfig extends Jorel2Root {
         settings.put(Environment.PASS, userPw);
         settings.put(Environment.DIALECT, dialect);
         settings.put("checkoutTimeout", DB_CONNECTION_TIMEOUT);
+        settings.put(AvailableSettings.CONNECTION_HANDLING, PhysicalConnectionHandlingMode.IMMEDIATE_ACQUISITION_AND_HOLD);
         //settings.put(Environment.SHOW_SQL, "true");
         
         return settings;

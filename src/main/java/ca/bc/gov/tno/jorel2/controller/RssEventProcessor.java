@@ -84,15 +84,17 @@ public class RssEventProcessor extends Jorel2Root implements EventProcessor {
 		    			decoratedTrace(INDENT1, "Two (or more) threads attempting to process the " + currentSource + " feed - skipping.");
 		    		} else {
 		    			try {
-			    			sourcesBeingProcessed.put(currentSource, "");
-			    			rssContent = getRssContent(currentEvent.getTitle());
-			    			
-			    			if(rssContent != null) {
-					    		newRssItems = getNewRssItems(currentSource, rssContent, session);
-					    		insertNewsItems(currentSource, newRssItems, rssContent, session);
-			    			}
-			    			
-				    		sourcesBeingProcessed.remove(currentSource);
+			        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+				    			sourcesBeingProcessed.put(currentSource, "");
+				    			rssContent = getRssContent(currentEvent.getTitle());
+				    			
+				    			if(rssContent != null) {
+						    		newRssItems = getNewRssItems(currentSource, rssContent, session);
+						    		insertNewsItems(currentSource, newRssItems, rssContent, session);
+				    			}
+				    			
+					    		sourcesBeingProcessed.remove(currentSource);
+			        		}
 		    			}
 		    			catch (Exception e) {
 				    		sourcesBeingProcessed.remove(currentSource);

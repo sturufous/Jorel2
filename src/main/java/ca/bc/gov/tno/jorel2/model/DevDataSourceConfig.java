@@ -62,6 +62,7 @@ final class DevDataSourceConfig extends DataSourceConfig {
 		        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().applySettings(config.getProperties()).build();
 		        
 		        SessionFactory sessionFactory = config.buildSessionFactory(serviceRegistry);
+		        
 		        sessionFactoryOptional = Optional.of(sessionFactory);
 		        instance.setConnectionStatus(ConnectionStatus.ONLINE);
 		     } catch (HibernateException  e) {

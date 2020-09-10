@@ -317,7 +317,7 @@ public class AnalysisHandler extends Jorel2Root {
 		if(!error){
 			try{
 				decoratedTrace(INDENT2, "Begin running mainSQL in AnalysisHandler.draw()");
-				rs = DbUtil.runSqlFlags(mainSQL, session);
+				rs = DbUtil.runSqlScrollInsensitive(mainSQL, session);
 				decoratedTrace(INDENT2, "Finished running mainSQL in AnalysisHandler.draw()");
 			} catch(Exception err){
 				decoratedError(INDENT0, "Analysis.draw3():", err);
