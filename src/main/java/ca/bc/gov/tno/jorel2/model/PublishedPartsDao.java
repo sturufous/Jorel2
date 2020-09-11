@@ -9,7 +9,10 @@ import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -54,7 +57,8 @@ public class PublishedPartsDao extends Jorel2Root implements java.io.Serializabl
 	}
 
 	@Id
-
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "next_rsn")
+	@SequenceGenerator(name = "next_rsn", sequenceName = "NEXT_RSN", allocationSize=1)
 	@Column(name = "PART_RSN", unique = true, nullable = false, precision = 38, scale = 0)
 	public BigDecimal getPartRsn() {
 		return this.partRsn;

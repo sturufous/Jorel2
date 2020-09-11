@@ -194,7 +194,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        	eventTypeName = eventEntry.getValue();
 	        	
 	        	switch (eventEnum) {
-	        		case NEWRSS -> rssEventProcessor.processEvents(this, session);
 	        		case RSS -> rssEventProcessor.processEvents(this, session);
 	        		case SYNDICATION -> syndicationEventProcessor.processEvents(this, session);
 	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(this, session);

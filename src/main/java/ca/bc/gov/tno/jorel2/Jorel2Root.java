@@ -80,7 +80,7 @@ public class Jorel2Root {
     public enum EventType {
 		
 		DURATION, CHANNELWATCHER, ARCHIVER, USER, HTML, PLSQL, SYNC, ALERT, AUTORUN, MONITOR, EXPIRE, CLEANBINARYROOT, 
-		CONVERTER, EXPIRE3GP, PAGEWATCHER, RSS, NEWRSS, CAPTURE, SHELLCOMMAND, SYNDICATION, LDAP
+		CONVERTER, EXPIRE3GP, PAGEWATCHER, RSS, CAPTURE, SHELLCOMMAND, SYNDICATION, LDAP
 	}
 	
     /** Enumeration used to categorize different words in the quote extractor object */
@@ -91,11 +91,13 @@ public class Jorel2Root {
 	
 	/** Enumeration that indicates whether an observed entity has been changed */
 	public enum ChangedStatus {
+		
 		CHANGED, UNCHANGED;
 	}
 	
 	/** Enumeration that indicates whether the Hibernate database connection is online or offline */
 	public enum ConnectionStatus {
+		
 		ONLINE, OFFLINE;
 	}
 	
