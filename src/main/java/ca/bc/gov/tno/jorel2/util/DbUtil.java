@@ -48,7 +48,9 @@ public class DbUtil {
             	ResultSet rs = null;
                 Statement stmt = null;
                 
-                stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
+            	System.out.println("Connection: " + connection);
+                
+                stmt = connection.createStatement();
                 connection.beginRequest();
                 rs = stmt.executeQuery(query);
                 connection.endRequest();

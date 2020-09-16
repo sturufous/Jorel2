@@ -4,6 +4,7 @@
 
 package ca.bc.gov.tno.jorel2;
 
+import org.hibernate.ConnectionReleaseMode;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 
@@ -20,6 +21,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * @version 0.0.1 All previous updates.
  * @version 0.0.2 03 Sep 20 - Changing the logging rollover policy from size based to time based.
  * @version 0.0.13 04 Sep 20 - Adding small screen device format to Jorel reports.
+ * @version 0.0.14 15 Sep 20 - Changing connection release policy to ConnectionReleaseMode.ON_CLOSE.
  */
 
 //@EnableAspectJAutoProxy

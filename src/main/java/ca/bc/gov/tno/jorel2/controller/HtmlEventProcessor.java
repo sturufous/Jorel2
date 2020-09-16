@@ -2,7 +2,6 @@ package ca.bc.gov.tno.jorel2.controller;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Calendar;

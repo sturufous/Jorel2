@@ -4,6 +4,7 @@ import static java.util.Map.Entry.comparingByKey;
 import static java.util.stream.Collectors.toMap;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import ca.bc.gov.tno.jorel2.model.DataSourceConfig;
 import ca.bc.gov.tno.jorel2.model.EventTypesDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
+import ca.bc.gov.tno.jorel2.util.DbUtil;
 
 import static java.util.stream.Collectors.*;
 import static java.util.Map.Entry.*;
@@ -141,32 +143,45 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Override
 	public void run() {
     	Optional<SessionFactory> sessionFactory = config.getSessionFactory();
-    	Session session = sessionFactory.get().openSession();
-				
-		logThreadStartup();
-		
-    	if(instance.getConnectionStatus() == ConnectionStatus.ONLINE) {
-    		processOnlineEvents(session);
-    	} 
-    	else if (instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
-    		if (!sessionFactory.isEmpty()) {
-    			if (isConnectionLive(session)) {
-    		        instance.setConnectionStatus(ConnectionStatus.ONLINE);        				
-        			decoratedTrace(INDENT1, "Connection to TNO database is back online.");
-        			instance.logDbOutageDuration();
-        			postProcessOfflineEvents(session);
-    			} else {
-    				decoratedTrace(INDENT1, "Connection to TNO database is still offline.");
-    				processOfflineEvents();
-    			}
-    		} else {
-    			// Unlikely to happen as c3p0 always returns a session factory
-    			decoratedTrace(INDENT1, "Connection to TNO database is still offline");
-    			processOfflineEvents();
+    	Session session = null;
+    			
+    	try {
+	    	session = sessionFactory.get().openSession();
+	    	
+	    	//ResultSet rs = DbUtil.runSql("select * from dual", session);
+	    	
+			logThreadStartup();
+			
+	    	if(instance.getConnectionStatus() == ConnectionStatus.ONLINE) {
+	    		processOnlineEvents(session);
+	    	} 
+	    	else if (instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
+	    		if (!sessionFactory.isEmpty()) {
+	    			if (isConnectionLive(session)) {
+	    		        instance.setConnectionStatus(ConnectionStatus.ONLINE);        				
+	        			decoratedTrace(INDENT1, "Connection to TNO database is back online.");
+	        			instance.logDbOutageDuration();
+	        			postProcessOfflineEvents(session);
+	    			} else {
+	    				decoratedTrace(INDENT1, "Connection to TNO database is still offline.");
+	    				processOfflineEvents();
+	    			}
+	    		} else {
+	    			// Unlikely to happen as c3p0 always returns a session factory
+	    			decoratedTrace(INDENT1, "Connection to TNO database is still offline");
+	    			processOfflineEvents();
+	    		}
+	    	}
+	    	
+	    	logThreadCompletion(jorelThread);
+	    	session.close();
+    	} catch (Exception e) {
+    		decoratedError(INDENT0, "In Jorel2Runnable.", e);
+    		
+    		if (session != null) {
+    			session.close();
     		}
     	}
-    	
-    	logThreadCompletion(jorelThread);
 	}
 	
 	/**
@@ -220,8 +235,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	    	instance.setConnectionStatus(ConnectionStatus.OFFLINE);
 	    	instance.addDatabaseInterruption();
 	    }
-        
-        session.close();
 	}
 	
 	/**
