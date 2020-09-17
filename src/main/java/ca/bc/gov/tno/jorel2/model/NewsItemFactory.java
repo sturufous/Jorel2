@@ -1,6 +1,7 @@
 package ca.bc.gov.tno.jorel2.model;
 
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import com.sun.syndication.feed.synd.SyndEntry;
 
@@ -9,6 +10,7 @@ import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.jaxb.Nitf;
 import ca.bc.gov.tno.jorel2.jaxb.Rss;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
+import ca.bc.gov.tno.jorel2.util.DbUtil;
 import ca.bc.gov.tno.jorel2.util.StringUtil;
 import ca.bc.gov.tno.jorel2.util.UrlUtil;
 
@@ -130,7 +132,7 @@ public class NewsItemFactory extends Jorel2Root {
 		newsItem.setText(StringUtil.stringToClob(content));
 		newsItem.setSummary(summary);
 		
-		// Saves converting back from Clob to string
+		// Saves converting back from Clob to string if you need the article content later
 		newsItem.content = content;
 		
 		return newsItem;
@@ -170,7 +172,7 @@ public class NewsItemFactory extends Jorel2Root {
 		newsItem.setSummary(summary);
 		newsItem.setType("Newspaper");
 		
-		// Saves converting back from Clob to string
+		// Saves converting back from Clob to string if you need the article content later
 		newsItem.content = content;
 		
 		return newsItem;
@@ -211,7 +213,7 @@ public class NewsItemFactory extends Jorel2Root {
 				newsItem.setWebpath(item.getLink());
 				newsItem.setText(StringUtil.stringToClob(content));
 				
-				// Saves converting back from Clob to string
+				// Saves converting back from Clob to string if you need the article content later
 				newsItem.content = content;
 			}
 		}
@@ -219,6 +221,70 @@ public class NewsItemFactory extends Jorel2Root {
 			logger.error("Retrieving individual CP News item: " + item.getUri(), e);
 			newsItem = null;
 		}
+		
+		return newsItem;
+	}
+	
+	/**
+	 * Creates and populates an instance of <code>NewsItemDao</code> containing data from a Non-XML based RSS feed item.
+	 * 
+	 * @param item The news item to process.
+	 * @param source The source of the news item (e.g. CP News)
+	 * @param instance Used to track timeout events when retrieving a news item.
+	 * @return A NewsItemsDao object instantiated with the data contained in <code>item</code>
+	 */
+	public static NewsItemsDao createChannelNewsItem(SyndEntry item, String source, String authorHandle, String author, ChannelsDao channel, Jorel2ServerInstance instance) {
+		
+		String content;
+		NewsItemsDao newsItem = createNewsItemTemplate();
+		
+		// Ensure time portion of Date is 00:00:00. Article won't show in Otis otherwise.
+		Date itemTime = item.getPublishedDate();
+		String description = StringUtil.nullToEmptyString(item.getDescription().getValue());
+		String autoTags = StringUtil.nullToEmptyString(channel.getAutoTags());
+		String socialType = "twitter";
+		
+		if (itemTime == null) {
+			itemTime = new Date();
+		}
+		Date itemDate = DateUtil.getDateAtMidnightByDate(itemTime);
+		
+		String uri = StringUtil.nullToEmptyString(item.getUri());
+		String link = StringUtil.nullToEmptyString(item.getLink());
+		if(uri.startsWith("http://"))
+			link = uri;
+		
+		if (!autoTags.equals("")) {
+			description = description + "\n\n" + autoTags;
+		}
+		
+		String markupDescription = description;
+		if (socialType.equalsIgnoreCase("twitter")) {
+			markupDescription = description.replaceAll("(?i)" + VALID_URL_PATTERN_STRING, "$2<a href=\"$3\">$3</a>");
+		}
+					
+		// Assign content of this SyndEntry to the NewsItemDao object
+		newsItem.setItemDate(itemDate);
+		newsItem.setItemTime(new Date());
+		newsItem.setSource(source);
+		newsItem.setString1(socialType); // Only twitter supported for now
+		newsItem.setString5(channel.getSeries());
+		newsItem.setString6(author);
+		newsItem.setString2(authorHandle);
+		newsItem.setTitle(StringUtil.nullToEmptyString(item.getTitle()));
+		newsItem.setType("Social Media");
+		//news.setNumber1(Math.round(klout_score));
+		//news.setNumber2(reach);
+		newsItem.setDate2(new Date()); // goes into the Date2 field
+		newsItem.setWebpath(link);
+		newsItem.setTranscript(StringUtil.stringToClob(""));
+		newsItem.setAlert(channel.getAutoAlert());
+		newsItem.setAutoTone(BigDecimal.valueOf(0L));
+		newsItem.setPublished(channel.getAutoPublish());
+		newsItem.setText(StringUtil.stringToClob(markupDescription));
+		
+		// Saves converting back from Clob to string if you need the article content later
+		newsItem.content = markupDescription;
 		
 		return newsItem;
 	}

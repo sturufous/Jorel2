@@ -524,8 +524,11 @@ public class AlertEventProcessor extends Jorel2Root implements EventProcessor {
 										// images
 										String imgs = "";
 										/*if(isAlertImages)
-											imgs = nii.getImages4Alerts(frame.getAVHost(),Long.parseLong(rsn));
-										emailLine = StringUtil.replace(emailLine, "<**images**>", imgs);*/
+											imgs = nii.getImages4Alerts(frame.getAVHost(),Long.parseLong(rsn));*/
+										
+										// isAlertImages returns the contents of the properties file attribute "alertimages".
+										// This is not present in any Jorel1 properties file I can find, so always blank it out.
+										emailLine = StringUtil.replace(emailLine, "<**images**>", imgs);
 
 										emailLine = EmojiParser.parseToUnicode(emailLine);
 

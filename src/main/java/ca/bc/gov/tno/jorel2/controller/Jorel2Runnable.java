@@ -116,6 +116,10 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	@Inject
     private CaptureEventProcessor captureEventProcessor;
 	
+	/** Channelwatcher Event processor service */
+	@Inject
+    private ChannelwatcherEventProcessor channelwatcherEventProcessor;
+	
 	/** Html Event processor service */
 	@Inject
     private HtmlEventProcessor htmlEventProcessor;
@@ -226,6 +230,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case LDAP -> ldapEventProcessor.processEvents(this, session);
 	        		case CAPTURE -> captureEventProcessor.processEvents(this, session);
 	        		case HTML -> htmlEventProcessor.processEvents(this, session);
+	        		case CHANNELWATCHER -> channelwatcherEventProcessor.processEvents(this, session);
 			        default -> Optional.empty();
 	        	};
 	        }

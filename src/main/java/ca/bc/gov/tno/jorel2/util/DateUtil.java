@@ -154,6 +154,29 @@ public class DateUtil extends Jorel2Root {
 		return utilDate;
 	}
 	
+	/**
+	 * THIS HAS NEVER BEEN TESTED. Takes a date as a MM-dd-yyyy string and converts it into a java.util.Date object.
+	 * 
+	 * @param dateStr The string representation of the date to be converted.
+	 * @return The date corresponding to the input string dateStr
+	 */
+	
+	public static Date getDateFromTime(String timeStr) {
+		
+		// Process the current date using the JDK 1.8 Time API
+		Date utilDate = null;
+		String dateStr = "01-01-1970 " + timeStr;
+		
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss");
+			utilDate = formatter.parse(dateStr);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+ 
+		return utilDate;
+	}
+	
 	public static String getTimeNow() {
 		
 		// Process the current date using the JDK 1.8 Time API

@@ -533,7 +533,7 @@ public class ReportHandler {
 
 				if (imgs.length() > 0) {
 					StringBuilder frontPagesSection = new StringBuilder(getPublishedPartByName("V9REPORTFRONTPAGES", "", hSession));
-					StringUtil.replace(frontPagesSection,"<**images**>",imgs.toString());
+					StringUtil.replace(frontPagesSection,"<**images**>", imgs.toString());
 					if (pageBreak) ssb.append(newPage);
 					ssb.append(StringUtil.replace(storyFormatDivide, "<**sectionname**>", "" ) );
 					ssb.append(frontPagesSection);

@@ -22,6 +22,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * @version 0.0.2 03 Sep 20 - Changing the logging rollover policy from size based to time based.
  * @version 0.0.13 04 Sep 20 - Adding small screen device format to Jorel reports.
  * @version 0.0.14 15 Sep 20 - Changing connection release policy to ConnectionReleaseMode.ON_CLOSE.
+ * @version 0.0.15 16 Sep 20 - Fix appearance of "<**images**>" in alert emails.
  */
 
 //@EnableAspectJAutoProxy

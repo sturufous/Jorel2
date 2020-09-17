@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ca.bc.gov.tno.jorel2</groupId>
   <artifactId>jorel2</artifactId>
-  <version>0.0.14-SNAPSHOT</version>
+  <version>0.0.15-SNAPSHOT</version>
   <name>Jorel2</name>
   <description>Java 13 rewrite of Jorel</description>
   <properties>
@@ -186,6 +186,17 @@
 	    <groupId>org.jfree</groupId>
 	    <artifactId>jfreechart</artifactId>
 	    <version>1.0.19</version>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/com.googlecode.json-simple/json-simple -->
+	<dependency>
+	    <groupId>com.googlecode.json-simple</groupId>
+	    <artifactId>json-simple</artifactId>
+	    <version>1.1</version>
+	</dependency>
+	<dependency>
+	    <groupId>commons-codec</groupId>
+	    <artifactId>commons-codec</artifactId>
+	    <version>1.15</version>
 	</dependency>
   </dependencies>
 </project>

@@ -689,4 +689,15 @@ public class StringUtil extends Jorel2Root {
 		sb.append(src.substring(p));
 		return sb.toString();
 	}
+	
+	public static String nullToEmptyString(String value) {
+		
+		String result = "";
+		
+		if(value != null) {
+			result = value;
+		}
+		
+		return result;
+	}
 }

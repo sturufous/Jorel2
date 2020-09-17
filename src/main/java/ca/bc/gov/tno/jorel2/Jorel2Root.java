@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+
 import javax.persistence.MappedSuperclass;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -75,6 +77,31 @@ public class Jorel2Root {
     protected static String rootInstanceName = "";
     protected static final int LDAP_PAGE_SIZE = 500;
     protected static final String LDAP_SERVER_URL = "ldap://idir.bcgov:389";
+    
+	// URL matching patterns
+	private final static String URL_VALID_PRECEEDING_CHARS = "(?:[^/\"':!=]|^|\\:)";
+	private final static String URL_VALID_DOMAIN = "(?:[\\.-]|[^\\p{Punct}])+\\.[a-z]{2,}(?::[0-9]+)?";
+	private final static String URL_VALID_URL_PATH_CHARS = "[a-z0-9!\\*'\\(\\);:&=\\+\\$/%#\\[\\]\\-_\\.,~]";
+	
+	// Valid end-of-path chracters (so /foo. does not gobble the period).
+	//   1. Allow ) for Wikipedia URLs.
+	//   2. Allow =&# for empty URL parameters and other URL-join artifacts
+	private final static String URL_VALID_URL_PATH_ENDING_CHARS = "[a-z0-9\\)=#/]";
+	private final static String URL_VALID_URL_QUERY_CHARS = "[a-z0-9!\\*'\\(\\);:&=\\+\\$/%#\\[\\]\\-_\\.,~]";
+	private final static String URL_VALID_URL_QUERY_ENDING_CHARS = "[a-z0-9_&=#]";
+	protected final static String VALID_URL_PATTERN_STRING = "(" +     //  $1 total match
+	"(" + URL_VALID_PRECEEDING_CHARS + ")" +                  //  $2 Preceeding chracter
+	"(" +                                                     //  $3 URL
+	"(https?://|www\\.)" +                                    //  $4 Protocol or beginning
+	"(" + URL_VALID_DOMAIN + ")" +                            //  $5 Domain(s) and optional port number
+	"(/" + URL_VALID_URL_PATH_CHARS + "*" +                   //  $6 URL Path
+	URL_VALID_URL_PATH_ENDING_CHARS + "?)?" +
+	"(\\?" + URL_VALID_URL_QUERY_CHARS + "*" +                //  $7 Query String
+	URL_VALID_URL_QUERY_ENDING_CHARS + ")?" +
+	")" +
+	")";
+	private final Pattern VALID_URL = Pattern.compile(VALID_URL_PATTERN_STRING, Pattern.CASE_INSENSITIVE);
+
     
     /** Enumeration containing entries for all event types processed by Jorel2 */
     public enum EventType {
