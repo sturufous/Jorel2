@@ -100,7 +100,9 @@ public class Jorel2Root {
 	URL_VALID_URL_QUERY_ENDING_CHARS + ")?" +
 	")" +
 	")";
-	private final Pattern VALID_URL = Pattern.compile(VALID_URL_PATTERN_STRING, Pattern.CASE_INSENSITIVE);
+	
+	protected static final Pattern VALID_URL = Pattern.compile(VALID_URL_PATTERN_STRING, Pattern.CASE_INSENSITIVE);
+	protected static final Pattern TITLE_TAG = Pattern.compile("\\<title>(.*)\\</title>", Pattern.CASE_INSENSITIVE|Pattern.DOTALL);
 
     
     /** Enumeration containing entries for all event types processed by Jorel2 */

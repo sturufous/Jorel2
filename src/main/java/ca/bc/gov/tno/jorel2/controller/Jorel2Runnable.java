@@ -158,8 +158,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 			
 	    	if(instance.getConnectionStatus() == ConnectionStatus.ONLINE) {
 	    		processOnlineEvents(session);
-	    	} 
-	    	else if (instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
+	    	} else if (instance.getConnectionStatus() == ConnectionStatus.OFFLINE) {
 	    		if (!sessionFactory.isEmpty()) {
 	    			if (isConnectionLive(session)) {
 	    		        instance.setConnectionStatus(ConnectionStatus.ONLINE);        				

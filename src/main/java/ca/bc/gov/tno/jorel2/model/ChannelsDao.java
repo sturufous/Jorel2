@@ -201,7 +201,7 @@ public class ChannelsDao implements java.io.Serializable {
 	 * @param session The current Hibernate persistence context.
 	 * @return A list containing all the records that meet the expiry criteria.
 	 */
-	public static List<ChannelsDao> getActiveChannels(String process, Session session) {
+	public static List<ChannelsDao> getActiveUnlockedChannels(String process, Session session) {
 		
 		String sqlStmt = "from ChannelsDao where active = 1 AND (lastRun = 'idle' OR lastRun = :lastRun) AND ((SYSDATE-lastRunDate)*24*60*60 > delay) order by lastRunDate";
 
@@ -210,5 +210,37 @@ public class ChannelsDao implements java.io.Serializable {
         List<ChannelsDao> results = query.getResultList();
         
 		return results;
+	}
+	
+	/**
+	 * Locks the channel so that no other Jorel2 instances attempts to process it.
+	 * 
+	 * @param name The name of the current Jorel2 instance.
+	 * @param channel The channel record to update.
+	 * @param session The current Hibernate persistence context.
+	 * @throws Exception Passes any exceptions up to the ChannelwatcherEvent processor for handling.
+	 */
+	public static void lockChannel(String name, ChannelsDao channel, Session session) throws Exception {
+		
+		channel.setLastRun(name);
+		session.beginTransaction();
+		session.persist(channel);
+		session.getTransaction().commit();
+	}
+	
+	/**
+	 * Unlocks the channel so that this, or other Jorel2 instances, can process it later.
+	 * 
+	 * @param name The name of the current Jorel2 instance.
+	 * @param channel The channel record to update.
+	 * @param session The current Hibernate persistence context.
+	 * @throws Exception Passes any exceptions up to the ChannelwatcherEvent processor for handling.
+	 */
+	public static void unlockChannel(ChannelsDao channel, Session session) throws Exception {
+		
+		channel.setLastRun("idle");
+		session.beginTransaction();
+		session.save(channel);
+		session.getTransaction().commit();
 	}
 }

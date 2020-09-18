@@ -5,6 +5,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
 
 import com.sun.syndication.feed.synd.SyndEntry;
 
@@ -83,5 +86,76 @@ public class UrlUtil extends Jorel2Root {
 		}
 
 		return articlePage;
+	}
+	
+	public static Map<String, String> resolveURL(String shortURL) {
+		
+		String title = "";
+		String longURL = shortURL;
+		String response = "";
+		HashMap<String, String> results = new HashMap<>();
+		try {
+			
+			// resolve redirects
+			HttpURLConnection connection = (HttpURLConnection) new URL(longURL).openConnection();
+			connection.setInstanceFollowRedirects(false);
+			int count = 0;
+			while ((connection.getResponseCode() / 100 == 3) || (count > 20)) {
+				count++;
+				longURL = connection.getHeaderField("location");
+			    connection = (HttpURLConnection) new URL(longURL).openConnection();
+			}
+			response = Long.toString(connection.getResponseCode());
+
+			// extract page title
+			if (connection.getResponseCode() / 100 == 2) {
+				String ct = connection.getContentType();
+				if (ct.contains("text/html")) {
+		            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+		            String line;
+		            StringBuilder html = new StringBuilder();
+		            while ((line = reader.readLine()) != null) {
+		            	html.append(line);
+		            	html.append("\n"); 
+		            }
+		            reader.close();
+		            
+		            // extract the title
+		            Matcher matcher = TITLE_TAG.matcher(html);
+		            if (matcher.find()) {
+		                // replace any occurrences of whitespace and HTML brackets with a space
+		                title = matcher.group(1).replaceAll("[\\s\\<>]+", " ").trim();
+		            }
+
+				}
+			}
+			
+			if (title.equalsIgnoreCase("")) title = longURL;
+
+		} catch (Exception ex) {
+			;
+		}
+
+		results.put("longUrl", longURL);
+		results.put("title", title);
+		results.put("responseCode", response.toString());
+		
+		return results;
+	}
+	
+	public static String fixURL(String url) {
+		url = url.replaceAll("#.*", "");
+		url = removeParam(url, "cmp");
+		url = removeParam(url, "utm_medium");
+		url = removeParam(url, "utm_source");
+		url = removeParam(url, "utm_campaign");
+		return url;
+	}
+	
+	private static String removeParam(String url, String param) {
+		url = url.replaceAll("\\?"+param+"=([^&]*)&", "?");
+		url = url.replaceAll("&"+param+"=([^&]*)", "");
+		url = url.replaceAll("\\?"+param+"=([^&]*)", "");
+		return url;
 	}
 }
