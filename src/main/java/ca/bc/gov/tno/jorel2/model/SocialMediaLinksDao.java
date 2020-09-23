@@ -25,7 +25,7 @@ import org.hibernate.Session;
 @Table(name = "SOCIAL_MEDIA_LINKS", schema = "TNO")
 public class SocialMediaLinksDao implements java.io.Serializable {
 
-	private static final long serialVersionUID = 1L;
+	//private static final long serialVersionUID = 1L;
 	private BigDecimal rsn;
 	private String link;
 	private String url;

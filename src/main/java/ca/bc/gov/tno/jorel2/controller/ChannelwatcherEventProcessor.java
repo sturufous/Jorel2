@@ -1,6 +1,5 @@
 package ca.bc.gov.tno.jorel2.controller;
 
-
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URL;
@@ -20,6 +19,7 @@ import com.sun.syndication.io.SyndFeedInput;
 import com.sun.syndication.io.XmlReader;
 
 import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
+import ca.bc.gov.tno.jorel2.Jorel2Root.EventType;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.ChannelsDao;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
@@ -54,21 +54,30 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 	public Optional<String> processEvents(Jorel2Runnable runnable, Session session) {
     	
     	try {
-    		decoratedTrace(INDENT1, "Starting Channelwatcher event processing");
-    		
-	        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
-			for (Object[] entityPair : results) {
-	        	if (entityPair[0] instanceof EventsDao) {
-	        		EventsDao currentEvent = (EventsDao) entityPair[0];
-        			setThreadTimeout(runnable, currentEvent, instance);
-        			
-	        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
-	        			channelEvent(currentEvent, session);
-	        		}
-	        	}
-			}
+    		if (instance.isExclusiveEventActive(EventType.CHANNELWATCHER)) {
+    			decoratedTrace(INDENT1, "Channelwatcher event processing already active. Skipping.");    			
+    		} else {
+    			instance.addExclusiveEvent(EventType.CHANNELWATCHER);
+    			
+	    		decoratedTrace(INDENT1, "Starting Channelwatcher event processing");
+	    		
+		        List<Object[]> results = EventsDao.getElligibleEventsByEventType(instance, runnable.getEventTypeName(), session);
+				for (Object[] entityPair : results) {
+		        	if (entityPair[0] instanceof EventsDao) {
+		        		EventsDao currentEvent = (EventsDao) entityPair[0];
+	        			setThreadTimeout(runnable, currentEvent, instance);
+	        			
+		        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
+		        			channelEvent(currentEvent, session);
+		        		}
+		        	}
+				}
+				
+		        instance.removeExclusiveEvent(EventType.CHANNELWATCHER);
+    		}
 		}
     	catch (Exception e) {
+	        instance.removeExclusiveEvent(EventType.CHANNELWATCHER);
     		logger.error("Processing Channelwatcher events.", e);
     	}
     	
@@ -115,6 +124,8 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 	} 
 		
 	private void processRssItems(SyndFeed feed, String source, ChannelsDao channel, Session session) throws Exception {
+		
+		int articleCount = 0;
 		
 		for (SyndEntry item : (List<SyndEntry>) feed.getEntries()) {
 			
@@ -164,10 +175,14 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 				}
 
 				if(saveNewsItem(spam, item, source, authorHandle, author, channel, session)) {
+					articleCount++;
 					parseRSS(text, channelName, author, session);
 				}
 			}
 		}
+		
+		instance.incrementArticleCount(source, articleCount);
+		decoratedTrace(INDENT2, "Added: " + articleCount + " article(s) from " + source);
 	}
 	
 	private boolean saveNewsItem(boolean spam, SyndEntry item, String source, String authorHandle, String author, ChannelsDao channel, Session session) {
@@ -224,6 +239,10 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 					if (longUrl.equalsIgnoreCase("")) longUrl = url;
 
 					String urlTitle = urlMeta.get("title");
+					if (urlTitle.length() > 1000) {
+						urlTitle = urlTitle.substring(0, 999);
+					}
+
 					if (urlTitle == null) urlTitle = url;
 					if (urlTitle.equalsIgnoreCase("")) urlTitle = url;
 
@@ -247,10 +266,10 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 								linkRecord.setChannel(channelName);
 								linkRecord.setAuthor(author);
 								linkRecord.setResponseCode(response);
-								linkRecord.setInfluencerRsn(BigDecimal.valueOf(0L));
-								linkRecord.setScore(BigDecimal.valueOf(0L));
+								linkRecord.setInfluencerRsn(BigDecimal.valueOf(0));
+								linkRecord.setScore(BigDecimal.valueOf(0));
 								linkRecord.setDateCreated(new Date());
-								linkRecord.setItemRsn(BigDecimal.valueOf(0L));
+								linkRecord.setItemRsn(BigDecimal.valueOf(0));
 								linkRecord.setDeleted(false);
 								
 								session.beginTransaction();

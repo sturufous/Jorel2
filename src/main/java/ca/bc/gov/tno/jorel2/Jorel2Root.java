@@ -170,7 +170,7 @@ public class Jorel2Root {
 			decoratedTrace(indent, message);
 		} else {
 			if (message.length() > 2000) {
-				message = message.substring(1, 1999);
+				message = message.substring(0, 1999);
 			}
 			
 			EventActivityLogDao logEntry = new EventActivityLogDao(null, rootInstanceName, new Date(), message);

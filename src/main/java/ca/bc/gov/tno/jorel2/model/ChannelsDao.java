@@ -239,6 +239,7 @@ public class ChannelsDao implements java.io.Serializable {
 	public static void unlockChannel(ChannelsDao channel, Session session) throws Exception {
 		
 		channel.setLastRun("idle");
+		channel.setLastRunDate(new Date());
 		session.beginTransaction();
 		session.save(channel);
 		session.getTransaction().commit();
