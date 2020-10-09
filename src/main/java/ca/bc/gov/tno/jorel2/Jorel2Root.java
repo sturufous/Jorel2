@@ -42,13 +42,21 @@ import org.hibernate.annotations.NamedQueries;
  * A primary role of this root superclass is the provision of a global logger.
  * 
  * @author Stuart Morse
- * @version 0.0.1
+ * @version 0.0.1 All previous updates.
+ * @version 0.0.2 03 Sep 20 - Changing the logging rollover policy from size based to time based.
+ * @version 0.0.13 04 Sep 20 - Adding small screen device format to Jorel reports.
+ * @version 0.0.14 15 Sep 20 - Changing connection release policy to ConnectionReleaseMode.ON_CLOSE.
+ * @version 0.0.15 16 Sep 20 - Fix appearance of "<**images**>" in alert emails.
+ * @version 0.0.16 21 Sep 20 - Adding Channelwatcher event handling
+ * @version 0.0.17 25 Sep 20 - Added getBuildNumber(), getActiveThreads(), getServerDetails() to Jorel2ServerInstance
+ * @version 0.0.18 08 Oct 20 - Added array-formatted output for database interruptions to Jorel2ServerInstance
  */
 
 @MappedSuperclass
 public class Jorel2Root {
 	
 	/** Constants for use throughout Jorel2 */
+	protected static final String buildNumber = "0.0.18";
     protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
     protected static final int THREAD_POOL_SIZE = 3;
     protected static final int FATAL_CONDITION = -1;
@@ -132,6 +140,9 @@ public class Jorel2Root {
 	
     /** Map used to record the start times of each thread. This is used for logging and the enforcement of the maxThreadRuntime property. */
 	protected static Map<Jorel2ThreadInstance, String> activeThreads = new ConcurrentHashMap<>();
+	
+    /** Map used to record the start times of each thread. This is used for logging and the enforcement of the maxThreadRuntime property. */
+	protected static Map<String, String> eventTypesProcessed = new ConcurrentHashMap<>();
 	
 	/** 
 	 * Method that does nothing, for use as a pattern in if/else statements for readability 

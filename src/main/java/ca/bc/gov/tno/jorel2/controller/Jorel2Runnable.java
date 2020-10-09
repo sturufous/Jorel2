@@ -152,8 +152,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
     	try {
 	    	session = sessionFactory.get().openSession();
 	    	
-	    	//ResultSet rs = DbUtil.runSql("select * from dual", session);
-	    	
 			logThreadStartup();
 			
 	    	if(instance.getConnectionStatus() == ConnectionStatus.ONLINE) {
@@ -295,6 +293,13 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
         // Sort eventMap - ensures event execution occurs in the right order 
 		Map<EventType, String> sorted = eventMap.entrySet().stream().sorted(comparingByKey())
 				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+		
+		// Detect which even types have been selected. Used in reporting via Jorel2ServerInstance mbean.
+		for(Entry eventType : sorted.entrySet()) {
+			if (!eventTypesProcessed.containsKey(eventType.getValue())) {
+				eventTypesProcessed.put((String) eventType.getValue(), "");
+			}
+		}
 		
 		return sorted;
 	}

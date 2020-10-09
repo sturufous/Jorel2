@@ -3,11 +3,13 @@ package ca.bc.gov.tno.jorel2;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.OptionalDouble;
-import java.util.OptionalLong;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import org.apache.commons.configuration.PropertiesConfiguration;
@@ -35,14 +37,18 @@ import static java.util.Map.Entry.*;
 @ManagedResource(
         objectName="Jorel2Instance:name=jorel2Mbean",
         description="Jorel2 Managed Bean",
-        currencyTimeLimit=15)
+        currencyTimeLimit=1)
 
 public class Jorel2ServerInstance extends Jorel2Root {
 	
-	Map<String, Long> threadDurations = new ConcurrentHashMap<>();
+//	Map<String, Long> threadDurations = new ConcurrentHashMap<>();
 	Map<String, Integer> articleCounts = new ConcurrentHashMap<>();
 	Map<String, Integer> wordCounts = new HashMap<>();
 	String lastInterruptionKey = "";
+	long minDuration = 0L;
+	long maxDuration = 0L;
+	long threadCount = 0L;
+	long lastDurationTimestamp = 0L;
 	
 	/** Keeps track of date and time of database connection interruptions, i.e., entering offline mode */
 	private ConcurrentHashMap<String, String> databaseInterruptions = new ConcurrentHashMap<>();
@@ -73,6 +79,67 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	 */
 	Jorel2ServerInstance() {
 		startTime = LocalDateTime.now();
+	}
+	
+	/**
+	 * Expose the build number for this instance.
+	 * 
+	 * @return The build number for the current instance
+	 */
+	@ManagedAttribute(description="The build number of this Jorel instance", currencyTimeLimit=15)
+	public String getBuildNumber() {
+		
+		return buildNumber;
+	}
+	
+	/**
+	 * Expose the number of threads currently running on this instance.
+	 * 
+	 * @return the number of threads currently running on this instance.
+	 */
+	@ManagedAttribute(description="The number of threads currently running on this Jorel instance", currencyTimeLimit=-1)
+	public int getActiveThreads() {
+		
+		return activeThreads.size();
+	}
+	
+	/**
+	 * Expose A list of event types handled by this instance.
+	 * 
+	 * @return A list of event types handled by this instance.
+	 */
+	@ManagedAttribute(description="A list of event types handled by this instance", currencyTimeLimit=15)
+	public String getEventTypesHandled() {
+		String result = ""; // Should use stringbuilder
+		
+		for (Entry entry : eventTypesProcessed.entrySet()) {
+			result = result + entry.getKey() + ", ";
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Expose the system architecture string for the server this instance is running on.
+	 * 
+	 * @return The system architecture string for the server this instance is running on.
+	 */
+	@ManagedAttribute(description="The system architecture string for the server this instance is running on", currencyTimeLimit=15)
+	public String getServerDetails() {
+		
+		return "Java " + System.getProperty("java.version") + ", " + System.getProperty("os.arch") +
+				", " + System.getProperty("os.name") + " " + System.getProperty("os.version");
+	}
+	
+	/**
+	 * Expose the user for the server this instance is running on.
+	 * 
+	 * @return The user for the server this instance is running on.
+	 */
+	@ManagedAttribute(description="The user for the server this instance is running on", currencyTimeLimit=15)
+	public String getServerUser() {
+		
+		return System.getProperty("user.name");
 	}
 	
 	/**
@@ -209,17 +276,42 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	}
 	
 	/**
-	 * Exposes a sorted list of database interruptions that took place during this run cycle.
+	 * Exposes a sorted list of database interruptions that took place during this run cycle. Because this is consumed by Angular
+	 * (in Overseer) using *ngFor, it needs to be an array rather than an object with multiple members. This means you can't 
+	 * see the values in VirtualVM, but Overseer provides a more powerful overview which makes it worth it.
 	 * 
 	 * @return The list of database interruptions.
 	 */
 	@ManagedAttribute(description="Records times when database interruptions took place", currencyTimeLimit=15)
-	public LinkedHashMap<String, String> getDatabaseInterruptions() {
+	public String[][] getDatabaseInterruptions() {
+		
+		String[][] arr = null;
 		
 		Map<String, String> sorted = databaseInterruptions.entrySet().stream().sorted(comparingByKey())
 				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
 		
-		return (LinkedHashMap<String, String>) sorted;
+		if(sorted.size() == 0) {
+			arr = new String[1][2];
+			arr[0][0] = "No database";
+			arr[0][1] = "Interruptions";
+		} else {
+			arr = new String[sorted.size()][2];
+			Set entries = sorted.entrySet();
+			Iterator entriesIterator = entries.iterator();
+	
+			int i = 0;
+			while(entriesIterator.hasNext()){
+	
+			    Map.Entry mapping = (Map.Entry) entriesIterator.next();
+	
+			    arr[i][0] = (String) mapping.getKey();
+			    arr[i][1] = (String) mapping.getValue();
+	
+			    i++;
+			}
+		}
+		
+		return arr;
 	}
 	
 	/**
@@ -298,9 +390,9 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	}
 	
 	/**
-	 * Exposes <code>lastDuration</code> as a JMX attribute. 
+	 * Exposes <code>appAlertCounter</code> as a JMX attribute. 
 	 * 
-	 * @return The lastDuration attribute for this instance.
+	 * @return The appAlertCounter attribute for this instance.
 	 */
 	@ManagedAttribute(description="The number of alert emails sent out", currencyTimeLimit=15)
 	public long getAppAlertCounter() {
@@ -327,9 +419,10 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	 * 
 	 * @return The lastDuration attribute for this instance.
 	 */
-	@ManagedAttribute(description="Length of last run duration in seconds", currencyTimeLimit=15)
+	@ManagedAttribute(description="Length of last run duration in seconds", currencyTimeLimit=1, persistPolicy="never")
 	public long getLastDuration() {
 		
+		logger.trace("Getting last duration.");
 		return lastDuration;
 	}
 	
@@ -351,16 +444,39 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	}
 	
 	/**
-	 * Add the latest thread execution duration to the <code>threadDurations</code> Map so that it can be used in
-	 * calculating longest, shortest and mean thread execution times.
+	 * Add the latest thread execution duration. As this value is used for monitoring thread performance by Overseer and VisualVM, we want to focus
+	 * on the big numbers rather than the small ones. As this value is being polled every 3 seconds we want to discard the lastDuration currently being 
+	 * set, if it is smaller than the previous one. This ensures that when the value is next polled the largest value of thread durations within the polling
+	 * period is returned. The saving of the current duration is overridden, following this protocol, for 20000 milliseconds.
 	 * 
 	 * @param threadName Name of the currently executing thread used as key the the threadDurations map.
 	 * @param duration Number of seconds it took for this thread to complete event processing.
 	 */
 	public void addThreadDuration(String threadName, long duration) {
 		
-		threadDurations.put(threadName, Long.valueOf(duration));
-		lastDuration = duration;
+		if(duration > maxDuration) {
+			maxDuration = duration;
+		}
+		
+		if(duration < minDuration) {
+			minDuration = duration;
+		}
+		
+		Date now = new Date();
+		long nowMilliseconds = now.getTime();
+		
+		// If the lastDuration was set recently, assume it hasn't been polled by overseer or VisualVM since the last update and keep the biggest value.
+		if(nowMilliseconds - lastDurationTimestamp < 20000) {
+			if(lastDuration < duration) {
+				lastDuration = duration;
+				decoratedTrace(INDENT2, "Keeping larger duration measure. Timestamp difference = " + (nowMilliseconds - lastDurationTimestamp));
+			}
+		} else {
+			lastDuration = duration;
+		}
+		
+		threadCount++;
+		lastDurationTimestamp = nowMilliseconds;
 	}
 
 	/**
@@ -371,8 +487,7 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	@ManagedAttribute(description="Maximum thread duration since startup", currencyTimeLimit=15)
 	public Long getThreadMaxDurationSeconds() {
 		
-		OptionalLong max = threadDurations.values().stream().mapToLong(v -> v).max();
-		return max.getAsLong();
+		return maxDuration;
 	}
 
 	/**
@@ -383,31 +498,18 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	@ManagedAttribute(description="Minimum thread duration since startup", currencyTimeLimit=15)
 	public Long getThreadMinDurationSeconds() {
 		
-		OptionalLong min = threadDurations.values().stream().mapToLong(v -> v).min();
-		return min.getAsLong();
+		return minDuration;
 	}
 
-	/**
-	 * Exposes the mean number of seconds all threads took complete, since this Jorel2 instance was started, as a JMX attribute.
-	 * 
-	 * @return The number of seconds.
-	 */
-	@ManagedAttribute(description="Mean thread duration since startup", currencyTimeLimit=15)
-	public Double getThreadMeanDurationSeconds() {
-		
-		OptionalDouble mean = threadDurations.values().stream().mapToLong(v -> v).average();
-		return mean.getAsDouble();
-	}
-	
 	/**
 	 * Exposes the number of threads that have run, since this Jorel2 instance was started, as a JMX attribute.
 	 * 
 	 * @return The number of threads that have run.
 	 */
 	@ManagedAttribute(description="Number of thread runs included in stats", currencyTimeLimit=15)
-	public int getThreadCompleteCount() {
+	public long getThreadCompleteCount() {
 		
-		return threadDurations.size();
+		return threadCount;
 	}
 	
 	/**
