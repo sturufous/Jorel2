@@ -177,7 +177,7 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	    	logThreadCompletion(jorelThread);
 	    	session.close();
     	} catch (Exception e) {
-    		decoratedError(INDENT0, "In Jorel2Runnable.", e);
+    		decoratedError(INDENT0, "In Jorel2Runnable run().", e);
     		
     		if (session != null) {
     			session.close();
@@ -214,7 +214,6 @@ public final class Jorel2Runnable extends Jorel2Root implements Runnable {
 	        		case SYNDICATION -> syndicationEventProcessor.processEvents(this, session);
 	        		case PAGEWATCHER -> pageWatcherEventProcessor.processEvents(this, session);
 	        		case SHELLCOMMAND -> shellCommandEventProcessor.processEvents(this, session);
-	        		case DURATION -> durationEventProcessor.processEvents(this, session);
 	        		case CLEANBINARYROOT -> cleanBinaryRootEventProcessor.processEvents(this, session);
 	        		case MONITOR -> monitorEventProcessor.processEvents(this, session);
 	        		case SYNC -> syncEventProcessor.processEvents(this, session);

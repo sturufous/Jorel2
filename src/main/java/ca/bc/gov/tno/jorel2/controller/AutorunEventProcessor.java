@@ -370,7 +370,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				}
 				else
 				{
-					decoratedError(INDENT0, "Filter " + fiRsn + " Loop Error! ", e);
+					decoratedTrace(INDENT2, "Filter " + fiRsn + " Loop Error! " + e.toString());
 				}
 			}
 			try {rs.close();} catch (Exception e) {;}
@@ -574,7 +574,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				}
 				else
 				{
-					decoratedError(INDENT0, "Analysis " + aRsn + " Loop Error!", e);
+					decoratedTrace(INDENT2, "Analysis " + aRsn + " Loop Error! " + e.toString());
 				}
 			}
 			if (rs!=null) try {rs.close();} catch (Exception e) {;}
@@ -806,7 +806,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				}
 				else
 				{
-					decoratedError(INDENT0, "Report " + rRsn + " Loop Error!", e);
+					decoratedTrace(INDENT2, "Report " + rRsn + " Loop Error! " + e.toString());
 				}
 			}
 			if (rs != null) try {rs.close();} catch (Exception e) {;}
@@ -983,7 +983,7 @@ public class AutorunEventProcessor extends Jorel2Root implements EventProcessor 
 				}
 				else
 				{
-					decoratedError(INDENT0, "Analysis " + aRsn + " Loop Error!", e);
+					decoratedTrace(INDENT2, "Analysis " + aRsn + " Loop Error! " + e.toString());
 				}
 			}
 			if (rs!=null) try {rs.close();} catch (Exception e) {;}

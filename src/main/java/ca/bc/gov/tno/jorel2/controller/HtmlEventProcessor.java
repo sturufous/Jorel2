@@ -63,8 +63,6 @@ public class HtmlEventProcessor extends Jorel2Root implements EventProcessor {
 	        		if (DateUtil.runnableToday(currentEvent.getFrequency())) {
 	        			htmlEvent(currentEvent, session);
 	        		}
-	        		
-	        		DbUtil.updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
 	        	}
 	        }
     	}
@@ -103,6 +101,9 @@ public class HtmlEventProcessor extends Jorel2Root implements EventProcessor {
     			case "currentddmmyyyy" -> updateYyyymmddPart(partUpper, session);
     			case "filestructure" -> createFileStructure(partUpper, session);
         	};
+        	
+    		// Only update lastFtpRun if the event's startTime has passed and the event has run.
+    		DbUtil.updateLastFtpRun(DateUtil.getDateNow(), currentEvent, session);
 		}
 	}
 	

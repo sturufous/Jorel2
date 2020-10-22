@@ -31,9 +31,9 @@ import ca.bc.gov.tno.jorel2.util.StringUtil;
 import ca.bc.gov.tno.jorel2.util.UrlUtil;
 
 /**
+ * Processes all eligible Channelwatcher event records from the TNO_EVENTS table.
  * 
  * @author Stuart Morse
- * @version 0.0.1
  */
 
 @Service
@@ -86,6 +86,17 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
     	return Optional.of("complete");
 	}
 	
+	/**
+	 * Retrieves all active unlocked channels from the Channel's table and iterates through them. Obtains the Url of the channel
+	 * using its <code>getUrl()</code> method and uses a SyndFeedInput object to retrieve the XML RSS 2.0 contents of the feed.
+	 * <code>processRssItems()</code> is then called to add the feed's contents to the NEWS_ITEMS table. Channels are locked
+	 * (made unavailable to other instances of Jorel2 currently processing Channelwatcher events) by setting the event's 
+	 * LAST_FTP_RUN field to the name of the instance that is processing it. After processing the value of the event's LAST_FTP_RUN
+	 * field is set to "idle".
+	 * 
+	 * @param currentEvent The Channelwatcher event currently being processed.
+	 * @param session The current Hibernate persistence context.
+	 */
 	private void channelEvent(EventsDao currentEvent, Session session) {
 
 		String instanceName = instance.getAppInstanceName();
@@ -123,6 +134,17 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 		}
 	} 
 		
+	/**
+	 * Iterates over the RSS items in the <code>SyndFeed</code> object passed in the parameter <code>feed</code> obtains the content
+	 * of the social media posts from the provider's API and adds the contents of the posts to the NEWS_ITEMS table. This method supports
+	 * Twitter posts only, as these are the only ones provided by the current infrastructure.
+	 * 
+	 * @param feed The SyndFeed object containing links to the the social media posts.
+	 * @param source The source of the social media post.
+	 * @param channel The channel from which the SyndFeed entries were extracted.
+	 * @param session The current Hibernate persistence context.
+	 * @throws Exception All runtime exceptions are thrown back to <code>channelEvent()</code> for processing.
+	 */
 	private void processRssItems(SyndFeed feed, String source, ChannelsDao channel, Session session) throws Exception {
 		
 		int articleCount = 0;
@@ -185,6 +207,18 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 		decoratedTrace(INDENT2, "Added: " + articleCount + " article(s) from " + source);
 	}
 	
+	/**
+	 * Creates a news item by calling <code>NewsItemFactory.createChannelNewsItem()</code> and saves this item to the NEWS_ITEMS table.
+	 * 
+	 * @param spam Is this social media post spam (not enough followers)
+	 * @param item The RSS item being added.
+	 * @param source The source of the item (usually "Social Media").
+	 * @param authorHandle The author handle of the social media post.
+	 * @param author The actual name of the author of the post.
+	 * @param channel The channel from which this post was retrieved.
+	 * @param session The current Hibernate persistence context.
+	 * @return A boolean indicating that the news item was added successfully.
+	 */
 	private boolean saveNewsItem(boolean spam, SyndEntry item, String source, String authorHandle, String author, ChannelsDao channel, Session session) {
 		
 		boolean success = true;
@@ -205,6 +239,13 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 		return success;
 	}
 	
+	/**
+	 * Determines if this social media post is spam by retrieving the author's follower count from the social media provider's API. If the number
+	 * of followers is less than 15 the post is classified as spam and will not be added to the NEWS_ITEMS table.
+	 * 
+	 * @param jsonapi Api object retrieved from Social Media provider.
+	 * @return Whether or not this post is regarded as spam.
+	 */
 	private boolean isSpam(ChannelApi jsonapi) {
 		
 		boolean spam = false;
@@ -222,6 +263,14 @@ public class ChannelwatcherEventProcessor extends Jorel2Root implements EventPro
 		return spam;
 	}
 	
+	/**
+	 * If a social media post was successfully added to the NEWS_ITEMS table, this method adds a record to the SOCIAL_MEDIA_LINKS table.
+	 * 
+	 * @param text The text of the social media post.
+	 * @param channelName The name of the channel from which this post was extracted.
+	 * @param author The author of the post.
+	 * @param session The current Hibernate persistence context.
+	 */
 	private void parseRSS(String text, String channelName, String author, Session session) {			
 
 		Matcher matcher = VALID_URL.matcher(text);

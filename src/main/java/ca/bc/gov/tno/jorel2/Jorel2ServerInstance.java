@@ -74,6 +74,9 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	/** Indicates whether this instance currently has access to a network connection */
 	private ConnectionStatus connectionStatus = ConnectionStatus.OFFLINE;
 	
+	/** Indicates that a shutdown request has been received, but one or more threads are currently running */
+	public boolean stopRequestReceived = false;
+	
 	/**
 	 * Construct this object and set the startTime to the time now.
 	 */
@@ -113,7 +116,7 @@ public class Jorel2ServerInstance extends Jorel2Root {
 		String result = ""; // Should use stringbuilder
 		
 		for (Entry entry : eventTypesProcessed.entrySet()) {
-			result = result + entry.getKey() + ", ";
+			result = result + entry.getKey() + " ";
 		}
 		
 		return result;
@@ -422,7 +425,6 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	@ManagedAttribute(description="Length of last run duration in seconds", currencyTimeLimit=1, persistPolicy="never")
 	public long getLastDuration() {
 		
-		logger.trace("Getting last duration.");
 		return lastDuration;
 	}
 	
@@ -447,7 +449,7 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	 * Add the latest thread execution duration. As this value is used for monitoring thread performance by Overseer and VisualVM, we want to focus
 	 * on the big numbers rather than the small ones. As this value is being polled every 3 seconds we want to discard the lastDuration currently being 
 	 * set, if it is smaller than the previous one. This ensures that when the value is next polled the largest value of thread durations within the polling
-	 * period is returned. The saving of the current duration is overridden, following this protocol, for 20000 milliseconds.
+	 * period is returned. The saving of the current duration is overridden, following this protocol, for 5000 milliseconds.
 	 * 
 	 * @param threadName Name of the currently executing thread used as key the the threadDurations map.
 	 * @param duration Number of seconds it took for this thread to complete event processing.
@@ -466,7 +468,7 @@ public class Jorel2ServerInstance extends Jorel2Root {
 		long nowMilliseconds = now.getTime();
 		
 		// If the lastDuration was set recently, assume it hasn't been polled by overseer or VisualVM since the last update and keep the biggest value.
-		if(nowMilliseconds - lastDurationTimestamp < 20000) {
+		if(nowMilliseconds - lastDurationTimestamp < 5000) {
 			if(lastDuration < duration) {
 				lastDuration = duration;
 				decoratedTrace(INDENT2, "Keeping larger duration measure. Timestamp difference = " + (nowMilliseconds - lastDurationTimestamp));
@@ -787,5 +789,23 @@ public class Jorel2ServerInstance extends Jorel2Root {
 	public Map<String, Integer> getWordCounts() {
 		
 		return wordCounts;
+	}
+	
+	@ManagedOperation(description="Stop this instance of Jorel2")
+	public void stop() {
+		if (activeThreads.size() > 0) {
+			stopRequestReceived = true;
+			logger.trace("Stop request received. Threads are running, will shutdown after thread completion.");
+		} else {
+			new Thread(() -> {
+				logger.trace("Stop request received. Shutting down immediately.");
+				try {
+					Thread.sleep(200);
+					System.exit(SHUTDOWN_REQUESTED);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}).start();
+		}
 	}
 }

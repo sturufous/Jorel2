@@ -138,6 +138,12 @@ public class FifoThreadQueueScheduler extends Jorel2Root {
 			threadQueue.put(jorelThread);
 			
 			activeThreads.remove(initiator);
+			
+			// If a shutdown request has been received via JMX, consider exiting the program.
+			if(activeThreads.size() == 0 && instance.stopRequestReceived) {
+				logger.trace("All threads complete. Initiating shutdown as requested by prior stop() operation.");
+				System.exit(SHUTDOWN_REQUESTED);
+			}
 		} catch (InterruptedException e) {
 			logger.error("Attempting to store the tail of the thread pool.", e);
 		}

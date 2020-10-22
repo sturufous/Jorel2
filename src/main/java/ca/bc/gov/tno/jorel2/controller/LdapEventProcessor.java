@@ -134,7 +134,6 @@ public class LdapEventProcessor extends Jorel2Root implements EventProcessor {
 			    ctx.close();
 			}
 		} catch (Exception ex) {
-			session.getTransaction().rollback();
 		    decoratedError(INDENT0, "Processing LDAP entries.", ex);			
 		}
 	}

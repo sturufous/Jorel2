@@ -47,16 +47,18 @@ import org.hibernate.annotations.NamedQueries;
  * @version 0.0.13 04 Sep 20 - Adding small screen device format to Jorel reports.
  * @version 0.0.14 15 Sep 20 - Changing connection release policy to ConnectionReleaseMode.ON_CLOSE.
  * @version 0.0.15 16 Sep 20 - Fix appearance of "<**images**>" in alert emails.
- * @version 0.0.16 21 Sep 20 - Adding Channelwatcher event handling
- * @version 0.0.17 25 Sep 20 - Added getBuildNumber(), getActiveThreads(), getServerDetails() to Jorel2ServerInstance
- * @version 0.0.18 08 Oct 20 - Added array-formatted output for database interruptions to Jorel2ServerInstance
+ * @version 0.0.16 21 Sep 20 - Adding Channelwatcher event handling.
+ * @version 0.0.17 25 Sep 20 - Added getBuildNumber(), getActiveThreads(), getServerDetails() to Jorel2ServerInstance.
+ * @version 0.0.18 08 Oct 20 - Added array-formatted output for database interruptions to Jorel2ServerInstance.
+ * @version 0.0.19 13 Oct 20 - Implemented remote shutdown.
+ * @version 0.0.20 14 Oct 20 - Implemented handling for the commentary PL/SQL event.
  */
 
 @MappedSuperclass
 public class Jorel2Root {
 	
 	/** Constants for use throughout Jorel2 */
-	protected static final String buildNumber = "0.0.18";
+	protected static final String buildNumber = "0.0.20";
     protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
     protected static final int THREAD_POOL_SIZE = 3;
     protected static final int FATAL_CONDITION = -1;
@@ -73,6 +75,7 @@ public class Jorel2Root {
     protected static final String GANDM_DEFINITION_ID_STRING = "Globe and Mail XML";
     protected static final String LOCALFILE_SOURCE = "localfile";
     protected static final String LDAP_SOURCE = "ldap";
+    protected static final int SHUTDOWN_REQUESTED = 1000;
 
     
     protected static final String TOS_MSG_DFLT = "This e-mail is a service provided by the Public Affairs Bureau and is only intended for the original addressee. All content is the copyrighted property of a third party creator of the material. Copying, retransmitting, redistributing, selling, licensing, or emailing the material to any third party or any employee of the Province who is not authorized to access the material is prohibited.";

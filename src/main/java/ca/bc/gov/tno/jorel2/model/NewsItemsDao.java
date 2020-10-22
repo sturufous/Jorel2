@@ -883,6 +883,28 @@ public class NewsItemsDao extends Jorel2Root implements java.io.Serializable {
 	}
 	
 	/**
+	 * Update commentary, commentaryTimeout and commentaryExpireTime to 0 if commentary is 1 and commentaryExpireTime is less than now.
+	 * 
+	 * @param expireTime Compared against the commentaryExpireTime of all matching records.
+	 * @param session The current Hibernate persistence context
+	 */
+	public static void updateCommentary(long now, Session session){
+		String sqlStmt = "update NewsItemsDao set commentary = 0, commentaryTimeout = 0, commentaryExpireTime = 0 where commentary = 1 and commentaryExpireTime < :now";
+
+		try{
+			Query<?> query = session.createQuery(sqlStmt);
+			BigDecimal bigNow = BigDecimal.valueOf(now);
+			query.setParameter("now", bigNow);
+			session.beginTransaction();
+			query.executeUpdate();
+			session.getTransaction().commit();
+		}
+		catch (Exception err) {
+			decoratedError(INDENT0, "Clearing alert news items.", err);
+		}
+	}
+	
+	/**
 	 * Delete the record corresponding with the object <code>item</code>.
 	 * 
 	 * @param item The object representing the item in the NewsItems table to be deleted.

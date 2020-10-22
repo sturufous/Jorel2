@@ -28,7 +28,6 @@ import ca.bc.gov.tno.jorel2.util.DateUtil;
  * This ensures that if a request has been made to re-index NEWS_ITEMS it is initiated within thirty seconds.
  * 
  * @author Stuart Morse
- * @version 0.0.1
  */
 
 @Service
@@ -106,7 +105,7 @@ public class SyncEventProcessor extends Jorel2Root implements EventProcessor {
 		
 		StoredProcedureQuery query = session.createStoredProcedureQuery("DOSYNCINDEX");
 		result = query.execute();
-		decoratedTrace(INDENT2, "Sync: Executed stored procedure DOSYNCINDEX");
+		decoratedTrace(INDENT2, "Sync: Executed stored procedure DOSYNCINDEX", session);
 				
 		return result;
 	}
