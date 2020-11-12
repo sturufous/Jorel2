@@ -97,8 +97,8 @@ public class Expire3gpEventProcessor extends Jorel2Root implements EventProcesso
 			int fudge = 0;
 			int deletedCounter = 0;
 
-			try { daysago=Integer.parseInt(currentEvent.getSource()); } catch (Exception err) { daysago = 0; }
-			try { fudge=Integer.parseInt(currentEvent.getFileName()); } catch (Exception err) { fudge = 0; }
+			try { daysago = Integer.parseInt(currentEvent.getSource()); } catch (Exception err) { daysago = 0; }
+			try { fudge = Integer.parseInt(currentEvent.getFileName()); } catch (Exception err) { fudge = 0; }
 
 			if (daysago > 0) {
 

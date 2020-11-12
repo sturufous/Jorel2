@@ -63,6 +63,11 @@ public class NewspaperImportHandler extends Jorel2Root {
 		
 		boolean success = true;
 		Nitf item = null;
+		String suffix = xmlFilePath.substring(xmlFilePath.toLowerCase().lastIndexOf('.') + 1);
+		
+		if(!suffix.equals("xml")) {
+			return true;
+		}
 		
 		try {
 		    Unmarshaller unmarshaller = unmarshallerFactory.getNitfUnmarshaller();

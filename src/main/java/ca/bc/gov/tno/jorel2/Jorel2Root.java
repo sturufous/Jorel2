@@ -52,13 +52,15 @@ import org.hibernate.annotations.NamedQueries;
  * @version 0.0.18 08 Oct 20 - Added array-formatted output for database interruptions to Jorel2ServerInstance.
  * @version 0.0.19 13 Oct 20 - Implemented remote shutdown.
  * @version 0.0.20 14 Oct 20 - Implemented handling for the commentary PL/SQL event.
+ * @version 0.0.21 29 Oct 20 - Changed password for LDAP event and made the event live.
+ * @version 0.0.22 05 Nov 20 - Store front page images in source_paper_images.
  */
 
 @MappedSuperclass
 public class Jorel2Root {
 	
 	/** Constants for use throughout Jorel2 */
-	protected static final String buildNumber = "0.0.20";
+	protected static final String buildNumber = "0.0.22";
     protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
     protected static final int THREAD_POOL_SIZE = 3;
     protected static final int FATAL_CONDITION = -1;

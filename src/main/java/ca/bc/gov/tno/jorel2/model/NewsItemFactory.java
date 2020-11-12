@@ -299,18 +299,17 @@ public class NewsItemFactory extends Jorel2Root {
 		return item;
 	}
 	
-	public static NewsItemImagesDao createNewsItemImage(BigDecimal sourceRsn, String wwwTarget, String fileName, long width, long height) {
+	public static SourcePaperImagesDao createSourcePaperImage(BigDecimal sourceRsn, String wwwTarget, String fileName, long width, long height) {
 		
-		NewsItemImagesDao niiRecord = new NewsItemImagesDao();
-		niiRecord.setItemRsn(sourceRsn);
-		niiRecord.setBinaryPath(wwwTarget);
-		niiRecord.setFileName(fileName);
-		niiRecord.setWidth(BigDecimal.valueOf(width));
-		niiRecord.setHeight(BigDecimal.valueOf(height));
-		niiRecord.setImageLoaded(true);
-		niiRecord.setProcessed(false);
-		niiRecord.setOnFrontPage(false);
+		SourcePaperImagesDao spiRecord = new SourcePaperImagesDao();
 		
-		return niiRecord;
+		spiRecord.setSourceRsn(sourceRsn);
+		spiRecord.setBinaryPath(wwwTarget);
+		spiRecord.setFileName(fileName);
+		spiRecord.setWidth(BigDecimal.valueOf(width));
+		spiRecord.setHeight(BigDecimal.valueOf(height));
+		spiRecord.setPaperDate(DateUtil.getDateAtMidnight());
+		
+		return spiRecord;
 	}
 }

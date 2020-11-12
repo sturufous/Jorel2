@@ -90,7 +90,7 @@ class FrontPageImageHandler extends Jorel2Root {
 							if (copyFile(c, archiveTarget)) {
 								ImageDimensions id = getImageDimensions(c);
 								String wwwTargetName = config.getString("wwwBinaryRoot") + sep + binaryDir + sep;
-								success = createNewsItemImage(sourceRsn, id, wwwTargetName, jpgFileName, c, session);
+								success = createSourcePaperImage(sourceRsn, id, wwwTargetName, jpgFileName, c, session);
 							}
 						} catch (IOException ex) {
 							decoratedError(INDENT0, "Copying from " + c + " to " + archiveTarget, ex);
@@ -289,7 +289,7 @@ class FrontPageImageHandler extends Jorel2Root {
 					if (copyFileToTargetDir(fileName, archivePath, binaryDir)) {
 						String wwwTargetName = config.getString("wwwBinaryRoot") + sep + binaryDir + sep;
 						ImageDimensions id = getImageDimensions(archivePath);
-						success = createNewsItemImage(sourceRsn, id, wwwTargetName, fileName, archivePath, session);
+						success = createSourcePaperImage(sourceRsn, id, wwwTargetName, fileName, archivePath, session);
 					}
 				} else {
 					success = false;
@@ -451,7 +451,7 @@ class FrontPageImageHandler extends Jorel2Root {
 	 * @return Whether the creation of the record was successful.
 	 */
 	
-	private boolean createNewsItemImage(BigDecimal sourceRsn, ImageDimensions id, String wwwTargetName, String fileName, File c, Session session) {
+	private boolean createSourcePaperImage(BigDecimal sourceRsn, ImageDimensions id, String wwwTargetName, String fileName, File c, Session session) {
 		
 		boolean success = true;
 		
@@ -470,10 +470,10 @@ class FrontPageImageHandler extends Jorel2Root {
 			
 			// Copy the source front page image to the av directory for web access and create the news_item_images record
 			if(copyFile(c, avTargetFile)) {
-				NewsItemImagesDao niiRecord = NewsItemFactory.createNewsItemImage(sourceRsn, wwwTargetName, fileName, id.width, id.height);
+				SourcePaperImagesDao spiRecord = NewsItemFactory.createSourcePaperImage(sourceRsn, wwwTargetName, fileName, id.width, id.height);
 				
 				session.beginTransaction();
-				session.persist(niiRecord);
+				session.persist(spiRecord);
 				session.getTransaction().commit();
 				
 				success = true;
