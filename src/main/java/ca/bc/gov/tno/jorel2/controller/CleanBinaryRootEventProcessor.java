@@ -15,8 +15,8 @@ import org.springframework.stereotype.Service;
 import ca.bc.gov.tno.jorel2.Jorel2ServerInstance;
 import ca.bc.gov.tno.jorel2.Jorel2Root;
 import ca.bc.gov.tno.jorel2.model.EventsDao;
-import ca.bc.gov.tno.jorel2.model.NewsItemImagesDao;
 import ca.bc.gov.tno.jorel2.model.NewsItemsDao;
+import ca.bc.gov.tno.jorel2.model.SourcePaperImagesDao;
 import ca.bc.gov.tno.jorel2.util.DateUtil;
 
 /**
@@ -105,7 +105,7 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 				String startHoursMinutes = startTimeStr.substring(0, 5);
 				String nowHoursMinutes = String.format("%02d:%02d", now.getHour(), now.getMinute());
 
-				if (nowHoursMinutes.equals(startHoursMinutes)) {
+				if (nowHoursMinutes.compareTo(startHoursMinutes) >= 0) {
 	
 					int numOfDays = 1;
 					String numOfDaysString = currentEvent.getSource();
@@ -130,7 +130,6 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 			    		
 			    		decoratedTrace(INDENT2, "Finish clean binary root directory");
 						now = now.minusDays(1L);
-	
 					}
 				}
 			} else {
@@ -183,13 +182,14 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 
 					String notThumbFileName = file.getName();
 					if (notThumbFileName.endsWith("-thumb.jpg")) {
-						notThumbFileName = notThumbFileName.substring(0, notThumbFileName.length() - 10)+".jpg";
+						notThumbFileName = notThumbFileName.substring(0, notThumbFileName.length() - 10) + ".jpg";
 					}
 
 					try {
-						List<NewsItemImagesDao> results = NewsItemImagesDao.getImageRecordsByFileName(notThumbFileName, avpath, session);
+						List<SourcePaperImagesDao> results = SourcePaperImagesDao.getImageRecordsByFileName(notThumbFileName, avpath, session);
 						
 						if (results.size() == 0) {
+							decoratedTrace(INDENT2, "Deleting " + avpath);
 							if (justLogit.equalsIgnoreCase("deleteit")) {
 								if (!file.delete()) {
 									IOException e = new IOException("Attempting to clean up file.");
@@ -216,6 +216,7 @@ public class CleanBinaryRootEventProcessor extends Jorel2Root implements EventPr
 							List<NewsItemsDao> results = NewsItemsDao.getItemByRsn(fileRsn, session);
 							if (results.size() == 0) {  // no record in the database with this RSN --> invalid file
 								if (justLogit.equalsIgnoreCase("deleteit")) {
+									decoratedTrace(INDENT2, "Deleting " + file.getName());
 									if (!file.delete()) {
 										IOException e = new IOException("Attempting to clean up file.");
 										decoratedError(INDENT0, "Deleting file " + file.getName(), e);

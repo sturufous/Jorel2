@@ -245,7 +245,7 @@ public class LdapEventProcessor extends Jorel2Root implements EventProcessor {
 		env.put(Context.PROVIDER_URL, LDAP_SERVER_URL);
 		env.put(Context.SECURITY_AUTHENTICATION, "simple");
 		env.put(Context.SECURITY_PRINCIPAL, "idir\\TNOJOREL");
-		env.put(Context.SECURITY_CREDENTIALS, "e6k9oLo(pX!");
+		env.put(Context.SECURITY_CREDENTIALS, "8mN@YD6tpc");
 		
 	    LdapContext ctx = null;
 	    

@@ -517,7 +517,7 @@ public class ExpireEventProcessor extends Jorel2Root implements EventProcessor {
 	}
 	
 	/**
-	 * Find all SourceItemImagesDao records with associated NewsItemsDao or HnewsItemsDao records and delete the binary from storage and the
+	 * Find all SourcePaperImagesDao records with associated NewsItemsDao or HnewsItemsDao records and delete the binary from storage and the
 	 * item from the SourceItemImages table.
 	 * 
 	 * @param retainImages How many days to retain the images (stored in preferences.retain_images).

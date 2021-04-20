@@ -160,6 +160,26 @@ public class SourcePaperImagesDao implements java.io.Serializable {
 	}
 	
 	/**
+	 * Get the SOURCE_PAPER_IMAGES record(s) matching the fileName and avPath.
+	 *
+	 * @param fileName The fileName to match.
+	 * @param avPath The path to the web directory for the image.
+	 * @param session The current Hibernate persistence context
+	 * @return The record(s) matching fileName
+	 */
+	public static List<SourcePaperImagesDao> getImageRecordsByFileName(String fileName, String avPath, Session session) {
+		
+		String sqlStmt = "from SourcePaperImagesDao where fileName=:fileName and binaryPath=:binaryPath";
+		
+		Query<SourcePaperImagesDao> query = session.createQuery(sqlStmt, SourcePaperImagesDao.class);
+		query.setParameter("fileName", fileName);
+		query.setParameter("binaryPath", avPath);
+        List<SourcePaperImagesDao> results = query.getResultList();
+        
+        return results;
+	}
+	
+	/**
 	 * Delete the record corresponding with the object <code>item</code>.
 	 * 
 	 * @param item The object representing the item in the SourcePaperImages table to be deleted.
