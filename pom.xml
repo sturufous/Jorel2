@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ca.bc.gov.tno.jorel2</groupId>
   <artifactId>jorel2</artifactId>
-  <version>0.0.25-SNAPSHOT</version>
+  <version>0.0.26-SNAPSHOT</version>
   <name>Jorel2</name>
   <description>Java 14 rewrite of Jorel</description>
   <properties>
@@ -65,10 +65,13 @@
       <id>my-local-repo</id>
       <url>file://${basedir}/lib</url>
     </repository>
-    <repository>
-      <id>boundlessgeo</id>
-      <url>https://repo.boundlessgeo.com/main/</url>
-    </repository>
+	<repository>
+	  <id>osgeo</id>
+	  <name>OSGeo Release Repository</name>
+	  <url>https://repo.osgeo.org/repository/release/</url>
+	  <snapshots><enabled>false</enabled></snapshots>
+	  <releases><enabled>true</enabled></releases>
+	</repository>
   </repositories>
   <dependencies>
     <dependency>
@@ -121,9 +124,9 @@
 	    <version>5.3.6.Final</version>
 	</dependency>
 	<dependency>
-	  <groupId>com.oracle</groupId>
+	  <groupId>com.oracle.ojdbc</groupId>
 	  <artifactId>ojdbc8</artifactId>
-	  <version>12.2.0.1</version>
+	  <version>19.3.0.0</version>
 	</dependency>
 	<dependency>
 	    <groupId>javax.inject</groupId>
@@ -141,12 +144,14 @@
 	  <version>5.1.1</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/com.sun.syndication/rome -->
+	<!-- https://mvnrepository.com/artifact/com.sun.syndication/com.springsource.com.sun.syndication -->
 	<dependency>
-	    <groupId>com.sun.syndication</groupId>
-	    <artifactId>rome</artifactId>
+	    <groupId>com.sun</groupId>
+	    <artifactId>syndication</artifactId>
 	    <version>0.9</version>
+	    <scope>system</scope>
+	    <systemPath>${project.basedir}/lib/syndication.jar</systemPath>
 	</dependency>
-	<!-- https://mvnrepository.com/artifact/org.jdom/jdom -->
 	<dependency>
 	    <groupId>org.jdom</groupId>
 	    <artifactId>jdom</artifactId>

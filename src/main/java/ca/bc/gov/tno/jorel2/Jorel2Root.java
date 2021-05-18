@@ -57,13 +57,14 @@ import org.hibernate.annotations.NamedQueries;
  * @version 0.0.23 16 Nov 20 - Prevent attempted import of .csv files from Globe and Mail.
  * @version 0.0.24 19 Nov 20 - Final fixes for Cleanbinaryroot event.
  * @version 0.0.25 04 Feb 21 - Changed the LDAP password.
+ * @version 0.0.26 18 May 21 - Changed the LDAP password.
  */
 
 @MappedSuperclass
 public class Jorel2Root {
 	
 	/** Constants for use throughout Jorel2 */
-	protected static final String buildNumber = "0.0.25";
+	protected static final String buildNumber = "0.0.26";
     protected static final Logger logger = LogManager.getLogger(Jorel2Root.class);
     protected static final int THREAD_POOL_SIZE = 3;
     protected static final int FATAL_CONDITION = -1;
